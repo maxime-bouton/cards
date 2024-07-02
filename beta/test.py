@@ -19,20 +19,22 @@ if __name__ == '__main__':
     sig2 = 1
     step = 0.99 / sig2
     m,n = 10,10
-    A = PSGLA( dims= [m,n] , stepSize=step)
+    A = PSGLA( dims= [m,n] , step_size=step)
 
-    A.setProx( nonNegativityProx )    
-    A.setGrad( lambda x : grad(x,sig2) )
+    #A.setProx( nonNegativityProx )    
+    #A.setGrad( lambda x : grad(x,sig2) )
+    A.prox = nonNegativityProx
+    A.grad = lambda x : grad(x,sig2)
 
     rng = np.random.default_rng()
     #A.mcStep(rng)
 
     N = 10000
-    chain = np.zeros( (N,*A.currentState.shape))
+    chain = np.zeros( (N,*A.current_state.shape))
 
     for i in range(N):
-        chain[i,:,:] = A.currentState.copy()
-        A.mcStep(rng)
+        chain[i,:,:] = A.current_state.copy()
+        A.mc_step(rng)
 
     sb.histplot( chain[ np.where(chain[:,0,0] > 0.01) ][:,0,0],  bins=50 )
     
