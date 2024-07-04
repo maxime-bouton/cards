@@ -1,5 +1,5 @@
-from refactor.models.BaseModel import BaseModel
-from refactor.TransitionKernel.TransitionKernel import BaseSerialTransitionKernel, PSGLA
+from src.models.BaseModel import BaseModel
+from src.TransitionKernel.TransitionKernel import BaseSerialTransitionKernel, PSGLA
 
 import numpy as np
 

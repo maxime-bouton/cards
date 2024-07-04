@@ -2,7 +2,8 @@
 
 #from dsgs.operators.inpainting import SerialInpainting
 
-from refactor.TransitionKernel.TransitionKernel import PSGLA
+#from src.TransitionKernel.TransitionKernel import PSGLA
+from TransitionKernel.TransitionKernel import PSGLA
 
 import numpy as np
 import matplotlib.pyplot as plt
