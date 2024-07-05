@@ -12,5 +12,13 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def computePotential(self) -> float :
+    def compute_potential(self) -> float :
+        pass
+
+    @abstractmethod
+    def reset_estimator(self) -> None:
+        pass
+
+    @abstractmethod
+    def normalize_estimator(self, batch_size : int ) -> None :
         pass
