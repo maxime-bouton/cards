@@ -37,8 +37,12 @@ class Sampler():
             #save current states
             self.model.normalize_estimator( self.batch_size )
 
-            self.data_manager.save( self.model.get_states(), self.save_path  + self.file_name + str(batch_num) + ".h5")
+            full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
+            self.data_manager.save( self.model.get_states(), full_name )
+            self.data_manager.save_monitoring(   self.potential, full_name, "potential" )
+
             print("Batch", batch_num, "out of", self.nb_batches, "computed.")
+            print("Potential :", self.potential[-1])
 
             self.model.reset_estimator()
 

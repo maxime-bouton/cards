@@ -12,9 +12,9 @@ class GaussianInpaintingModel(BaseModel):
                 mask : np.ndarray,
                 X : BaseSerialTransitionKernel,
                 Z : BaseSerialTransitionKernel,
-                sigma2,
-                reg_coeff,
-                split_coeff
+                sigma2 : float,
+                reg_coeff : float ,
+                split_coeff : float
                 ) -> None:
         self.observations = observations
         self.mask = mask
@@ -24,8 +24,12 @@ class GaussianInpaintingModel(BaseModel):
         self.split_coeff = split_coeff
         self.sigma2 = sigma2
 
+        #if type(X) == PSGLA :
+        #switch( type(X) ) : 
+        #    case PSGLA:  
+
         self.gradX = np.zeros( (2, *self.X.current_state.shape) )
-        self.MMSE = np.zeros( self.observations.shape ) #! to be moved?
+        self.MMSE = np.zeros( self.observations.shape ) #! to be moved? -> EstimatorBuilder
 
     def get_states(self) -> dict:
         states = {}
@@ -43,6 +47,7 @@ class GaussianInpaintingModel(BaseModel):
 
         self.MMSE += self.X.current_state
 
+
     def reset_estimator(self) -> None:
         self.MMSE = np.zeros_like(self.X.current_state)
     def normalize_estimator(self, batch_size: int) -> None:
@@ -53,5 +58,4 @@ class GaussianInpaintingModel(BaseModel):
         p += np.sum( ( self.observations - self.mask * self.X.current_state)**2 ) / (2 * self.sigma2 ) # suboptimal
         p += np.sum( (self.gradX - self.Z.current_state) ** 2 ) / (2*self.split_coeff)
         p += self.reg_coeff * l21_norm(self.Z.current_state)
-        #! to be checked
         return p 

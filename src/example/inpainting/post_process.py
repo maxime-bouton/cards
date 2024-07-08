@@ -54,7 +54,7 @@ plt.show()
 file_name = path + "sample" + str(0) + ".h5"
 with h5py.File(file_name, "r") as file:
     MMSE = np.zeros(original.shape, dtype="d")
-    #potential = file["/potential"][:]
+    potential = file["/potential"][:]
 
 burnin = 5
 for i in range(burnin, nbBatch):
@@ -65,8 +65,8 @@ for i in range(burnin, nbBatch):
 for i in range(1, nbBatch):
     file_name = path + "sample" + str(i) + ".h5"
 
-    #with h5py.File(file_name, "r") as file:
-        #potential = np.append(potential, file["/potential"])
+    with h5py.File(file_name, "r") as file:
+        potential = np.append(potential, file["/potential"])
 
 # MMSE = MMSE / np.amax(MMSE)
 MMSE = MMSE / (nbBatch - burnin)
@@ -117,8 +117,10 @@ print("Observations/Truth SNR : ", SNR_ori)
 print("Reconstruction/Truth SNR : ", SNR)
 print("Observations/Truth SSIM : ", ssim_noise)
 print("Reconstruction/Truth SSIM : ", ssim_recon)
+"""
 print(
     "Reconstruction total time={:.3e}, atime={:.3e}, std={:.3e}".format(
         total_time, atime, std_time
     )
 )
+"""
