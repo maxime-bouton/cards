@@ -40,6 +40,7 @@ class Sampler():
             full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
             self.data_manager.save( self.model.get_states(), full_name )
             self.data_manager.save_monitoring(   self.potential, full_name, "potential" )
+            self.data_manager.save_rng( self.rng, full_name)
 
             print("Batch", batch_num, "out of", self.nb_batches, "computed.")
             print("Potential :", self.potential[-1])
