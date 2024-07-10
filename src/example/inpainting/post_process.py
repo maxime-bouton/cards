@@ -53,6 +53,7 @@ plt.show()
 # %% forming the MMSE estimator and the potential
 file_name = path + "sample" + str(0) + ".h5"
 with h5py.File(file_name, "r") as file:
+    print(file.keys())
     MMSE = np.zeros(original.shape, dtype="d")
     potential = file["/potential"][:]
 

@@ -47,5 +47,15 @@ class Sampler():
 
             self.model.reset_estimator()
 
+    def restart(self, file_name : str, batch_restart : int, new_save_path : str):
+    
+        self.data_manager.load_rng( self.rng, file_name)
+        self.data_manager.load( self.model.get_states(), file_name )
+
+        self.save_path = new_save_path
+        self.start_batch_num = batch_restart
+
+
+
 
     

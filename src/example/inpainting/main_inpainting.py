@@ -72,4 +72,6 @@ if __name__ == '__main__' :
                 save_path,
                 model)
     
+    sampler.restart("./sample/sample5.h5", 6, "./resumed/")
+
     sampler.sample()
