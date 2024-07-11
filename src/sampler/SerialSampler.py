@@ -2,6 +2,7 @@ from models import BaseModel
 from DataManager.DataManager import DataManager
 
 import numpy as np
+import sys
 
 class Sampler():
     def __init__(self,
@@ -47,10 +48,25 @@ class Sampler():
 
             self.model.reset_estimator()
 
+    def set_rng(self, state_array : np.ndarray, inc_array : np.ndarray) -> None :
+        new_state = int.from_bytes(state_array, sys.byteorder)
+        new_inc = int.from_bytes(inc_array, sys.byteorder)
+
+        new_rng_state = self.rng.__getstate__()
+        new_rng_state["state"]["state"] = new_state
+        new_rng_state["state"]["inc"] = new_inc
+
+        self.rng.__setstate__(new_rng_state)
+
+
     def restart(self, file_name : str, batch_restart : int, new_save_path : str):
     
-        self.data_manager.load_rng( self.rng, file_name)
-        self.data_manager.load( self.model.get_states(), file_name )
+        #self.data_manager.load_rng( self.rng, file_name)
+        #self.data_manager.load( self.model.get_states(), file_name )
+
+        data = self.data_manager.load_h52dict( file_name)
+        self.set_rng( data["rng_state_array"], data["rng_inc_array"] )
+        self.model.set_states(data)
 
         self.save_path = new_save_path
         self.start_batch_num = batch_restart

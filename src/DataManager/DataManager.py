@@ -14,6 +14,14 @@ class DataManager():
                 data[key] = file[key][:]
                 #! to be checked
                 #! not working as intended
+    
+    def load_h52dict( self, file_name : str ) -> dict :
+        data = {}
+        with h5py.File(file_name, 'r') as file:
+            for key in file.keys():
+                data[key] = file[key][:]
+        return data
+
 
     def save_monitoring(self,data : np.ndarray , file_name : str, name : str) -> None:
         with h5py.File(file_name, 'r+') as file: #expect file to exist

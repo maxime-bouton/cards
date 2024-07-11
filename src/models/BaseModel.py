@@ -12,6 +12,10 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
+    def set_states(self, states : dict) -> None :
+        pass
+
+    @abstractmethod
     def compute_potential(self) -> float :
         pass
 

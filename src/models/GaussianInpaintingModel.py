@@ -40,19 +40,14 @@ class GaussianInpaintingModel(BaseModel):
         self.split_coeff = split_coeff
         self.sigma2 = sigma2
 
-        #if type(X) == PSGLA :
-        #switch( type(X) ) : 
-        #    case PSGLA:
-        type_X = type(X)
-        match type_X.__qualname__:
+        match type(X).__qualname__:
             case PSGLA.__qualname__:
                 self.X.prox = prox_nonegativity # implement prox
                 self.X.grad = lambda x :  self.mask*( x - self.observations ) / self.sigma2  + gradient_2d_adjoint( self.gradX - self.Z.current_state ) / self.split_coeff            
             case _:
                 print("Kernel type not yet supported by this model.") #! move to logger
         
-        type_Z = type(Z)
-        match type_Z.__qualname__:
+        match type(Z).__qualname__:
             case PSGLA.__qualname__:
                 self.Z.prox = lambda z : ( prox_l21norm( z, self.Z.step_size * self.reg_coeff ) )
                 self.Z.grad = lambda z : ( z - self.gradX ) / self.split_coeff
@@ -68,6 +63,11 @@ class GaussianInpaintingModel(BaseModel):
         states['Z'] = self.Z.current_state
         states['MMSE'] = self.MMSE
         return states
+    
+    def set_states(self, states: dict) -> None:
+        self.X.current_state = states["X"].copy()
+        self.Z.current_state = states["Z"].copy()
+        self.gradX = gradient_2d(self.X.current_state)
     
     def update(self, rng) -> None:
         self.X.mc_step(rng)
