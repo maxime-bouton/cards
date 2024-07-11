@@ -57,12 +57,7 @@ if __name__ == '__main__' :
                 sigma2,
                 reg_coeff,
                 split_coeff)
-    
-    X.prox = prox_nonegativity # implement prox
-    X.grad = lambda x :  model.mask*( x - model.observations ) / model.sigma2  + gradient_2d_adjoint( model.gradX - model.Z.current_state ) / model.split_coeff
-
-    Z.prox = lambda z : ( prox_l21norm( z, model.Z.step_size * model.reg_coeff ) )
-    Z.grad = lambda z : ( z - model.gradX ) / model.split_coeff
+    # conditionnals are set in the constructor
 
     sampler = Sampler(
                 batch_size,
@@ -72,6 +67,6 @@ if __name__ == '__main__' :
                 save_path,
                 model)
     
-    sampler.restart("./sample/sample5.h5", 6, "./resumed/")
+    #sampler.restart("./sample/sample5.h5", 6, "./resumed/")
 
     sampler.sample()

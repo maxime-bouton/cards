@@ -13,6 +13,7 @@ class DataManager():
             for key in data:
                 data[key] = file[key][:]
                 #! to be checked
+                #! not working as intended
 
     def save_monitoring(self,data : np.ndarray , file_name : str, name : str) -> None:
         with h5py.File(file_name, 'r+') as file: #expect file to exist
@@ -35,9 +36,9 @@ class DataManager():
         loaded_state = int.from_bytes(loaded_state_array, sys.byteorder)
         loaded_inc = int.from_bytes(loaded_inc_array, sys.byteorder)
 
-        current_rng_state = rng.__getstate__()
-        current_rng_state["state"]["state"] = loaded_state
-        current_rng_state["state"]["inc"] = loaded_inc
+        new_rng_state = rng.__getstate__()
+        new_rng_state["state"]["state"] = loaded_state
+        new_rng_state["state"]["inc"] = loaded_inc
 
-        rng.__setstate__(current_rng_state)
+        rng.__setstate__(new_rng_state)
         #! must be tested
