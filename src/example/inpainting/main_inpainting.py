@@ -2,6 +2,7 @@ from TransitionKernel.TransitionKernel import PSGLA
 from models.GaussianInpaintingModel import GaussianInpaintingModel
 from sampler.SerialSampler import Sampler
 from functionals.numpy.prox import prox_l21norm
+from estimator.estimatorBuilder import mmse_builder
 
 import h5py
 import json
@@ -59,14 +60,17 @@ if __name__ == '__main__' :
                 split_coeff)
     # conditionnals are set in the constructor
 
+    mmse_handler = mmse_builder( X.current_state.shape )
+
     sampler = Sampler(
                 batch_size,
                 nb_batches,
                 seed,
                 "sample",
                 save_path,
-                model)
+                model,
+                mmse_handler)
     
-    sampler.restart("./sample/sample5.h5", 6, "./resumed/")
+    #sampler.restart("./sample/sample5.h5", 6, "./resumed/")
 
     sampler.sample()

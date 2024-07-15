@@ -1,3 +1,6 @@
+""" 
+    docstring : describe model
+"""
 from models.BaseModel import BaseModel
 from TransitionKernel.TransitionKernel import BaseSerialTransitionKernel, PSGLA
 
@@ -55,13 +58,11 @@ class GaussianInpaintingModel(BaseModel):
                 print("Kernel type not yet supported by this model.") #! move to logger
 
         self.gradX = np.zeros( (2, *self.X.current_state.shape) )
-        self.MMSE = np.zeros( self.observations.shape ) #! to be moved? -> EstimatorBuilder
 
     def get_states(self) -> dict:
         states = {}
         states['X'] = self.X.current_state
         states['Z'] = self.Z.current_state
-        states['MMSE'] = self.MMSE
         return states
     
     def set_states(self, states: dict) -> None:
@@ -76,13 +77,8 @@ class GaussianInpaintingModel(BaseModel):
 
         self.Z.mc_step(rng)
 
-        self.MMSE += self.X.current_state
-
-
-    def reset_estimator(self) -> None:
-        self.MMSE = np.zeros_like(self.X.current_state)
-    def normalize_estimator(self, batch_size: int) -> None:
-        self.MMSE /= batch_size
+    def give_data2estimator(self):
+        return self.X.current_state
 
     def compute_potential(self) -> float:
         p = 0

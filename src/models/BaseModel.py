@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
+from numpy import random
 
 
 class BaseModel(ABC):
     
     @abstractmethod
-    def update(self, rng) -> None :
-        pass
+    def update(self, rng : random.Generator) -> None :
+        return NotImplemented
 
     @abstractmethod
     def get_states(self) -> dict :
@@ -20,9 +21,5 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def reset_estimator(self) -> None:
-        pass
-
-    @abstractmethod
-    def normalize_estimator(self, batch_size : int ) -> None :
+    def give_data2estimator(self):
         pass
