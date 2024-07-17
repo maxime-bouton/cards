@@ -1,5 +1,5 @@
 """ 
-    docstring : describe model
+    Implement a denoising model for the inpainting problem with guassian noise.
 """
 from models.BaseModel import BaseModel
 from TransitionKernel.TransitionKernel import BaseSerialTransitionKernel, PSGLA
@@ -35,6 +35,24 @@ class GaussianInpaintingModel(BaseModel):
                 reg_coeff : float ,
                 split_coeff : float
                 ) -> None:
+        """
+        Parameters
+        ----------
+        observations : np.ndarray
+            Deteriorated picture than can be observed.
+        mask : np.ndarray
+            Matrix of ones and zeros associated to the inapinting operator.
+        X : BaseSerialTransitionKernel
+            Random variable following the approximation of the targeted law.
+        Z : BaseSerialTransitionKernel
+            Splitting variable.
+        sigma2 : float
+            Standard deviation of the gausssian noise, expexted to be known.
+        reg_coeff : float
+            Regularisation coefficient.
+        split_coeff : float
+            Splitting coefficient.
+        """
         self.observations = observations
         self.mask = mask
         self.X = X
@@ -60,17 +78,41 @@ class GaussianInpaintingModel(BaseModel):
         self.gradX = np.zeros( (2, *self.X.current_state.shape) )
 
     def get_states(self) -> dict:
+        """get_states
+        Exctracts the current state of the transition kernel and other variables of interest and return the in a dictionnary.
+
+        Returns
+        -------
+        dict
+            Dictionnary containing the curent states of the variables.
+        """
         states = {}
         states['X'] = self.X.current_state
         states['Z'] = self.Z.current_state
         return states
     
     def set_states(self, states: dict) -> None:
+        """set_states 
+        Read the dictionnary given in entry and set the variables of the model to the values contained in it.
+        The keys used by the dictionnary must be the same as in "get_states"
+
+        Parameters
+        ----------
+        states : dict
+            Dictionnary containing new values for the variables of the model.
+        """
         self.X.current_state = states["X"].copy()
         self.Z.current_state = states["Z"].copy()
         self.gradX = gradient_2d(self.X.current_state)
     
-    def update(self, rng) -> None:
+    def update(self, rng : np.random.Generator ) -> None:
+        """update Gobal update of the model. Updates every kernel used by the model and computes annex variables.
+
+        Parameters
+        ----------
+        rng : np.random.Generator
+            Random number generator, given by the sampler.
+        """
         self.X.mc_step(rng)
 
         self.gradX = gradient_2d(self.X.current_state)
@@ -81,6 +123,13 @@ class GaussianInpaintingModel(BaseModel):
         return self.X.current_state
 
     def compute_potential(self) -> float:
+        """compute_potential Computes the potential.
+
+        Returns
+        -------
+        float
+            Potential of the targeted law.
+        """
         p = 0
         p += np.sum( ( self.observations - self.mask * self.X.current_state)**2 ) / (2 * self.sigma2 ) # suboptimal
         p += np.sum( (self.gradX - self.Z.current_state) ** 2 ) / (2*self.split_coeff)

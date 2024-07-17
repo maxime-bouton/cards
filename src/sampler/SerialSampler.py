@@ -19,19 +19,19 @@ class Sampler():
         Parameters
         ----------
         batch_size : int
-            _description_
+            Lenght of a batch.
         nb_batches : int
-            _description_
+            Number of batches to be computed.
         seed : int
-            _description_
+            Seed of the random number generator.
         file_name : str
-            _description_
+            Name under wich the samples will be saved.
         save_path : str
-            _description_
+            Path to the location where we will save the samples.
         model : BaseModel
-            _description_
+            Model used to solve an inverse problem.
         estimator_handler : BaseEstimatorBuilder
-            _description_
+            #! will change
         """
         self.batch_size = batch_size
         self.nb_batches = nb_batches
@@ -51,6 +51,9 @@ class Sampler():
         self.data_manager = DataManager()
         
     def sample(self):
+        """sample Main method. Call the update method of the model inside a loop and save the current state at regular intarvales.
+        A partial estimator is built along the iterations.
+        """
         for batch_num in range(self.start_batch_num, self.nb_batches):
 
             self.estimator_handler.reset()
@@ -76,6 +79,15 @@ class Sampler():
 
 
     def set_rng(self, state_array : np.ndarray, inc_array : np.ndarray) -> None :
+        """set_rng Set the internal state of the random number generator to the the one given in entry.
+
+        Parameters
+        ----------
+        state_array : np.ndarray
+            Internal state of the random number generator.
+        inc_array : np.ndarray
+            Internal state of the random number generator.
+        """
         new_state = int.from_bytes(state_array, sys.byteorder)
         new_inc = int.from_bytes(inc_array, sys.byteorder)
 
@@ -87,11 +99,21 @@ class Sampler():
 
 
     def restart(self, file_name : str, batch_restart : int, new_save_path : str):
-    
-        #self.data_manager.load_rng( self.rng, file_name)
-        #self.data_manager.load( self.model.get_states(), file_name )
+        """restart Resume the sampling at a given state. It may be used to start a second where a first run had been interrupted.
+        This second run will generate the exact same data that the first run would have.
+        It must be called after the constructor.
 
-        data = self.data_manager.load_h52dict( file_name)
+        Parameters
+        ----------
+        file_name : str
+            Name under wich the samples will be saved.
+        batch_restart : int
+            Number of the batch where we will resume the sampling.
+        new_save_path : str
+            Path to the location where we will save the samples.
+        """
+
+        data = self.data_manager.load_h5( file_name)
         self.set_rng( data["rng_state_array"], data["rng_inc_array"] )
         self.model.set_states(data)
 
