@@ -2,7 +2,7 @@ from TransitionKernel.TransitionKernel import PSGLA
 from models.GaussianInpaintingModel import GaussianInpaintingModel
 from sampler.SerialSampler import Sampler
 from functionals.numpy.prox import prox_l21norm
-from estimator.estimatorBuilder import mmse_builder
+from estimator.estimatorBuilder import MMSEBuilder
 
 import h5py
 import json
@@ -32,6 +32,7 @@ if __name__ == '__main__' :
     nb_batches = params["nbCheckpoint"]
     batch_size = params["sampleSize"] // nb_batches
     save_path = params["savePath"]
+    restart_save_path = params["reloadSavePath"]
 
     split_coeff = params["alpha"]
     reg_coeff = params["regularizationCoefficient"]
@@ -60,7 +61,7 @@ if __name__ == '__main__' :
                 split_coeff)
     # conditionnals are set in the constructor
 
-    mmse_handler = mmse_builder( X.current_state.shape )
+    mmse_handler = MMSEBuilder( X.current_state.shape )
 
     sampler = Sampler(
                 batch_size,
@@ -71,6 +72,6 @@ if __name__ == '__main__' :
                 model,
                 mmse_handler)
     
-    #sampler.restart("./sample/sample5.h5", 6, "./resumed/")
+    sampler.restart("./sample/sample5.h5", 6, restart_save_path)
 
     sampler.sample()
