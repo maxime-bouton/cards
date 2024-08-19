@@ -3,6 +3,7 @@
 """
 from models.BaseModel import BaseModel
 from TransitionKernel.TransitionKernel import BaseSerialTransitionKernel, PSGLA
+from estimator.estimatorBuilder import MMSEBuilder
 
 import numpy as np
 
@@ -60,6 +61,8 @@ class GaussianInpaintingModel(BaseModel):
         self.reg_coeff = reg_coeff
         self.split_coeff = split_coeff
         self.sigma2 = sigma2
+
+        self.estimator_builder = MMSEBuilder( observations.shape )
 
         match type(X).__qualname__:
             case PSGLA.__qualname__:

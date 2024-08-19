@@ -13,8 +13,7 @@ class Sampler():
                 seed : int,
                 file_name : str,
                 save_path : str,
-                model : BaseModel,
-                estimator_handler : BaseEstimatorBuilder  ) -> None:
+                model : BaseModel  ) -> None:
         """
         Parameters
         ----------
@@ -30,8 +29,6 @@ class Sampler():
             Path to the location where we will save the samples.
         model : BaseModel
             Model used to solve an inverse problem.
-        estimator_handler : BaseEstimatorBuilder
-            #! will change
         """
         self.batch_size = batch_size
         self.nb_batches = nb_batches
@@ -44,7 +41,6 @@ class Sampler():
         self.save_path = save_path
 
         self.model = model
-        self.estimator_handler = estimator_handler
 
         self.potential = np.zeros([self.batch_size])
 
@@ -56,22 +52,22 @@ class Sampler():
         """
         for batch_num in range(self.start_batch_num, self.nb_batches):
 
-            self.estimator_handler.reset()
+            self.model.estimator_builder.reset()
 
             for i in range(self.batch_size):
                 self.model.update(self.rng)
 
                 self.potential[i] = self.model.compute_potential()
-                self.estimator_handler.aggregate_states( self.model.give_data2estimator() ) #! slow down -> bench
+                self.model.estimator_builder.aggregate_states( self.model.give_data2estimator() ) #! slow down -> bench
 
-            self.estimator_handler.build_estimator(self.batch_size)
+            self.model.estimator_builder.build_estimator(self.batch_size)
 
             #save data on disk
             full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
             with h5py.File( full_name , 'w') as file :
                 self.data_manager.save_dict( self.model.get_states(), file ) 
                 self.data_manager.save_array(   self.potential, file, "potential" )
-                self.data_manager.save_array(   self.estimator_handler.estimator , file, self.estimator_handler.name )
+                self.data_manager.save_array(   self.model.estimator_builder.estimator , file, self.model.estimator_builder.name )
                 self.data_manager.save_rng( self.rng, file)
 
             print("Batch", batch_num, "out of", self.nb_batches, "computed.")

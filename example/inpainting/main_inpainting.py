@@ -69,9 +69,8 @@ if __name__ == '__main__' :
                 seed,
                 "sample",
                 save_path,
-                model,
-                mmse_handler)
+                model)
     
-    sampler.restart("./sample/sample5.h5", 6, restart_save_path)
+    #sampler.restart("./sample/sample5.h5", 6, restart_save_path)
 
     sampler.sample()
