@@ -1,0 +1,75 @@
+from models import BaseModel
+from DataManager.DataManager import DataManager
+from estimator.GpuEstimatorBuilder import BaseGpuEstimatorBuilder
+
+import cupy as cp
+import numpy as np
+import sys
+import h5py
+
+class GpuSampler():
+    def __init__(self,
+                batch_size : int,
+                nb_batches : int,
+                seed : int,
+                file_name : str,
+                save_path : str,
+                model : BaseModel  ) -> None:
+        """
+        Parameters
+        ----------
+        batch_size : int
+            Lenght of a batch.
+        nb_batches : int
+            Number of batches to be computed.
+        seed : int
+            Seed of the random number generator.
+        file_name : str
+            Name under wich the samples will be saved.
+        save_path : str
+            Path to the location where we will save the samples.
+        model : BaseModel
+            Model used to solve an inverse problem.
+        """
+        self.batch_size = batch_size
+        self.nb_batches = nb_batches
+        self.start_batch_num = 0
+
+        self.seed = seed
+        self.rng = cp.random.default_rng(self.seed)
+
+        self.file_name = file_name
+        self.save_path = save_path
+
+        self.model = model
+
+        self.potential = np.zeros([self.batch_size])
+
+        self.data_manager = DataManager()
+
+    def sample(self):
+            """Sampler main method. Call the update method of the model inside a loop and save the current state at regular intarvales.
+            A partial estimator is built along the iterations.
+            """
+            for batch_num in range(self.start_batch_num, self.nb_batches):
+
+                self.model.estimator_builder.reset()
+
+                for i in range(self.batch_size):
+                    self.model.update(self.rng)
+
+                    self.potential[i] = self.model.compute_potential()
+                    self.model.aggregate_states() #! slow down -> bench
+
+                self.model.estimator_builder.build_estimator(self.batch_size)
+
+                #save data on disk
+                full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
+                with h5py.File( full_name , 'w') as file :
+                    self.data_manager.save_dict( self.model.get_states(), file ) 
+                    self.data_manager.save_array(   self.potential, file, "potential" )
+                    self.data_manager.save_array(  cp.asnumpy( self.model.estimator_builder.estimator )  , file, self.model.estimator_builder.name )
+                    #self.data_manager.save_rng( self.rng, file) #! needs to be done another way
+
+                print("Batch", batch_num, "out of", self.nb_batches, "computed.")
+                print("Potential :", self.potential[-1])

@@ -41,8 +41,8 @@ if __name__ == '__main__' :
                 X ,
                 Z ,
                 cp.asarray(sigma2),
-                cp.asarray(reg_coeff),
-                cp.asarray(split_coeff)
+                reg_coeff,
+                split_coeff
                 )
     # conditionnals are set in the constructor
 
