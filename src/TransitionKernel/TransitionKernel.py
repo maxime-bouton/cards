@@ -19,14 +19,16 @@ class PSGLA( BaseSerialTransitionKernel ):
 
     def prox(self, state : np.ndarray) ->  np.ndarray :
         print("Warning : proximal operator not defined !")
-        pass
+        return NotImplemented
+    
     def grad(self, state : np.ndarray) ->  np.ndarray :
         print("Warning : gradient function not defined!")
-        pass
+        return NotImplemented
 
     def mc_step(self, rng):
         self.current_state = self.prox(  self.current_state + np.sqrt(2*self.step_size)*rng.standard_normal( self.current_state.shape ) \
-                                        -self.step_size*self.grad( self.current_state) )
+                                        - self.step_size*self.grad( self.current_state) )
+        
 
 class MYULA( BaseSerialTransitionKernel ):
     def __init__(self, dims, step_size, reg_coeff):
@@ -38,10 +40,11 @@ class MYULA( BaseSerialTransitionKernel ):
 
     def prox(self, state : np.ndarray) ->  np.ndarray :
         print("Warning : proximal operator has not be defined !")
-        pass
+        return NotImplemented
+    
     def grad(self, state : np.ndarray) ->  np.ndarray :
         print("Warning : gradient function has not be defined !")
-        pass
+        return NotImplemented
 
     def mc_step(self, rng):
         self.current_state = self.current_state  + np.sqrt( 2*self.step_size )*rng.standard_normal( self.current_state.shape ) \

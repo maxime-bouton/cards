@@ -122,8 +122,8 @@ class GaussianInpaintingModel(BaseModel):
 
         self.Z.mc_step(rng)
 
-    def give_data2estimator(self):
-        return self.X.current_state
+    def aggregate_states(self):
+        self.estimator_builder.estimator += self.X.current_state
 
     def compute_potential(self) -> float:
         """compute_potential Computes the potential.

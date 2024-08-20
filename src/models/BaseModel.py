@@ -9,7 +9,7 @@ class BaseModel(ABC):
     
     @abstractmethod
     def update(self, rng : random.Generator) -> None :
-        """update Gobal update of the model. May call the update method of several transition kernel.
+        """update Global update of the model. May call the update method of several transition kernels.
 
         Parameters
         ----------
@@ -27,7 +27,7 @@ class BaseModel(ABC):
         dict
             Current state of the variables.
         """
-        pass
+        return NotImplemented
 
     @abstractmethod
     def set_states(self, states : dict) -> None :
@@ -38,7 +38,7 @@ class BaseModel(ABC):
         states : dict
             Dictionnary containing a new state for the variables of the model.
         """
-        pass
+        return NotImplemented
 
     @abstractmethod
     def compute_potential(self) -> float :
@@ -49,9 +49,8 @@ class BaseModel(ABC):
         float
             Potential.
         """
-        pass
+        return NotImplemented
 
-    #! to be deleted, becomes useless when estimator is built inside the model.
     @abstractmethod
-    def give_data2estimator(self):
-        pass
+    def aggregate_states(self) -> None:
+        return NotImplemented

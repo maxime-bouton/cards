@@ -1,12 +1,12 @@
-from TransitionKernel.TransitionKernel import PSGLA
-from models.GaussianInpaintingModel import GaussianInpaintingModel
-from sampler.SerialSampler import Sampler
-from functionals.numpy.prox import prox_l21norm
-from estimator.estimatorBuilder import MMSEBuilder
+from TransitionKernel.GpuTransitionKernel import GpuPSGLA
+from models.GpuGaussianInpaintingModel import GpuGaussianInpaintingModel
+from sampler.GpuSampler import GpuSampler
+from estimator.GpuEstimatorBuilder import GpuMMSEBuilder
 
 import h5py
 import json
 import numpy as np
+import cupy as cp
 
 
 if __name__ == '__main__' :
@@ -29,25 +29,26 @@ if __name__ == '__main__' :
         sigma2 = data_file["sig2"][:]
         observations = data_file["data"][:]
 
-    step_size_X = 0.99 * 1./( 8./split_coeff + 1./sigma2 )
-    X = PSGLA(observations.shape, step_size_X)
+    step_size_X = cp.asarray( 0.99 * 1./( 8./split_coeff + 1./sigma2 ) )
+    X = GpuPSGLA(observations.shape, step_size_X)
 
-    step_size_Z = 0.99 / split_coeff
-    Z = PSGLA( (2,*X.current_state.shape), step_size_Z)
+    step_size_Z = cp.asarray( 0.99 / split_coeff )
+    Z = GpuPSGLA( (2,*X.current_state.shape), step_size_Z)
 
-    model = GaussianInpaintingModel(
-                observations ,
-                mask,
+    model = GpuGaussianInpaintingModel(
+                cp.asarray(observations) ,
+                cp.asarray(mask),
                 X ,
                 Z ,
-                sigma2,
-                reg_coeff,
-                split_coeff)
+                cp.asarray(sigma2),
+                cp.asarray(reg_coeff),
+                cp.asarray(split_coeff)
+                )
     # conditionnals are set in the constructor
 
-    mmse_handler = MMSEBuilder( X.current_state.shape )
+    mmse_handler = GpuMMSEBuilder( X.current_state.shape )
 
-    sampler = Sampler(
+    sampler = GpuSampler(
                 batch_size,
                 nb_batches,
                 seed,

@@ -10,7 +10,7 @@ class Sampler():
     def __init__(self,
                 batch_size : int,
                 nb_batches : int,
-                seed : int,
+                seed : int, #! use generator instead of sees
                 file_name : str,
                 save_path : str,
                 model : BaseModel  ) -> None:
@@ -47,7 +47,7 @@ class Sampler():
         self.data_manager = DataManager()
         
     def sample(self):
-        """sample Main method. Call the update method of the model inside a loop and save the current state at regular intarvales.
+        """sampler Main method. Call the update method of the model inside a loop and save the current state at regular intarvales.
         A partial estimator is built along the iterations.
         """
         for batch_num in range(self.start_batch_num, self.nb_batches):
@@ -58,7 +58,7 @@ class Sampler():
                 self.model.update(self.rng)
 
                 self.potential[i] = self.model.compute_potential()
-                self.model.estimator_builder.aggregate_states( self.model.give_data2estimator() ) #! slow down -> bench
+                self.model.aggregate_states() #! slow down -> bench
 
             self.model.estimator_builder.build_estimator(self.batch_size)
 
