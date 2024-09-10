@@ -5,6 +5,7 @@
 import h5py
 import numpy as np
 import sys
+import torch
 
 class DataManager():
     def save_dict(self,data : dict , file ) -> None:
@@ -85,3 +86,6 @@ class DataManager():
         new_rng_state["state"]["inc"] = loaded_inc
 
         rng.__setstate__(new_rng_state)
+
+    def save_offset(self, rng : torch.Generator, file) -> None :
+        file['offset'] = rng.get_offset()

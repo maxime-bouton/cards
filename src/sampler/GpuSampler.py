@@ -2,6 +2,7 @@ from models import BaseModel
 from DataManager.DataManager import DataManager
 from estimator.GpuEstimatorBuilder import BaseGpuEstimatorBuilder
 
+import torch
 import cupy as cp
 import numpy as np
 import sys
@@ -36,7 +37,11 @@ class GpuSampler():
         self.start_batch_num = 0
 
         self.seed = seed
-        self.rng = cp.random.default_rng(self.seed)
+        #self.rng = cp.random.default_rng(self.seed)
+        #self.rng = cp.random.RandomState(seed = self.seed, method  = cp.cuda.curand.CURAND_RNG_PSEUDO_DEFAULT)
+        # randomState is not a generator but it contains one , see : https://github.com/cupy/cupy/blob/main/cupy/random/_generator.py
+
+        self.rng = torch.Generator(device='cuda').manual_seed(self.seed)
 
         self.file_name = file_name
         self.save_path = save_path
@@ -67,9 +72,22 @@ class GpuSampler():
                 full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
                 with h5py.File( full_name , 'w') as file :
                     self.data_manager.save_dict( self.model.get_states(), file ) 
-                    self.data_manager.save_array(   self.potential, file, "potential" )
-                    self.data_manager.save_array(  cp.asnumpy( self.model.estimator_builder.estimator )  , file, self.model.estimator_builder.name )
-                    #self.data_manager.save_rng( self.rng, file) #! needs to be done another way
+                    self.data_manager.save_array( self.potential, file, "potential" )
+                    self.data_manager.save_offset( self.rng, file)
 
                 print("Batch", batch_num, "out of", self.nb_batches, "computed.")
                 print("Potential :", self.potential[-1])
+
+    def restart_rng(self):
+        #self.rng = cp.random.RandomState(seed = self.seed, method  = cp.cuda.curand.CURAND_RNG_PSEUDO_DEFAULT)
+        offset = ( self.start_batch_num * self.batch_size  * self.model.get_step_offset() ) //2
+        cp.cuda.curand.setGeneratorOffset(self.rng._generator, offset)
+
+    def restart(self, file_name : str, batch_restart : int, new_save_path : str):
+
+        data = self.data_manager.load_h5( file_name)
+        self.save_path = new_save_path
+        self.start_batch_num = batch_restart
+
+        self.restart_rng()
+        self.model.set_states(data)   

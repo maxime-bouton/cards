@@ -11,6 +11,7 @@ import cupy as cp
 
 if __name__ == '__main__' :
     config_file = open("config.json")
+    #config_file = open("./example/inpainting/config_debug.json")
     params = json.load(config_file)
 
     nb_batches = params["nbCheckpoint"]
@@ -56,6 +57,6 @@ if __name__ == '__main__' :
                 save_path,
                 model)
     
-    #sampler.restart("./sample/sample5.h5", 6, restart_save_path)
+    #sampler.restart("./produced_data/sample/sample5.h5", 6, restart_save_path)
 
     sampler.sample()

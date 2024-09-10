@@ -67,7 +67,6 @@ class Sampler():
             with h5py.File( full_name , 'w') as file :
                 self.data_manager.save_dict( self.model.get_states(), file ) 
                 self.data_manager.save_array(   self.potential, file, "potential" )
-                self.data_manager.save_array(   self.model.estimator_builder.estimator , file, self.model.estimator_builder.name )
                 self.data_manager.save_rng( self.rng, file)
 
             print("Batch", batch_num, "out of", self.nb_batches, "computed.")

@@ -1,5 +1,6 @@
 import numpy as np
 import cupy as cp
+import torch
 
 from abc import ABC, abstractmethod
 
@@ -28,5 +29,9 @@ class GpuPSGLA( BaseGpuTransitionKernel ):
         return NotImplemented
 
     def mc_step(self, rng):
-        self.current_state = self.prox(  self.current_state + np.sqrt(2*self.step_size)*rng.standard_normal( self.current_state.shape ) \
+        #self.current_state = self.prox(  self.current_state + np.sqrt(2*self.step_size)*rng.standard_normal( self.current_state.shape ) \
+        #                               - self.step_size*self.grad( self.current_state) )
+        self.current_state = self.prox(  self.current_state \
+                                        + np.sqrt(2*self.step_size)\
+                                        *cp.asarray( torch.normal( torch.as_tensor(cp.zeros_like(self.current_state), device='cuda'), torch.as_tensor(cp.ones_like(self.current_state), device='cuda'),generator=rng) )\
                                        - self.step_size*self.grad( self.current_state) )
