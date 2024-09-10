@@ -37,7 +37,10 @@ class DataManager():
         data = {}
         with h5py.File(file_name, 'r') as file:
             for key in file.keys():
-                data[key] = file[key][:]
+                if file[key].size > 1:
+                    data[key] = file[key][:]
+                else :
+                    data[key] = file[key][()]
         return data
 
 

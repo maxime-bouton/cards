@@ -78,10 +78,11 @@ class GpuSampler():
                 print("Batch", batch_num, "out of", self.nb_batches, "computed.")
                 print("Potential :", self.potential[-1])
 
-    def restart_rng(self):
+    def restart_rng(self, offset):
         #self.rng = cp.random.RandomState(seed = self.seed, method  = cp.cuda.curand.CURAND_RNG_PSEUDO_DEFAULT)
-        offset = ( self.start_batch_num * self.batch_size  * self.model.get_step_offset() ) //2
-        cp.cuda.curand.setGeneratorOffset(self.rng._generator, offset)
+        #offset = ( self.start_batch_num * self.batch_size  * self.model.get_step_offset() ) //2
+        #cp.cuda.curand.setGeneratorOffset(self.rng._generator, offset)
+        self.rng.set_offset(offset)
 
     def restart(self, file_name : str, batch_restart : int, new_save_path : str):
 
@@ -89,5 +90,5 @@ class GpuSampler():
         self.save_path = new_save_path
         self.start_batch_num = batch_restart
 
-        self.restart_rng()
+        self.restart_rng( int( data['offset'][()] ) )
         self.model.set_states(data)   

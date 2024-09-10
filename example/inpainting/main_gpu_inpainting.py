@@ -58,5 +58,6 @@ if __name__ == '__main__' :
                 model)
     
     #sampler.restart("./produced_data/sample/sample5.h5", 6, restart_save_path)
+    sampler.restart("../../produced_data/sample/sample5.h5", 6, restart_save_path)
 
     sampler.sample()
