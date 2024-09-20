@@ -79,8 +79,6 @@ class GpuGaussianInpaintingModel(BaseModel):
         self.split_coeff = split_coeff
         self.sigma2 = sigma2
 
-        self.offset = 0
-
         self.estimator_builder = GpuMMSEBuilder( observations.shape )
 
         match type(X).__qualname__:
@@ -112,7 +110,6 @@ class GpuGaussianInpaintingModel(BaseModel):
         states['X'] = cp.asnumpy( self.X.current_state )
         states['Z'] = cp.asnumpy( self.Z.current_state )
         states['MMSE'] = cp.asnumpy(self.estimator_builder.estimator)
-        #states['offset'] = np.asarray(self.offset)
         return states
     
     def set_states(self, states: dict) -> None:
@@ -128,7 +125,6 @@ class GpuGaussianInpaintingModel(BaseModel):
         self.X.current_state = cp.asarray( states["X"] ).copy()
         self.Z.current_state = cp.asarray( states["Z"] ).copy()
         self.gradX = gradient_2d(self.X.current_state)
-        #self.offset = states['offset'][:]
     
     def update(self, rng : cp.random.Generator ) -> None:
         """update Gobal update of the model. Updates every kernel used by the model and computes annex variables.
@@ -139,12 +135,10 @@ class GpuGaussianInpaintingModel(BaseModel):
             Random number generator, given by the sampler.
         """
         self.X.mc_step(rng)
-        #self.offset += self.X.current_state.size
 
         self.gradX = gradient_2d(self.X.current_state)
 
         self.Z.mc_step(rng)
-        #self.offset += self.Z.current_state.size
 
     def aggregate_states(self):
         self.estimator_builder.estimator += self.X.current_state
@@ -162,8 +156,3 @@ class GpuGaussianInpaintingModel(BaseModel):
         p += cp.sum( (self.gradX - self.Z.current_state) ** 2 ) / (2*self.split_coeff)
         p += self.reg_coeff * l21_norm(self.Z.current_state) #! must be defined on gpu with cupy
         return p
-    
-    def get_step_offset(self) -> int:
-        offset =  self.X.current_state.size + self.Z.current_state.size
-        return offset
-        #return self.offset

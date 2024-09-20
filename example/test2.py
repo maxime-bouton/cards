@@ -6,29 +6,10 @@ from mpi4py import MPI
 from slicer.comm_slicer import CommSlicer
 from slicer.cartesian_comm_slicer import CartesianCommSlicer
 from communicator.sync_cartesian_communicator import SyncCartesianCommunicator
-from operators.jtv import  chunk_gradient_2d_adjoint, gradient_2d
+from operators.jtv import  chunk_gradient_2d_adjoint,gradient_2d
 
 
 def chunk_gradient_2d(x, islast):
-    r"""Chunk of the 2d discrete gradient (with jit support).
-
-    Compute a chunk of the 2d discrete gradient operator (using jit
-    compilation). Assumes forward border overlap between the arrays handled by
-    consecutive worker.
-
-    Parameters
-    ----------
-    x : numpy.ndarray[float64 or complex128], 2d
-        Input array including border for forwrd overlap.
-    islast : numpy.ndarray, bool, 1d
-        Vector indicating whether the chunk is the last one along each
-        dimension of the Cartesian process grid.
-
-    Returns
-    -------
-    u : numpy.ndarray[float64 or complex128], 2d
-        Local chunk of the horizontal and vertical differences.
-    """
     assert (
         len(x.shape) == 2 and islast.size == 2
     ), "gradient_2d: Invalid input, expected len(x.shape)==len(islast.shape)==2"
@@ -80,7 +61,6 @@ def chunk_gradient_2d(x, islast):
     return u
 
 
-
 if __name__ == '__main__' :
     """
     ranknd = np.asarray([0,1])
@@ -127,7 +107,7 @@ if __name__ == '__main__' :
     start_j = cartesian_comm.cartslicer.tile_range[1][0]
     
 
-    local = np.ones(cartesian_comm.cartslicer.facet_size) * rank
+    local = np.zeros(cartesian_comm.cartslicer.facet_size)
     #local = np.ones(cartesian_comm.cartslicer.tile_size) * rank
     local[:m,:n] = X[start_i: start_i+m, start_j: start_j+n].copy()
 
@@ -142,7 +122,8 @@ if __name__ == '__main__' :
     chunk_grad = np.ones([2,*cartesian_comm.cartslicer.tile_size]) * rank
     #chunk_grad[:,:m,:n] = np.concatenate([local[None,...],local[None,...]])
 
-    chunk_grad = chunk_gradient_2d(local , np.asarray([last_x,last_y]) ) 
+    u,v= chunk_gradient_2d(local , np.asarray([last_x,last_y]) ) 
+    chunk_grad = np.concatenate([u[None,...],v[None,...]], axis=0)
     
 
 
@@ -187,9 +168,8 @@ if __name__ == '__main__' :
         #distributed_grad[0][:,-1] = np.zeros([M])
         #distributed_grad[1][-1,:] = np.zeros([N])
 
-        #print( (global_grad[0]-distributed_grad[0])[:M,:N], '\n')
-        #print( (global_grad[1]-distributed_grad[1])[:M,:N], '\n')
-        #print(global_grad[1]-distributed_grad[1])
+        print( (global_grad[0]-distributed_grad[0])[:M,:N], '\n')
+        print( (global_grad[1]-distributed_grad[1])[:M,:N], '\n')
         #print(global_grad[0][:M,:N],'\n')
         print(distributed_grad)
         #print(global_grad[1])

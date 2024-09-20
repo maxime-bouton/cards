@@ -33,5 +33,5 @@ class GpuPSGLA( BaseGpuTransitionKernel ):
         #                               - self.step_size*self.grad( self.current_state) )
         self.current_state = self.prox(  self.current_state \
                                         + np.sqrt(2*self.step_size)\
-                                        *cp.asarray( torch.normal( torch.zeros(self.current_state.shape, device='cuda'), torch.ones(self.current_state.shape, device='cuda'),generator=rng) )\
+                                        *cp.from_dlpack( torch.normal( torch.zeros(self.current_state.shape, device='cuda'), torch.ones(self.current_state.shape, device='cuda'),generator=rng) )\
                                        - self.step_size*self.grad( self.current_state) )

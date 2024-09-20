@@ -47,8 +47,6 @@ if __name__ == '__main__' :
                 )
     # conditionnals are set in the constructor
 
-    mmse_handler = GpuMMSEBuilder( X.current_state.shape )
-
     sampler = GpuSampler(
                 batch_size,
                 nb_batches,

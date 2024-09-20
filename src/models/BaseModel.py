@@ -54,7 +54,3 @@ class BaseModel(ABC):
     @abstractmethod
     def aggregate_states(self) -> None:
         return NotImplemented
-    
-class BaseGpuModel(BaseModel):
-    def get_step_offset(self) -> int :
-        return NotImplemented
