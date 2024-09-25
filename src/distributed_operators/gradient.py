@@ -74,13 +74,80 @@ def chunk_gradient_2d(x, islast):
 
     return u
 
+
+def chunk_gradient_2d_adjoint(uh, uv, x, isfirst, islast):
+    r"""Chunk of the adjoint 2d discrete gradient (with jit support).
+
+    Compute a chunk of the adjoint 2d discrete gradient. Assumes backward border overlap between the arrays handled by consecutive worker.
+
+    Parameters
+    ----------
+    uh : numpy.ndarray[float64 or complex128], 2d
+        Local chunk of the horizontal difference.
+    uv : numpy.ndarray[float64 or complex128], 2d
+        Local chunk of the vertical difference.
+    x : numpy.ndarray[float64 or complex128], 2d
+        Output array (updated in-place).
+    isfirst : numpy.ndarray, bool, 1d
+        Vector indicating whether the chunk is the first one along each
+        dimension of the Cartesian process grid.
+    islast : numpy.ndarray, bool, 1d
+        Vector indicating whether the chunk is the last one along each
+        dimension of the Cartesian process grid.
+
+    ..note::
+        The array ``x`` is updated in-place. Backward overlap is expected.
+    """
+    # TODO: need to check size of u?
+    assert (
+        len(uh.shape) == len(uv.shape) == 2
+    ), "gradient_2d_adjoint: Invalid input, expected len(uh.shape) == len(uv.shape) == 2"
+
+    # vertical: uv = u[1, :, :]
+    if isfirst[0]:  # no overlap along axis 0
+        x[0, :] -= uv[0, :]
+        if islast[0]:
+            x[1:-1, :] += uv[:-2, :] - uv[1:-1, :]
+            x[-1, :] += uv[-2, :]
+        else:
+            x[1:, :] += uv[:-1, :] - uv[1:, :]
+    else:
+        if islast[0]:
+            x[:-1, :] += uv[:-2, :] - uv[1:-1, :]
+            x[-1, :] += uv[-2, :]
+        else:
+            x += uv[:-1, :] - uv[1:, :]
+
+    # horizontal: uh = u[0, :, :]
+    if isfirst[1]:  # no overlap along axis 0
+        x[:, 0] -= uh[:, 0]
+        if islast[1]:
+            x[:, 1:-1] += uh[:, :-2] - uh[:, 1:-1]
+            x[:, -1] += uh[:, -2]
+        else:
+            x[:, 1:] += uh[:, :-1] - uh[:, 1:]
+    else:
+        if islast[1]:
+            x[:, :-1] += uh[:, :-2] - uh[:, 1:-1]
+            x[:, -1] += uh[:, -2]
+        else:
+            x += uh[:, :-1] - uh[:, 1:]
+
+    return
+
 class distributed_gradient2d(  ):
     def __init__(self, global_size : np.ndarray, grid_size : np.ndarray ) -> None:
+        
         overlap = np.asarray([1,1])
         self.cart_comm = SyncCartesianCommunicator( MPI.COMM_WORLD, grid_size, global_size, overlap, overlap, backward=False )
+        self.adj_cart_comm_v = SyncCartesianCommunicator( MPI.COMM_WORLD, grid_size, global_size, np.asarray([1,0]),np.asarray([1,0]), backward=True )
+        self.adj_cart_comm_h = SyncCartesianCommunicator( MPI.COMM_WORLD, grid_size, global_size, np.asarray([0,1]),np.asarray([0,1]), backward=True )
+
         self.local_buffer = np.zeros(self.cart_comm.cartslicer.facet_size)
+        self.local_buffer_adj_v = np.zeros(self.adj_cart_comm_v.cartslicer.facet_size)
+        self.local_buffer_adj_h = np.zeros(self.adj_cart_comm_h.cartslicer.facet_size)
         
-    def compute(self, local_data : np.ndarray) -> np.ndarray :
+    def compute_grad(self, local_data : np.ndarray) -> np.ndarray :
         [m,n] = self.cart_comm.cartslicer.tile_size
         self.local_buffer[:m,:n] = local_data.copy()
 
@@ -91,4 +158,19 @@ class distributed_gradient2d(  ):
         is_border = np.asarray( [ranknd[0] == (grid_size[0]-1), ranknd[1] == (grid_size[1]-1)  ] )
         return chunk_gradient_2d(self.local_buffer, is_border)
 
+    def compute_adjoint(self,res : np.ndarray , local_data_h : np.ndarray, local_data_v : np.ndarray) -> None :
+        [m,n] = self.adj_cart_comm_v.cartslicer.tile_size
+        self.local_buffer_adj_v[-m:,-n:] = local_data_v.copy()
+        self.local_buffer_adj_h[-m:,-n:] = local_data_h.copy()
+
+        self.adj_cart_comm_v.update_borders(self.local_buffer_adj_v)
+        self.adj_cart_comm_h.update_borders(self.local_buffer_adj_h)
+
+        grid_size = self.cart_comm.grid_size
+        ranknd = self.cart_comm.ranknd
+        is_first = np.asarray([ ranknd[0] == 0 , ranknd[1] == 0  ])
+        is_last = np.asarray( [ ranknd[0] == (grid_size[0]-1), ranknd[1] == (grid_size[1]-1) ] )
+
+        chunk_gradient_2d_adjoint(self.local_buffer_adj_h, self.local_buffer_adj_v, res, is_first, is_last)
+        return 
 

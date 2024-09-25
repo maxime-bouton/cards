@@ -6,67 +6,8 @@ from slicer.comm_slicer import CommSlicer
 from slicer.cartesian_comm_slicer import CartesianCommSlicer
 from communicator.sync_cartesian_communicator import SyncCartesianCommunicator
 from operators.jtv import  gradient_2d_adjoint
+from distributed_operators.gradient import chunk_gradient_2d_adjoint
 
-
-def chunk_gradient_2d_adjoint(uh, uv, x, isfirst, islast):
-    r"""Chunk of the adjoint 2d discrete gradient (with jit support).
-
-    Compute a chunk of the adjoint 2d discrete gradient. Assumes backward border overlap between the arrays handled by consecutive worker.
-
-    Parameters
-    ----------
-    uh : numpy.ndarray[float64 or complex128], 2d
-        Local chunk of the horizontal difference.
-    uv : numpy.ndarray[float64 or complex128], 2d
-        Local chunk of the vertical difference.
-    x : numpy.ndarray[float64 or complex128], 2d
-        Output array (updated in-place).
-    isfirst : numpy.ndarray, bool, 1d
-        Vector indicating whether the chunk is the first one along each
-        dimension of the Cartesian process grid.
-    islast : numpy.ndarray, bool, 1d
-        Vector indicating whether the chunk is the last one along each
-        dimension of the Cartesian process grid.
-
-    ..note::
-        The array ``x`` is updated in-place. Backward overlap is expected.
-    """
-    # TODO: need to check size of u?
-    assert (
-        len(uh.shape) == len(uv.shape) == 2
-    ), "gradient_2d_adjoint: Invalid input, expected len(uh.shape) == len(uv.shape) == 2"
-
-    # vertical: uv = u[1, :, :]
-    if isfirst[0]:  # no overlap along axis 0
-        x[0, :] -= uv[0, :]
-        if islast[0]:
-            x[1:-1, :] += uv[:-2, :] - uv[1:-1, :]
-            x[-1, :] += uv[-2, :]
-        else:
-            x[1:, :] += uv[:-1, :] - uv[1:, :]
-    else:
-        if islast[0]:
-            x[:-1, :] += uv[:-2, :] - uv[1:-1, :]
-            x[-1, :] += uv[-2, :]
-        else:
-            x += uv[:-1, :] - uv[1:, :]
-
-    # horizontal: uh = u[0, :, :]
-    if isfirst[1]:  # no overlap along axis 0
-        x[:, 0] -= uh[:, 0]
-        if islast[1]:
-            x[:, 1:-1] += uh[:, :-2] - uh[:, 1:-1]
-            x[:, -1] += uh[:, -2]
-        else:
-            x[:, 1:] += uh[:, :-1] - uh[:, 1:]
-    else:
-        if islast[1]:
-            x[:, :-1] += uh[:, :-2] - uh[:, 1:-1]
-            x[:, -1] += uh[:, -2]
-        else:
-            x += uh[:, :-1] - uh[:, 1:]
-
-    return
 
 
 if __name__ == '__main__' :
@@ -95,6 +36,8 @@ if __name__ == '__main__' :
 
     if rank == 0 :
         X= np.random.rand(2,M,N)
+        X = np.ones([2,M,N])
+        X[0,:,:] = np.zeros([M,N])
     
     cart_comm.Bcast([X, MPI.DOUBLE], root=0)
 
@@ -134,11 +77,12 @@ if __name__ == '__main__' :
         for i in range( comm.Get_size() ):
             comm.Recv([chunk_adj,MPI.DOUBLE], i )
             coord = cart_comm.Get_coords(i)
+            #print(i, coord, cartesian_comm_rows.ranknd ) #! ranknd form root thread, return [0,0]
             x = coord[0]*m
             y = coord[1]*n
             distributed_adj[ x:x+m , y:y+n ] = chunk_adj[-m:,-n:].copy()
 
-        print( (global_adj-distributed_adj)[:M,:N], '\n')
-        print(distributed_adj[-1,:],'\n')
-        print(global_adj[-1,:])
+        #print( (global_adj-distributed_adj)[:M,:N], '\n')
+        print(distributed_adj,'\n')
+        #print(global_adj)
         print(np.allclose( global_adj,distributed_adj ) )
