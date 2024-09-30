@@ -1,7 +1,7 @@
 """ 
     Implement a denoising model for the inpainting problem with guassian noise.
 """
-from models.BaseModel import BaseGpuModel
+from models.BaseModel import BaseModel
 from TransitionKernel.TransitionKernel import BaseSerialTransitionKernel, PSGLA
 from estimator.estimatorBuilder import MMSEBuilder
 
@@ -26,7 +26,7 @@ def gradient_2d_adjoint(X):
 #! those two functions must be defined elsewhere
 
 
-class GaussianInpaintingModel(BaseGpuModel):
+class GaussianInpaintingModel(BaseModel):
     def __init__(self,
                 observations : np.ndarray,
                 mask : np.ndarray,

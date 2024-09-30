@@ -35,6 +35,8 @@ classDiagram
     }
 
     class Slicer{
+    +tile_size
+    +facet_size
     }
 
     class Model{
@@ -76,12 +78,17 @@ classDiagram
     Model "1" --o "1" Sampler
     Model <|-- InpaintingModel
     Model <|-- GaussianDeconvolution
+
+    Slicer --o Communicator
+    Communicator --o DistributedLinearOperator
     
 
     DistributedLinearOperator <| -- DistributedConvolution
     DistributedLinearOperator <| -- DistributedGradient
     DistributedLinearOperator <| -- DistributedInpainting
-    DistributedConvolution --o GaussianDeconvolution
+
+    DistributedLinearOperator --o Model
+    
 
     TransitionKernel "1..n" --o "1" Model
     
