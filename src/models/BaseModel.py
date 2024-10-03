@@ -54,3 +54,12 @@ class BaseModel(ABC):
     @abstractmethod
     def aggregate_states(self) -> None:
         return NotImplemented
+
+class BaseDistributedModel(BaseModel):
+    @abstractmethod
+    def set_silces(self)  -> dict :
+        return NotImplemented
+    
+    @abstractmethod
+    def set_global_sizes(self) -> dict :
+        return NotImplemented

@@ -1,7 +1,8 @@
 from models import BaseModel
 from DataManager.DataManager import DataManager
-from estimator.estimatorBuilder import BaseEstimatorBuilder
+#from estimator.estimatorBuilder import BaseEstimatorBuilder
 
+from mpi4py import MPI
 import numpy as np
 import sys
 import h5py
@@ -34,7 +35,10 @@ class Sampler():
         self.nb_batches = nb_batches
         self.start_batch_num = 0
 
-        self.seed = seed
+        self.rank  = MPI.COMM_WORLD.Get_rank()
+
+        # change seed for each rank
+        self.seed = seed + self.rank
         self.rng = np.random.default_rng(self.seed)
 
         self.file_name = file_name
@@ -42,7 +46,7 @@ class Sampler():
 
         self.model = model
 
-        self.potential = np.zeros([self.batch_size])
+        self.potential = np.zeros([self.batch_size]) #! reduce on root
 
         self.data_manager = DataManager()
         
@@ -57,7 +61,7 @@ class Sampler():
             for i in range(self.batch_size):
                 self.model.update(self.rng)
 
-                self.potential[i] = self.model.compute_potential()
+                self.potential[i] = self.model.compute_potential() #! reduce on root
                 self.model.aggregate_states() #! slow down -> bench
 
             self.model.estimator_builder.build_estimator(self.batch_size)
@@ -69,53 +73,5 @@ class Sampler():
                 self.data_manager.save_array(   self.potential, file, "potential" )
                 self.data_manager.save_rng( self.rng, file)
 
-            print("Batch", batch_num, "out of", self.nb_batches, "computed.")
+            print("Batch", batch_num, "out of", self.nb_batches, "computed.") #! print on root only
             print("Potential :", self.potential[-1])
-
-
-    def set_rng(self, state_array : np.ndarray, inc_array : np.ndarray) -> None :
-        """set_rng Set the internal state of the random number generator to the the one given in entry.
-
-        Parameters
-        ----------
-        state_array : np.ndarray
-            Internal state of the random number generator.
-        inc_array : np.ndarray
-            Internal state of the random number generator.
-        """
-        new_state = int.from_bytes(state_array, sys.byteorder)
-        new_inc = int.from_bytes(inc_array, sys.byteorder)
-
-        new_rng_state = self.rng.__getstate__()
-        new_rng_state["state"]["state"] = new_state
-        new_rng_state["state"]["inc"] = new_inc
-
-        self.rng.__setstate__(new_rng_state)
-
-
-    def restart(self, file_name : str, batch_restart : int, new_save_path : str):
-        """restart Resume the sampling at a given state. It may be used to start a second where a first run had been interrupted.
-        This second run will generate the exact same data that the first run would have.
-        It must be called after the constructor.
-
-        Parameters
-        ----------
-        file_name : str
-            Name under wich the samples will be saved.
-        batch_restart : int
-            Number of the batch where we will resume the sampling.
-        new_save_path : str
-            Path to the location where we will save the samples.
-        """
-
-        data = self.data_manager.load_h5( file_name)
-        self.set_rng( data["rng_state_array"], data["rng_inc_array"] )
-        self.model.set_states(data)
-
-        self.save_path = new_save_path
-        self.start_batch_num = batch_restart
-
-
-
-
-    
