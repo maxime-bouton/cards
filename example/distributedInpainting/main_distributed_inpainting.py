@@ -2,7 +2,7 @@ from mpi4py import MPI
 
 from TransitionKernel.TransitionKernel import PSGLA
 from models.DistributedGaussianInpainting import DistributedGaussianInpaintingModel
-#from sampler.SerialSampler import Sampler
+from sampler.DistributedSampler import DistributedSampler
 
 from slicer.cartesian_comm_slicer import CartesianCommSlicer
 
@@ -59,16 +59,13 @@ if __name__ == '__main__' :
                 split_coeff)
     # conditionnals are set in the constructor
 
-    """
-    sampler = Sampler(
-                batch_size,
-                nb_batches,
-                seed,
-                "sample",
-                save_path,
-                model)
+    sampler = DistributedSampler(
+        batch_size,
+        nb_batches,
+        seed,
+        "sample",
+        save_path,
+        model
+    )
     
-    #sampler.restart("./sample/sample5.h5", 6, restart_save_path)
-
     sampler.sample()
-    """

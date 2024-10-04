@@ -57,9 +57,9 @@ class BaseModel(ABC):
 
 class BaseDistributedModel(BaseModel):
     @abstractmethod
-    def set_silces(self)  -> dict :
+    def set_slices(self)  -> dict :
         return NotImplemented
     
     @abstractmethod
-    def set_global_sizes(self) -> dict :
+    def set_global_sizes(self) -> None :
         return NotImplemented

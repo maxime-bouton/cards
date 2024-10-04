@@ -1,5 +1,5 @@
 from models import BaseModel
-from DataManager.DataManager import DataManager
+from DataManager.DistributedDataManager import DistributedDataManager
 #from estimator.estimatorBuilder import BaseEstimatorBuilder
 
 from mpi4py import MPI
@@ -7,11 +7,11 @@ import numpy as np
 import sys
 import h5py
 
-class Sampler():
+class DistributedSampler():
     def __init__(self,
                 batch_size : int,
                 nb_batches : int,
-                seed : int, #! use generator instead of seed
+                seed : int, 
                 file_name : str,
                 save_path : str,
                 model : BaseModel  ) -> None:
@@ -46,9 +46,9 @@ class Sampler():
 
         self.model = model
 
-        self.potential = np.zeros([self.batch_size]) #! reduce on root
+        self.potential = np.zeros([self.batch_size]) #! memory management, useless exepct on root
 
-        self.data_manager = DataManager()
+        self.data_manager = DistributedDataManager()
         
     def sample(self):
         """sampler Main method. Call the update method of the model inside a loop and save the current state at regular intarvales.
@@ -59,19 +59,23 @@ class Sampler():
             self.model.estimator_builder.reset()
 
             for i in range(self.batch_size):
+
                 self.model.update(self.rng)
 
-                self.potential[i] = self.model.compute_potential() #! reduce on root
+                partial_potential = self.model.compute_potential()
+                #MPI.COMM_WORLD.Reduce(partial_potential, self.potential[i], MPI.SUM, root=0)
+        
                 self.model.aggregate_states() #! slow down -> bench
 
             self.model.estimator_builder.build_estimator(self.batch_size)
 
             #save data on disk
-            full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
-            with h5py.File( full_name , 'w') as file :
-                self.data_manager.save_dict( self.model.get_states(), file ) 
-                self.data_manager.save_array(   self.potential, file, "potential" )
-                self.data_manager.save_rng( self.rng, file)
+            #full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
+            #with h5py.File( full_name , 'w', driver='mpio', comm=MPI.COMM_WORLD) as file :
+                #self.data_manager.save_dict( self.model.get_states(), file ) 
+                #self.data_manager.save_array(   self.potential, file, "potential" )
+                #self.data_manager.save_rng( self.rng, file)
 
-            print("Batch", batch_num, "out of", self.nb_batches, "computed.") #! print on root only
-            print("Potential :", self.potential[-1])
+            if self.rank ==0 :
+                print("Batch", batch_num, "out of", self.nb_batches, "computed.") #! print on root only
+                print("Potential :", self.potential[-1])
