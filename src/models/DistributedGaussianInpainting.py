@@ -99,7 +99,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         """
         states = {}
         states['X'] = self.X.current_state
-        states['Z'] = self.Z.current_state
+        #states['Z'] = self.Z.current_state
         states['MMSE'] = self.estimator_builder.estimator
         return states
     

@@ -22,8 +22,8 @@ class DistributedDataManager():
         """
         for key in data:
             #! acces mode must be set in parallel
-            dset = file.create_dataset( key, global_sizes[key]) #! must give global dimensions
-            dset[ *slices[key] ] = data[key]
+            dset = file.create_dataset( key, global_sizes[key], dtype='f') #! must give global dimensions
+            dset[ slices[key] ] = data[key]
 
 
     def save_array(self,data : np.ndarray , global_size : np.ndarray ,slices : slice , file : h5py.File, name : str) -> None:
@@ -42,5 +42,5 @@ class DistributedDataManager():
         name : str
             Name of the datafield in the file.
         """
-        dset = file.create_dataset( name, global_size)
+        dset = file.create_dataset( name, global_size, dtype='f')
         dset[*slices] = data

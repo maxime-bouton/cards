@@ -1,4 +1,4 @@
-from models import BaseModel
+from models.BaseModel import BaseDistributedModel
 from DataManager.DistributedDataManager import DistributedDataManager
 #from estimator.estimatorBuilder import BaseEstimatorBuilder
 
@@ -14,7 +14,7 @@ class DistributedSampler():
                 seed : int, 
                 file_name : str,
                 save_path : str,
-                model : BaseModel  ) -> None:
+                model : BaseDistributedModel ) -> None:
         """
         Parameters
         ----------
@@ -63,16 +63,23 @@ class DistributedSampler():
                 self.model.update(self.rng)
 
                 partial_potential = self.model.compute_potential()
-                #MPI.COMM_WORLD.Reduce(partial_potential, self.potential[i], MPI.SUM, root=0)
+                
+                MPI.COMM_WORLD.reduce(partial_potential, MPI.SUM, 0)
+                self.potential[i] = partial_potential # sum -> full potential
         
                 self.model.aggregate_states() #! slow down -> bench
 
             self.model.estimator_builder.build_estimator(self.batch_size)
+            #if self.rank == 0:
+            #    print( np.amax(self.model.estimator_builder.estimator))
 
+            #if self.rank == 0:
+            #    print(self.model.slices["X"])
+            #print(self.rank, self.model.slices["MMSE"])
             #save data on disk
-            #full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
-            #with h5py.File( full_name , 'w', driver='mpio', comm=MPI.COMM_WORLD) as file :
-                #self.data_manager.save_dict( self.model.get_states(), file ) 
+            full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
+            with h5py.File( full_name , 'w', driver='mpio', comm=MPI.COMM_WORLD) as file :
+                self.data_manager.save_dict( self.model.get_states(), file, self.model.global_sizes, self.model.slices ) 
                 #self.data_manager.save_array(   self.potential, file, "potential" )
                 #self.data_manager.save_rng( self.rng, file)
 
