@@ -61,21 +61,18 @@ class DistributedSampler():
             for i in range(self.batch_size):
 
                 self.model.update(self.rng)
+                MPI.COMM_WORLD.Barrier()
 
                 partial_potential = self.model.compute_potential()
                 
                 MPI.COMM_WORLD.reduce(partial_potential, MPI.SUM, 0)
                 self.potential[i] = partial_potential # sum -> full potential
         
-                self.model.aggregate_states() #! slow down -> bench
+                self.model.aggregate_states()
 
             self.model.estimator_builder.build_estimator(self.batch_size)
-            #if self.rank == 0:
-            #    print( np.amax(self.model.estimator_builder.estimator))
-
-            #if self.rank == 0:
-            #    print(self.model.slices["X"])
-            #print(self.rank, self.model.slices["MMSE"])
+            
+            #print(self.rank, self.model.slices["Z"]) #! error here
             #save data on disk
             full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
             with h5py.File( full_name , 'w', driver='mpio', comm=MPI.COMM_WORLD) as file :

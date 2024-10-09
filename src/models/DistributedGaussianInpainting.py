@@ -16,6 +16,7 @@ def prox_nonegativity(x):
 
 class DistributedGaussianInpaintingModel(BaseDistributedModel):
     def __init__(self,
+                full_size : np.ndarray,
                 grid_size : np.ndarray,
                 observations : np.ndarray,
                 mask : np.ndarray,
@@ -28,14 +29,18 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         """
         Parameters
         ----------
+        full_size : np.ndarray
+            Dimensions of the image.
+        grid_size : np.ndarray
+            Dimensions of the local subarrays.
         observations : np.ndarray
-            Deteriorated picture than can be observed.
+            Local subarray of the deteriorated picture than can be observed.
         mask : np.ndarray
-            Matrix of ones and zeros associated to the inapinting operator.
+            Local mask. Sub-matrix of ones and zeros associated to the inapinting operator.
         X : BaseSerialTransitionKernel
-            Random variable following the approximation of the targeted law.
+            Subarray of the random variable following the approximation of the targeted law.
         Z : BaseSerialTransitionKernel
-            Splitting variable.
+            Subarray of the plitting variable.
         sigma2 : float
             Standard deviation of the gausssian noise, expexted to be known.
         reg_coeff : float
@@ -43,6 +48,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         split_coeff : float
             Splitting coefficient.
         """
+        self.full_size = full_size
         self.observations = observations
         self.mask = mask
         self.X = X
@@ -51,7 +57,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         self.split_coeff = split_coeff
         self.sigma2 = sigma2
 
-        self.gradient_handler = distributed_gradient2d(np.asarray(observations.shape), grid_size)
+        self.gradient_handler = distributed_gradient2d(np.asarray(self.full_size), grid_size)
         self.adj_buffer = np.zeros(self.gradient_handler.cart_comm.cartslicer.tile_size) #! buffer linked to the kernel used
         self.slices = {}
         self.slices = self.set_slices()
@@ -62,8 +68,8 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
 
         match type(X).__qualname__:
             case PSGLA.__qualname__:
-                self.X.prox = prox_nonegativity # implement prox
-                self.X.grad = lambda x :  self.mask[*self.slices["X"]]*( x - self.observations[*self.slices["X"]] ) / self.sigma2  + self.adj_buffer            
+                self.X.prox = prox_nonegativity # implement prox 
+                self.X.grad = lambda x :  self.mask*( x - self.observations ) / self.sigma2  + self.adj_buffer / self.split_coeff         
             case _:
                 print("Kernel type not yet supported by this model.") #! move to logger
         
@@ -79,9 +85,10 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
     def set_slices(self) -> None:
         slices ={}
         slices["X"] = self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
-        slices["Z"] = \
-        (self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile() ,
-         self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile())
+        #slices["Z"] = \
+        #(self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile() ,
+        # self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile())
+        slices["Z"] = ( np.s_[:] , *self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile())
         slices["MMSE"] = self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
         self.silces = slices
         return slices
@@ -90,7 +97,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
     #! local buffer
     def get_states(self) -> dict:
         """get_states
-        Exctracts the current state of the transition kernel and other variables of interest and return the in a dictionnary.
+        Exctracts the current state of the transition kernel and other variables of interest and return it in a dictionnary.
 
         Returns
         -------
@@ -99,7 +106,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         """
         states = {}
         states['X'] = self.X.current_state
-        #states['Z'] = self.Z.current_state
+        states['Z'] = self.Z.current_state #! pb on slices
         states['MMSE'] = self.estimator_builder.estimator
         return states
     
@@ -120,9 +127,9 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
 
     def set_global_sizes(self) -> dict:
         sizes = {}
-        sizes["X"] = np.asarray(self.observations.shape)
-        sizes["Z"] = np.asarray( [2, *self.observations.shape]  )
-        sizes["MMSE"] = np.asarray(self.observations.shape)
+        sizes["X"] = np.asarray(self.full_size , dtype=int)
+        sizes["Z"] = np.asarray( [2, *self.full_size] , dtype=int )
+        sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
         self.global_sizes = sizes
     
     def update(self, rng : np.random.Generator ) -> None:
@@ -139,6 +146,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
 
         self.Z.mc_step(rng)
 
+        self.adj_buffer[:] = 0
         self.gradient_handler.compute_adjoint(self.adj_buffer, self.gradX[0] - self.Z.current_state[0], self.gradX[1] - self.Z.current_state[1] )
 
     def aggregate_states(self):
@@ -148,7 +156,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         """compute_potential Computes the potential."""
         #! local indexes does not match for observations
         p = 0
-        p += np.sum( ( self.observations[ *self.silces["X"] ] - self.mask[ *self.slices["X"] ] * self.X.current_state)**2 ) / (2 * self.sigma2 ) # suboptimal
+        p += np.sum( ( self.observations - self.mask * self.X.current_state)**2 ) / (2 * self.sigma2 ) # suboptimal
         p += np.sum( (self.gradX - self.Z.current_state) ** 2 ) / (2*self.split_coeff)
         p += self.reg_coeff * l21_norm(self.Z.current_state)
         return p 

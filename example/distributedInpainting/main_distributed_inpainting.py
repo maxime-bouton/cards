@@ -26,19 +26,23 @@ if __name__ == '__main__' :
 
     data_path = params["dataPath"]
 
-    with h5py.File(data_path,'r') as data_file:
-        mask = data_file["mask01"][:]
-        sigma2 = data_file["sig2"][:]
-        observations = data_file["data"][:]
-
     size = MPI.COMM_WORLD.Get_size()
     rank = MPI.COMM_WORLD.Get_rank()
     grid_size = np.asarray( MPI.Compute_dims(MPI.COMM_WORLD.Get_size(), 2) ,dtype = int )
     mpi_cart_comm = MPI.COMM_WORLD.Create_cart( grid_size )
     ranknd = np.asarray(mpi_cart_comm.Get_coords(rank) )
 
+    with h5py.File(data_path,'r',driver='mpio', comm=MPI.COMM_WORLD) as data_file:
+        mask = data_file["mask01"][:]
+        sigma2 = data_file["sig2"][:]
+        observations = data_file["data"][:]
+        img_size = observations.shape
+
     slicer = CartesianCommSlicer(ranknd, grid_size, observations.shape, np.asarray([0,0]), np.asarray([0,0]))
     tile_size = slicer.tile_size
+    slice = slicer._get_slice_global_buffer_to_tile()
+    mask = mask[ slice]
+    observations = observations[slice]
 
     step_size_X = 0.99 * 1./( 8./split_coeff + 1./sigma2 )
     #X = PSGLA(observations.shape, step_size_X) #! size must be changed to tile_size
@@ -49,6 +53,7 @@ if __name__ == '__main__' :
     Z = PSGLA( (2,*tile_size), step_size_Z)
     
     model = DistributedGaussianInpaintingModel(
+                img_size,
                 grid_size,
                 observations ,
                 mask,

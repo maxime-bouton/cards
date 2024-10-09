@@ -79,6 +79,7 @@ def chunk_gradient_2d_adjoint(uh, uv, x, isfirst, islast):
     r"""Chunk of the adjoint 2d discrete gradient (with jit support).
 
     Compute a chunk of the adjoint 2d discrete gradient. Assumes backward border overlap between the arrays handled by consecutive worker.
+    Expects the buffer given in entry to be set to 0.
 
     Parameters
     ----------
