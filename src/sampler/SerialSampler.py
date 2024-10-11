@@ -1,10 +1,10 @@
 from models import BaseModel
 from DataManager.DataManager import DataManager
-from estimator.estimatorBuilder import BaseEstimatorBuilder
 
 import numpy as np
 import sys
 import h5py
+from time import perf_counter
 
 class Sampler():
     def __init__(self,
@@ -43,6 +43,7 @@ class Sampler():
         self.model = model
 
         self.potential = np.zeros([self.batch_size])
+        self.computation_time = np.zeros([self.batch_size])
 
         self.data_manager = DataManager()
         
@@ -55,10 +56,14 @@ class Sampler():
             self.model.estimator_builder.reset()
 
             for i in range(self.batch_size):
+                start = perf_counter()
                 self.model.update(self.rng)
+                end = perf_counter()
 
                 self.potential[i] = self.model.compute_potential()
                 self.model.aggregate_states() #! slow down -> bench
+
+                self.computation_time[i] = end - start
 
             self.model.estimator_builder.build_estimator(self.batch_size)
 
@@ -68,9 +73,11 @@ class Sampler():
                 self.data_manager.save_dict( self.model.get_states(), file ) 
                 self.data_manager.save_array(   self.potential, file, "potential" )
                 self.data_manager.save_rng( self.rng, file)
+                self.data_manager.save_array( self.computation_time, file, "computation_time")
 
             print("Batch", batch_num, "out of", self.nb_batches, "computed.")
             print("Potential :", self.potential[-1])
+            print("Time :", self.computation_time[-1])
 
 
     def set_rng(self, state_array : np.ndarray, inc_array : np.ndarray) -> None :

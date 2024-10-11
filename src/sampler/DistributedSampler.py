@@ -6,6 +6,7 @@ from mpi4py import MPI
 import numpy as np
 import sys
 import h5py
+from time import perf_counter
 
 class DistributedSampler():
     def __init__(self,
@@ -38,7 +39,7 @@ class DistributedSampler():
         self.rank  = MPI.COMM_WORLD.Get_rank()
 
         # change seed for each rank
-        self.seed = seed + self.rank
+        self.seed = seed + self.rank #! seed generation not safe : https://numpy.org/doc/stable/reference/random/parallel.html#seedsequence-spawn
         self.rng = np.random.default_rng(self.seed)
 
         self.file_name = file_name
@@ -46,7 +47,8 @@ class DistributedSampler():
 
         self.model = model
 
-        self.potential = np.zeros([self.batch_size]) #! memory management, useless exepct on root
+        self.potential = np.zeros([self.batch_size]) #! memory management, useless excepted on root
+        self.computation_time = np.zeros([self.batch_size])
 
         self.data_manager = DistributedDataManager()
         
@@ -60,14 +62,19 @@ class DistributedSampler():
 
             for i in range(self.batch_size):
 
+                start = perf_counter()
                 self.model.update(self.rng)
+                end = perf_counter()
+
                 MPI.COMM_WORLD.Barrier()
 
                 partial_potential = self.model.compute_potential()
+                elapsed = end-start
                 
-                MPI.COMM_WORLD.reduce(partial_potential, MPI.SUM, 0)
-                self.potential[i] = partial_potential # sum -> full potential
-        
+                
+                self.potential[i] = MPI.COMM_WORLD.reduce(partial_potential, MPI.SUM, root=0) # sum -> full potential
+                self.computation_time[i] = MPI.COMM_WORLD.reduce(elapsed, MPI.MAX, root =0)
+
                 self.model.aggregate_states()
 
             self.model.estimator_builder.build_estimator(self.batch_size)
@@ -76,10 +83,19 @@ class DistributedSampler():
             #save data on disk
             full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
             with h5py.File( full_name , 'w', driver='mpio', comm=MPI.COMM_WORLD) as file :
-                self.data_manager.save_dict( self.model.get_states(), file, self.model.global_sizes, self.model.slices ) 
+                self.data_manager.save_dict( self.model.get_states(), file, self.model.global_sizes, self.model.slices )
+                self.data_manager.save_rng(self.rng, file, self.rank, MPI.COMM_WORLD.Get_size())
+            
+            if self.rank ==0 :
+                with h5py.File( full_name , 'r+') as file :
+                    self.data_manager.save_local_array(self.potential, "potential", file)
+                    self.data_manager.save_local_array(self.computation_time, "computation_time", file)
                 #self.data_manager.save_array(   self.potential, file, "potential" )
                 #self.data_manager.save_rng( self.rng, file)
+
+                #! add bit_generator from previous version
 
             if self.rank ==0 :
                 print("Batch", batch_num, "out of", self.nb_batches, "computed.") #! print on root only
                 print("Potential :", self.potential[-1])
+                print("Time :", self.computation_time[-1])

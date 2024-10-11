@@ -4,6 +4,7 @@
 
 import h5py
 import numpy as np
+import sys
 
 class DistributedDataManager():
     def save_dict(self,data : dict , file : h5py.File, global_sizes : dict ,slices : dict ) -> None:
@@ -44,3 +45,22 @@ class DistributedDataManager():
         """
         dset = file.create_dataset( name, global_size, dtype='f')
         dset[*slices] = data
+
+    def save_seed(self, seed : int , rank : int , comm_size : int , file : h5py.File ):
+        dset = file.create_dataset("seed", np.asarray([comm_size]), dtype=int)
+        dset[rank] = seed
+
+    def save_local_array(self, data : np.ndarray, name : str , file : h5py.File):
+        file[ name ] = data
+
+    def save_rng(self, rng : np.random.Generator, file : h5py.File, rank : int, comm_size : int) -> None :
+        
+        state_array = np.array( bytearray(rng.bit_generator.__getstate__()[0]["state"]["state"].to_bytes(32, sys.byteorder)) )
+        inc_array = np.array( bytearray(rng.bit_generator.__getstate__()[0]["state"]["inc"].to_bytes(32, sys.byteorder)) )
+
+        size = np.asarray([comm_size, *state_array.shape])
+        dset = file.create_dataset( "rng_state_array", size )
+        dset[rank] = state_array
+
+        #dset = file.create_dataset("rng_inc_state", (comm_size,*inc_array.shape))
+        #dset["rng_inc_array"][rank,:] = inc_array
