@@ -59,10 +59,9 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
 
         self.gradient_handler = distributed_gradient2d(np.asarray(self.full_size), grid_size)
         self.adj_buffer = np.zeros(self.gradient_handler.cart_comm.cartslicer.tile_size) #! buffer linked to the kernel used
-        self.slices = {}
+
         self.slices = self.set_slices()
-        self.global_sizes = {}
-        self.set_global_sizes()
+        self.global_sizes = self.set_global_sizes()
 
         self.estimator_builder = MMSEBuilder( self.gradient_handler.cart_comm.cartslicer.tile_size )
 
@@ -82,15 +81,11 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
 
         self.gradX = np.zeros( (2, *self.X.current_state.shape) )
 
-    def set_slices(self) -> None:
+    def set_slices(self) -> dict:
         slices ={}
         slices["X"] = self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
-        #slices["Z"] = \
-        #(self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile() ,
-        # self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile())
         slices["Z"] = ( np.s_[:] , *self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile())
         slices["MMSE"] = self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
-        self.silces = slices
         return slices
 
     #! need tile range for each entry ?
@@ -130,7 +125,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         sizes["X"] = np.asarray(self.full_size , dtype=int)
         sizes["Z"] = np.asarray( [2, *self.full_size] , dtype=int )
         sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
-        self.global_sizes = sizes
+        return sizes
     
     def update(self, rng : np.random.Generator ) -> None:
         """update Gobal update of the model. Updates every kernel used by the model and computes annex variables.

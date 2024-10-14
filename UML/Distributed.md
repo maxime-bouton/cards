@@ -24,6 +24,7 @@ classDiagram
 
     class Communicator{
     +Slicer slicer
+    +update_border()
     }
    
     class DistributedLinearOperator{

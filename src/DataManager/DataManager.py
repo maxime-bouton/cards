@@ -58,6 +58,7 @@ class DataManager():
         """
         file[name] = data
 
+    #! numpy behaviour has changed, return None now
     def save_rng(self, rng, file) -> None :
         """save_rng Save the internal state of the random number generator given in entry to the .h5 file given in entry.
 
@@ -68,14 +69,14 @@ class DataManager():
         file : _type_
             File to write the internal state.
         """
-        state_array = np.array( bytearray(rng.__getstate__()["state"]["state"].to_bytes(32, sys.byteorder)) )
-        inc_array = np.array( bytearray(rng.__getstate__()["state"]["inc"].to_bytes(32, sys.byteorder)) )
+        state_array = np.array( bytearray(rng.bit_generator.__getstate__()[0]["state"]["state"].to_bytes(32, sys.byteorder)) )
+        inc_array = np.array( bytearray(rng.bit_generator.__getstate__()[0]["state"]["inc"].to_bytes(32, sys.byteorder)) )
 
         file["rng_state_array"] = state_array
         file["rng_inc_array"] = inc_array
         #! check saved as uint8
 
-    # becomes useless
+    """
     def load_rng(self, rng, file_name : str) -> None:
         with h5py.File(file_name, 'r') as file:
             loaded_state_array = file["rng_state_array"][:]
@@ -84,11 +85,12 @@ class DataManager():
         loaded_state = int.from_bytes(loaded_state_array, sys.byteorder)
         loaded_inc = int.from_bytes(loaded_inc_array, sys.byteorder)
 
-        new_rng_state = rng.__getstate__()
-        new_rng_state["state"]["state"] = loaded_state
-        new_rng_state["state"]["inc"] = loaded_inc
+        new_rng_state = rng.bit_generator.__getstate__()
+        new_rng_state[0]["state"]["state"] = loaded_state
+        new_rng_state[0]["state"]["inc"] = loaded_inc
 
-        rng.__setstate__(new_rng_state)
+        rng.bit_generator.__setstate__(new_rng_state)
+    """
 
     def save_offset(self, rng : torch.Generator, file) -> None :
         file['offset'] = rng.get_offset()

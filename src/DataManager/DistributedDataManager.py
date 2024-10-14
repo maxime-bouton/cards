@@ -2,6 +2,8 @@
     Object than handles any reading/writing on disk with parallel memory acces.
 """
 
+#! the use of private method to write the internal state of the generator may bring some compatibility issues
+
 import h5py
 import numpy as np
 import sys
@@ -23,7 +25,7 @@ class DistributedDataManager():
         """
         for key in data:
             #! acces mode must be set in parallel
-            dset = file.create_dataset( key, global_sizes[key], dtype='f') #! must give global dimensions
+            dset = file.create_dataset( key, global_sizes[key], dtype='f')
             dset[ slices[key] ] = data[key]
 
 
@@ -53,14 +55,35 @@ class DistributedDataManager():
     def save_local_array(self, data : np.ndarray, name : str , file : h5py.File):
         file[ name ] = data
 
+    def load_h5(self, file : h5py.File , slices : dict) -> dict :
+        data = {}
+        for key in slices.keys():
+            data[ key ] = file[key][ slices[key] ]
+        return data
+    
     def save_rng(self, rng : np.random.Generator, file : h5py.File, rank : int, comm_size : int) -> None :
         
         state_array = np.array( bytearray(rng.bit_generator.__getstate__()[0]["state"]["state"].to_bytes(32, sys.byteorder)) )
         inc_array = np.array( bytearray(rng.bit_generator.__getstate__()[0]["state"]["inc"].to_bytes(32, sys.byteorder)) )
 
         size = np.asarray([comm_size, *state_array.shape])
-        dset = file.create_dataset( "rng_state_array", size )
+        dset = file.create_dataset( "rng_state_array", size , dtype=np.uint8)
         dset[rank] = state_array
 
-        #dset = file.create_dataset("rng_inc_state", (comm_size,*inc_array.shape))
-        #dset["rng_inc_array"][rank,:] = inc_array
+        size = np.asarray([comm_size, *inc_array.shape])
+        dset = file.create_dataset( "rng_inc_array", size , dtype=np.uint8) # inc_array.dtype
+        dset[rank] = inc_array
+
+    def load_rng(self, rng : np.random.Generator, file : h5py.File, rank : int) -> None:
+
+        new_state = rng.bit_generator.__getstate__()
+
+        loaded_state = file["rng_state_array"][rank]
+        loaded_inc  = file["rng_inc_array"][rank]
+
+        new_state_state = int.from_bytes( loaded_state , sys.byteorder)
+        new_state_inc = int.from_bytes(loaded_inc , sys.byteorder)
+        new_state[0]["state"]["state"] = new_state_state
+        new_state[0]["state"]["inc"] = new_state_inc #! convertion error?
+
+        rng.bit_generator.__setstate__(new_state)

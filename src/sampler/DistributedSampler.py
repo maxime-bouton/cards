@@ -79,7 +79,6 @@ class DistributedSampler():
 
             self.model.estimator_builder.build_estimator(self.batch_size)
             
-            #print(self.rank, self.model.slices["Z"]) #! error here
             #save data on disk
             full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
             with h5py.File( full_name , 'w', driver='mpio', comm=MPI.COMM_WORLD) as file :
@@ -90,12 +89,17 @@ class DistributedSampler():
                 with h5py.File( full_name , 'r+') as file :
                     self.data_manager.save_local_array(self.potential, "potential", file)
                     self.data_manager.save_local_array(self.computation_time, "computation_time", file)
-                #self.data_manager.save_array(   self.potential, file, "potential" )
-                #self.data_manager.save_rng( self.rng, file)
-
-                #! add bit_generator from previous version
 
             if self.rank ==0 :
-                print("Batch", batch_num, "out of", self.nb_batches, "computed.") #! print on root only
+                print("Batch", batch_num, "out of", self.nb_batches, "computed.") #! move to logger
                 print("Potential :", self.potential[-1])
                 print("Time :", self.computation_time[-1])
+
+    def restart(self, file_path : str, new_save_path : str, batch_restart : int) -> None :
+        with h5py.File(file_path, 'r', driver='mpio', comm= MPI.COMM_WORLD) as file :
+            data = self.data_manager.load_h5(file, self.model.slices)
+            self.data_manager.load_rng(self.rng, file, self.rank)
+        
+        self.save_path = new_save_path
+        self.start_batch_num = batch_restart
+        self.model.set_states(data)

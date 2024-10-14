@@ -93,11 +93,11 @@ class Sampler():
         new_state = int.from_bytes(state_array, sys.byteorder)
         new_inc = int.from_bytes(inc_array, sys.byteorder)
 
-        new_rng_state = self.rng.__getstate__()
-        new_rng_state["state"]["state"] = new_state
-        new_rng_state["state"]["inc"] = new_inc
+        new_rng_state = self.rng.bit_generator.__getstate__()
+        new_rng_state[0]["state"]["state"] = new_state
+        new_rng_state[0]["state"]["inc"] = new_inc
 
-        self.rng.__setstate__(new_rng_state)
+        self.rng.bit_generator.__setstate__(new_rng_state)
 
 
     def restart(self, file_name : str, batch_restart : int, new_save_path : str):
