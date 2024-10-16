@@ -8,8 +8,8 @@ from operators.jtv import  gradient_2d_adjoint
 
 if __name__ == '__main__' :
 
-    M = 12
-    N = 12
+    M = 100
+    N = 150
     global_size = np.asarray([M,N])
 
     comm = MPI.COMM_WORLD
@@ -25,7 +25,7 @@ if __name__ == '__main__' :
     cart_comm = comm.Create_cart(dims = grid_dims)
 
     X = np.zeros([2,M,N])
-    local = np.zeros([2,m+1,n+1])
+
     local_v = np.zeros(gradient_handler.adj_cart_comm_h.cartslicer.tile_size)
     local_h = np.zeros(gradient_handler.adj_cart_comm_v.cartslicer.tile_size)
 
@@ -34,7 +34,12 @@ if __name__ == '__main__' :
         #X = np.ones([2,M,N])
         #X[0,:,:] = np.zeros([M,N])
         #X[1,:,:] = np.zeros([M,N])
-        
+
+    slice_0 = gradient_handler.adj_cart_comm_h.cartslicer._get_slice_global_buffer_to_tile()
+    slice_1 = gradient_handler.adj_cart_comm_v.cartslicer._get_slice_global_buffer_to_tile()
+
+    slices_0 = comm.gather(slice_0, 0)
+    slices_1 = comm.gather(slice_1, 0)
     
     cart_comm.Bcast([X, MPI.DOUBLE], root=0)
 
@@ -45,14 +50,9 @@ if __name__ == '__main__' :
 
     last_x = (grid_dims[0]-1 == grid_coords[0])
     last_y = (grid_dims[1]-1 == grid_coords[1])
-
-
-
-    x = gradient_handler.cart_comm.cartslicer.tile_range[0][0]
-    y = gradient_handler.cart_comm.cartslicer.tile_range[1][0]
    
-    local_h[-m:,-n:] = X[0][x:x+m,y:y+n]
-    local_v[-m:,-n:] = X[1][x:x+m,y:y+n]
+    local_h[-m:,-n:] = X[0][slice_0]
+    local_v[-m:,-n:] = X[1][slice_1]
    
 
     chunk_adj = np.zeros(gradient_handler.adj_cart_comm_h.cartslicer.tile_size)
@@ -65,15 +65,15 @@ if __name__ == '__main__' :
 
     distributed_adj = np.zeros([M,N])
 
-    comm.Send([chunk_adj, MPI.DOUBLE], 0)
+    #comm.Send([chunk_adj, MPI.DOUBLE], 0)
+    comm.send(chunk_adj, dest=0)
 
     if rank == 0 :
         for i in range( comm.Get_size() ):
-            comm.Recv([chunk_adj,MPI.DOUBLE], i )
-            coord = cart_comm.Get_coords(i)
-            x = coord[0]*m
-            y = coord[1]*n
-            distributed_adj[ x:x+m , y:y+n ] = chunk_adj[-m:,-n:].copy()
+        #    comm.Recv([chunk_adj,MPI.DOUBLE], i )
+            chunk_adj = comm.recv(source=i)
+
+            distributed_adj[ slices_0[i][0] , slices_1[i][1] ] = chunk_adj.copy()
 
         #print( (global_adj-distributed_adj)[:M,:N], '\n')
         #print(distributed_adj,'\n')
