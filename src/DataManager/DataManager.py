@@ -93,4 +93,13 @@ class DataManager():
     """
 
     def save_offset(self, rng : torch.Generator, file) -> None :
+        """save_offset Write the offset on a .h5 file.
+
+        Parameters
+        ----------
+        rng : torch.Generator
+            Generator from which we will extract and save the offset.
+        file : _type_
+            File to be written on.
+        """
         file['offset'] = rng.get_offset()

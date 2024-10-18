@@ -39,7 +39,7 @@ class DistributedSampler():
         self.rank  = MPI.COMM_WORLD.Get_rank()
 
         # change seed for each rank
-        self.seed = seed + self.rank #! seed generation not safe : https://numpy.org/doc/stable/reference/random/parallel.html#seedsequence-spawn
+        self.seed = [seed , self.rank ]#! seed generation not safe : https://numpy.org/doc/stable/reference/random/parallel.html#seedsequence-spawn
         self.rng = np.random.default_rng(self.seed)
 
         self.file_name = file_name

@@ -10,7 +10,8 @@ import sys
 
 class DistributedDataManager():
     def save_dict(self,data : dict , file : h5py.File, global_sizes : dict ,slices : dict ) -> None:
-        """save_dict Saves the dictionnary given in entry in the .h5 file given in entry. 
+        """save_dict Saves the dictionnary given in entry in the .h5 file given in entry.
+        It expects the given file to be open in paralell mode. 
 
         Parameters
         ----------
@@ -49,19 +50,71 @@ class DistributedDataManager():
         dset[*slices] = data
 
     def save_seed(self, seed : int , rank : int , comm_size : int , file : h5py.File ):
+        """save_seed Save the seeds used on each process. It expects the given file to be open in paralell mode.
+
+        Parameters
+        ----------
+        seed : int
+            Local seed.
+        rank : int
+            Rank of the process.
+        comm_size : int
+            Number of process.
+        file : h5py.File
+            File to be written on.
+        """
         dset = file.create_dataset("seed", np.asarray([comm_size]), dtype=int)
         dset[rank] = seed
 
     def save_local_array(self, data : np.ndarray, name : str , file : h5py.File):
+        """save_local_array Save an array on a .h5 file. It expects the given file to be open in serial mode.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Local array.
+        name : str
+            Name of the variable.
+        file : h5py.File
+            File to be written on.
+        """
         file[ name ] = data
 
     def load_h5(self, file : h5py.File , slices : dict) -> dict :
+        """load_h5 Read a .5 file and load the local value of the array on each process.
+        It expects the given file to be open in paralell mode.
+
+        Parameters
+        ----------
+        file : h5py.File
+            File to be read.
+        slices : dict
+            Dictionnary containing the slices of each variables, different on each thread.
+
+        Returns
+        -------
+        dict
+            Dictonnary containing the local value of each variable.
+        """
         data = {}
         for key in slices.keys():
             data[ key ] = file[key][ slices[key] ]
         return data
     
     def save_rng(self, rng : np.random.Generator, file : h5py.File, rank : int, comm_size : int) -> None :
+        """save_rng Seva the internal state of all the generator used along all the processes.
+
+        Parameters
+        ----------
+        rng : np.random.Generator
+            Local random number generator.
+        file : h5py.File
+            File to be written on.
+        rank : int
+            Rank of the process.
+        comm_size : int
+            Number of processes.
+        """
         
         state_array = np.array( bytearray(rng.bit_generator.__getstate__()[0]["state"]["state"].to_bytes(32, sys.byteorder)) )
         inc_array = np.array( bytearray(rng.bit_generator.__getstate__()[0]["state"]["inc"].to_bytes(32, sys.byteorder)) )
@@ -75,6 +128,17 @@ class DistributedDataManager():
         dset[rank] = inc_array
 
     def load_rng(self, rng : np.random.Generator, file : h5py.File, rank : int) -> None:
+        """load_rng Load the internal state of the random number generator for each process.
+
+        Parameters
+        ----------
+        rng : np.random.Generator
+            Local random number generator.
+        file : h5py.File
+            File to be read.
+        rank : int
+            Rank of the process.
+        """
 
         new_state = rng.bit_generator.__getstate__()
 
