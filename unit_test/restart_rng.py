@@ -2,11 +2,13 @@ import numpy as np
 import sys
 
 if __name__ == '__main__' :
+    N = 10000000
+
     rng = np.random.default_rng(1234)
     new_state_state = rng.bit_generator.__getstate__()[0]["state"]["state"]
     new_state_inc = rng.bit_generator.__getstate__()[0]["state"]["inc"]
 
-    a = rng.standard_normal(10)
+    a = rng.standard_normal(N)
 
     loaded_state_state = np.array( bytearray( new_state_state.to_bytes(32, sys.byteorder) ) )
     loaded_state_inc = np.array( bytearray( new_state_inc.to_bytes(32, sys.byteorder) ) )                        
@@ -18,7 +20,7 @@ if __name__ == '__main__' :
 
     rng2.bit_generator.__setstate__(new_state)
 
-    b = rng2.standard_normal(10)
+    b = rng2.standard_normal(N)
     
     #print(a,'\n', b)
     #print(loaded_state_state)
