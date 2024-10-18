@@ -12,9 +12,9 @@ import numpy as np
 
 
 if __name__ == '__main__' :
-    config_path = "/home/stephane/dev/python-mcmc/example/distributedInpainting/config.json"
-    #config_file = open("config.json")
-    config_file = open(config_path)
+    #config_path = "/home/stephane/dev/python-mcmc/example/distributedInpainting/config.json"
+    config_file = open("config.json")
+    #config_file = open(config_path)
     params = json.load(config_file)
 
     nb_batches = params["nbCheckpoint"]
@@ -77,8 +77,8 @@ if __name__ == '__main__' :
         model
     )
     
-    sampler.restart("../../produced_data/sample/sample5.h5", restart_save_path, num_batch+1) #? +1
+    load_path = "../../produced_data/sample/sample"+ str(num_batch-1)+".h5"
+    sampler.restart("../../produced_data/sample/sample5.h5", restart_save_path, num_batch) #? +1
     #sampler.restart("../../produced_data/sample/sample5.h5", restart_save_path, 1)
-    
     
     sampler.sample()

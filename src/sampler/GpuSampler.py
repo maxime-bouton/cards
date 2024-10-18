@@ -7,6 +7,7 @@ import cupy as cp
 import numpy as np
 import sys
 import h5py
+from time import perf_counter
 
 class GpuSampler():
     def __init__(self,
@@ -49,6 +50,7 @@ class GpuSampler():
         self.model = model
 
         self.potential = np.zeros([self.batch_size])
+        self.computation_time = np.zeros([self.batch_size])
 
         self.data_manager = DataManager()
 
@@ -61,9 +63,14 @@ class GpuSampler():
                 self.model.estimator_builder.reset()
 
                 for i in range(self.batch_size):
+                    start = perf_counter()
                     self.model.update(self.rng)
+                    end = perf_counter()
+
+                    elapsed = end-start
 
                     self.potential[i] = self.model.compute_potential()
+                    self.computation_time[i] = elapsed
                     self.model.aggregate_states() #! slow down -> bench
 
                 self.model.estimator_builder.build_estimator(self.batch_size)
@@ -73,6 +80,7 @@ class GpuSampler():
                 with h5py.File( full_name , 'w') as file :
                     self.data_manager.save_dict( self.model.get_states(), file ) 
                     self.data_manager.save_array( self.potential, file, "potential" )
+                    self.data_manager.save_array( self.computation_time, file, "computation_time")
                     self.data_manager.save_offset( self.rng, file)
 
                 print("Batch", batch_num, "out of", self.nb_batches, "computed.")

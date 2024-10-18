@@ -18,6 +18,7 @@ if __name__ == '__main__' :
     batch_size = params["sampleSize"] // nb_batches
     save_path = params["savePath"]
     restart_save_path = params["reloadSavePath"]
+    num_batch = params["numLoadedBatch"]
 
     split_coeff = params["alpha"]
     reg_coeff = params["regularizationCoefficient"]
@@ -55,7 +56,8 @@ if __name__ == '__main__' :
                 save_path,
                 model)
     
-    #sampler.restart("../../produced_data/sample/sample5.h5", 6, restart_save_path)
+    load_path = "../../produced_data/sample/sample"+str(num_batch-1)+".h5"
+    sampler.restart(load_path, num_batch, restart_save_path)
     #sampler.restart("../../produced_data/sample/sample5.h5", 6, restart_save_path)
 
     sampler.sample()
