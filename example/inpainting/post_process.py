@@ -13,7 +13,7 @@ from skimage.metrics import structural_similarity as ssim
 # %%
 
 # ! relative path to the configuration file, may need to be changed
-#configFile = open("config.json")
+# configFile = open("config.json")
 configFile = open("config_peppers.json")
 param = json.load(configFile)
 path_origin = param["originPath"]
@@ -43,7 +43,7 @@ plt.show()
 with h5py.File(dataPath, "r") as file:
     observations = file["data"][:]
     mask = file["mask01"][:]
-    #sigma = np.sqrt(file["/sig2"][:])
+    # sigma = np.sqrt(file["/sig2"][:])
     sigma = np.sqrt(file["/sig2"][()])
 
 plt.imshow(observations.T, cmap="gray", vmin=pixelMin, vmax=pixelMax)
@@ -91,7 +91,7 @@ plt.show()
 
 plt.plot(potential)
 plt.title("Potential")
-#plt.savefig("potential")
+# plt.savefig("potential")
 plt.show()
 
 # mmse = MMSE.astype(np.uint8)

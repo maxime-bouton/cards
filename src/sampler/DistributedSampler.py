@@ -89,7 +89,7 @@ class DistributedSampler:
             self.model.estimator_builder.build_estimator(self.batch_size)
 
             # save data on disk
-            full_name = join( self.save_path  , self.file_name + str(batch_num) + ".h5")
+            full_name = join(self.save_path, self.file_name + str(batch_num) + ".h5")
             with h5py.File(full_name, "w", driver="mpio", comm=MPI.COMM_WORLD) as file:
                 self.data_manager.save_dict(
                     self.model.get_states(),

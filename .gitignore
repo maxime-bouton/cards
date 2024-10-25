@@ -271,3 +271,4 @@ $RECYCLE.BIN/
 ### Project-specific folders
 ./produced_data/*
 *.pyc
+*.h5

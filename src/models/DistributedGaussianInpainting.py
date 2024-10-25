@@ -137,7 +137,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         """
         self.X.current_state = states["X"].copy()
         self.Z.current_state = states["Z"].copy()
-        
+
         self.gradX = self.gradient_handler.compute_grad(self.X.current_state)
         self.gradient_handler.compute_adjoint(
             self.adj_buffer,
@@ -150,7 +150,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         sizes["X"] = np.asarray(self.full_size, dtype=int)
         sizes["Z"] = np.asarray([2, *self.full_size], dtype=int)
         sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
-        
+
         return sizes
 
     def update(self, rng: np.random.Generator) -> None:
@@ -161,7 +161,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         rng : np.random.Generator
             Random number generator, given by the sampler.
         """
-        
+
         self.X.mc_step(rng)
 
         self.gradX = self.gradient_handler.compute_grad(self.X.current_state)

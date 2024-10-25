@@ -2,12 +2,10 @@ import cupy as cp
 import torch
 from numpy import zeros, all
 
-import pytest
 
 def test_restart_gpu_rng():
-
     rng = torch.Generator(device="cuda").manual_seed(1234)
-    
+
     shape = [512, 512]
     n = 10
 
@@ -22,7 +20,7 @@ def test_restart_gpu_rng():
             )
         )
 
-    rng2 = torch.Generator(device='cuda').manual_seed(1234)
+    rng2 = torch.Generator(device="cuda").manual_seed(1234)
 
     offset = rng.get_offset()
     rng2.set_offset(offset)

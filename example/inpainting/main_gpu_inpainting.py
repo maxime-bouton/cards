@@ -9,8 +9,8 @@ import cupy as cp
 
 if __name__ == "__main__":
     config_file = open("config.json")
-    #config_file = open("config_peppers.json")
-    #config_file = open("./example/inpainting/config_debug.json")
+    # config_file = open("config_peppers.json")
+    # config_file = open("./example/inpainting/config_debug.json")
     params = json.load(config_file)
 
     nb_batches = params["nbCheckpoint"]
@@ -27,8 +27,8 @@ if __name__ == "__main__":
 
     with h5py.File(data_path, "r") as data_file:
         mask = data_file["mask01"][:]
-        #mask = data_file["mask"][:]
-        #sigma2 = data_file["sig2"][:]
+        # mask = data_file["mask"][:]
+        # sigma2 = data_file["sig2"][:]
         sigma2 = data_file["sig2"][()]
         observations = data_file["data"][:]
 
@@ -49,17 +49,11 @@ if __name__ == "__main__":
     )
     # conditionnals are set in the constructor
 
-    sampler = GpuSampler(
-                batch_size,
-                nb_batches,
-                seed,
-                "sample",
-                save_path,
-                model)
-    
-    #load_path = "../../produced_data/sample/sample"+str(num_batch-1)+".h5"
-    #sampler.restart(load_path, num_batch, restart_save_path)
-    #sampler.restart("../../produced_data/sample/sample5.h5", 6, restart_save_path)
+    sampler = GpuSampler(batch_size, nb_batches, seed, "sample", save_path, model)
+
+    # load_path = "../../produced_data/sample/sample"+str(num_batch-1)+".h5"
+    # sampler.restart(load_path, num_batch, restart_save_path)
+    # sampler.restart("../../produced_data/sample/sample5.h5", 6, restart_save_path)
 
     load_path = "../../produced_data/sample/sample" + str(num_batch - 1) + ".h5"
     sampler.restart(load_path, num_batch, restart_save_path)
