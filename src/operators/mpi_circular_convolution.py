@@ -1,4 +1,4 @@
-""" Distributed circular convolution operator. Includes helper functions to
+"""Distributed circular convolution operator. Includes helper functions to
 implement the communications leveraged for the distributed implementation
 of the circular convolution and its adjoint.
 """
@@ -10,14 +10,12 @@ of the circular convolution and its adjoint.
 # [arxiv preprint 2210.02341](http://arxiv.org/abs/2210.02341), October 2022.
 
 import numpy as np
-from mpi4py import MPI
 
 import dsgs.utils.communications as ucomm
 import dsgs.utils.communicators as comms
 from dsgs.operators.convolutions import fft_conv
 from dsgs.operators.linear_operator import LinearOperator
 from dsgs.operators.mpi_adjoint_circular_padding import AdjointCircularPadding
-from dsgs.operators.padding import pad_array_nd
 
 
 def calculate_local_data_size_cconv(

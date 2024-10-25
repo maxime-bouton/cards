@@ -1,4 +1,4 @@
-""" Set of helper functions to implement a MPI-distributed convolution operator
+"""Set of helper functions to implement a MPI-distributed convolution operator
 and its adjoint.
 """
 
@@ -91,8 +91,7 @@ def create_local_to_global_slice(
     global_slice = tuple(
         [
             np.s_[
-                tile_pixels[d, 0]
-                + offset[d] : tile_pixels[d, 0]
+                tile_pixels[d, 0] + offset[d] : tile_pixels[d, 0]
                 + offset[d]
                 + local_data_size[d]
             ]

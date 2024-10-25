@@ -6,15 +6,21 @@ import pytest
 
 def test_restart_gpu_rng():
 
-    rng = torch.Generator(device='cuda').manual_seed(1234)
-
-    shape = [512,512]
+    rng = torch.Generator(device="cuda").manual_seed(1234)
+    
+    shape = [512, 512]
     n = 10
 
     A = cp.zeros(shape)
 
     for i in range(n):
-        A = cp.asarray( torch.normal( torch.as_tensor(cp.zeros_like(A), device='cuda'), torch.as_tensor(cp.ones_like(A), device='cuda'),generator=rng) )
+        A = cp.asarray(
+            torch.normal(
+                torch.as_tensor(cp.zeros_like(A), device="cuda"),
+                torch.as_tensor(cp.ones_like(A), device="cuda"),
+                generator=rng,
+            )
+        )
 
     rng2 = torch.Generator(device='cuda').manual_seed(1234)
 
@@ -25,9 +31,21 @@ def test_restart_gpu_rng():
     check = zeros(10)
 
     for i in range(10):
-        A = cp.asarray( torch.normal( torch.as_tensor(cp.zeros_like(A), device='cuda'), torch.as_tensor(cp.ones_like(A), device='cuda'),generator=rng) )
-        B = cp.asarray( torch.normal( torch.as_tensor(cp.zeros_like(B), device='cuda'), torch.as_tensor(cp.ones_like(B), device='cuda'),generator=rng2) )
+        A = cp.asarray(
+            torch.normal(
+                torch.as_tensor(cp.zeros_like(A), device="cuda"),
+                torch.as_tensor(cp.ones_like(A), device="cuda"),
+                generator=rng,
+            )
+        )
+        B = cp.asarray(
+            torch.normal(
+                torch.as_tensor(cp.zeros_like(B), device="cuda"),
+                torch.as_tensor(cp.ones_like(B), device="cuda"),
+                generator=rng2,
+            )
+        )
 
-        check[i] = cp.allclose(A,B)
+        check[i] = cp.allclose(A, B)
 
     assert all(check)

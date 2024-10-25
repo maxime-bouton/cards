@@ -2,35 +2,37 @@ import numpy as np
 from mpi4py import MPI
 
 from distributed_operators.gradient import distributed_gradient2d
-from operators.jtv import  gradient_2d
+from operators.jtv import gradient_2d
 
 import pytest
 
 def test_distributed_gradient():
     M = 100
     N = 50
-    global_size = np.asarray([M,N])
+    global_size = np.asarray([M, N])
 
     comm = MPI.COMM_WORLD
-   
-    rank  = comm.Get_rank()
-    grid_dims = np.asarray( MPI.Compute_dims(comm.Get_size(), 2) ,dtype = int )
 
-    gradient_handler = distributed_gradient2d( global_size, grid_dims)
+    rank = comm.Get_rank()
+    grid_dims = np.asarray(MPI.Compute_dims(comm.Get_size(), 2), dtype=int)
 
+    gradient_handler = distributed_gradient2d(global_size, grid_dims)
 
-    cart_comm = comm.Create_cart(dims = grid_dims)
+    cart_comm = comm.Create_cart(dims=grid_dims)
 
+    X = np.zeros([M, N])
 
-    X = np.zeros([M,N])
+    if rank == 0:
+        X = np.random.rand(M, N)
 
-    if rank == 0 :
-        X= np.random.rand(M,N)
-    
     cart_comm.Bcast([X, MPI.DOUBLE], root=0)
-    
-    slice_0 = gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()[0]
-    slice_1 = gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()[1]
+
+    slice_0 = gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()[
+        0
+    ]
+    slice_1 = gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()[
+        1
+    ]
 
     slices_0_start = comm.gather(slice_0.start, 0)
     slices_0_end = comm.gather(slice_0.stop, 0)
@@ -41,13 +43,12 @@ def test_distributed_gradient():
     local = np.zeros(gradient_handler.cart_comm.cartslicer.tile_size)
     local = X[slice_0, slice_1]
 
-
     chunk_grad = gradient_handler.compute_grad(local)
 
-    global_grad = np.zeros( shape= [2,M,N])
-    distributed_grad = np.zeros( shape= [2,M,N])
+    global_grad = np.zeros(shape=[2, M, N])
+    distributed_grad = np.zeros(shape=[2, M, N])
 
-    if rank == 0 :
+    if rank == 0:
         global_grad = gradient_2d(X)
 
     comm.send(chunk_grad,dest=0)

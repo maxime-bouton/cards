@@ -24,8 +24,8 @@ classDiagram
     -targetDensity()
     }
 
-   
-    
+
+
 
     class Model{
         <<Interface>>
@@ -69,8 +69,8 @@ classDiagram
 
 
     TransitionKernel "1..n" --o "1" Model
-    
-    DataManager "1" --* "1" Sampler : Read/Write data from/to disk 
+
+    DataManager "1" --* "1" Sampler : Read/Write data from/to disk
     Model -- DataManager : Send/Recieve states value
 
 ```

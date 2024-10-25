@@ -1,14 +1,15 @@
-from abc import ABC, abstractmethod
-from numpy import random
-
-""" Abstract class that descibes the interface of the model class.
+"""Abstract class that descibes the interface of the model class.
 The methods declared here will be used by the sampler.
 """
 
+from abc import ABC, abstractmethod
+
+from numpy import random
+
+
 class BaseModel(ABC):
-    
     @abstractmethod
-    def update(self, rng : random.Generator) -> None :
+    def update(self, rng: random.Generator) -> None:
         """update Global update of the model. May call the update method of several transition kernels.
 
         Parameters
@@ -19,7 +20,7 @@ class BaseModel(ABC):
         return NotImplemented
 
     @abstractmethod
-    def get_states(self) -> dict :
+    def get_states(self) -> dict:
         """get_states Extracts the current states of the variables in the model.
 
         Returns
@@ -30,7 +31,7 @@ class BaseModel(ABC):
         return NotImplemented
 
     @abstractmethod
-    def set_states(self, states : dict) -> None :
+    def set_states(self, states: dict) -> None:
         """set_states Set the variables of the model the the values given in entry.
 
         Parameters
@@ -41,7 +42,7 @@ class BaseModel(ABC):
         return NotImplemented
 
     @abstractmethod
-    def compute_potential(self) -> float :
+    def compute_potential(self) -> float:
         """compute_potential Compute the potential of the targeted law.
 
         Returns
@@ -55,14 +56,15 @@ class BaseModel(ABC):
     def aggregate_states(self) -> None:
         return NotImplemented
 
+
 class BaseDistributedModel(BaseModel):
     global_sizes = dict
     slices = dict
 
     @abstractmethod
-    def set_slices(self)  -> dict :
+    def set_slices(self) -> dict:
         return NotImplemented
-    
+
     @abstractmethod
-    def set_global_sizes(self) -> None :
+    def set_global_sizes(self) -> None:
         return NotImplemented

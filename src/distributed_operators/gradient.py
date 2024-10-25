@@ -1,8 +1,8 @@
 import numpy as np
 from mpi4py import MPI
 
-from slicer.cartesian_comm_slicer import CartesianCommSlicer
 from communicator.sync_cartesian_communicator import SyncCartesianCommunicator
+
 
 def chunk_gradient_2d(x, islast):
     r"""Chunk of the 2d discrete gradient (with jit support).
@@ -136,42 +136,65 @@ def chunk_gradient_2d_adjoint(uh, uv, x, isfirst, islast):
 
     return
 
-class distributed_gradient2d(  ):
-    def __init__(self, global_size : np.ndarray, grid_size : np.ndarray ) -> None:
-        
-        overlap = np.asarray([1,1])
-        self.cart_comm = SyncCartesianCommunicator( MPI.COMM_WORLD, grid_size, global_size, overlap, overlap, backward=False )
-        self.adj_cart_comm_v = SyncCartesianCommunicator( MPI.COMM_WORLD, grid_size, global_size, np.asarray([1,0]),np.asarray([1,0]), backward=True )
-        self.adj_cart_comm_h = SyncCartesianCommunicator( MPI.COMM_WORLD, grid_size, global_size, np.asarray([0,1]),np.asarray([0,1]), backward=True )
+
+class distributed_gradient2d:
+    def __init__(self, global_size: np.ndarray, grid_size: np.ndarray) -> None:
+        overlap = np.asarray([1, 1])
+        self.cart_comm = SyncCartesianCommunicator(
+            MPI.COMM_WORLD, grid_size, global_size, overlap, overlap, backward=False
+        )
+        self.adj_cart_comm_v = SyncCartesianCommunicator(
+            MPI.COMM_WORLD,
+            grid_size,
+            global_size,
+            np.asarray([1, 0]),
+            np.asarray([1, 0]),
+            backward=True,
+        )
+        self.adj_cart_comm_h = SyncCartesianCommunicator(
+            MPI.COMM_WORLD,
+            grid_size,
+            global_size,
+            np.asarray([0, 1]),
+            np.asarray([0, 1]),
+            backward=True,
+        )
 
         self.local_buffer = np.zeros(self.cart_comm.cartslicer.facet_size)
         self.local_buffer_adj_v = np.zeros(self.adj_cart_comm_v.cartslicer.facet_size)
         self.local_buffer_adj_h = np.zeros(self.adj_cart_comm_h.cartslicer.facet_size)
-        
-    def compute_grad(self, local_data : np.ndarray) -> np.ndarray :
-        [m,n] = self.cart_comm.cartslicer.tile_size
-        self.local_buffer[:m,:n] = local_data.copy()
+
+    def compute_grad(self, local_data: np.ndarray) -> np.ndarray:
+        [m, n] = self.cart_comm.cartslicer.tile_size
+        self.local_buffer[:m, :n] = local_data.copy()
 
         self.cart_comm.update_borders(self.local_buffer)
 
         grid_size = self.cart_comm.cartslicer.grid_size
         ranknd = self.cart_comm.ranknd
-        is_border = np.asarray( [ranknd[0] == (grid_size[0]-1), ranknd[1] == (grid_size[1]-1)  ] )
+        is_border = np.asarray(
+            [ranknd[0] == (grid_size[0] - 1), ranknd[1] == (grid_size[1] - 1)]
+        )
         return chunk_gradient_2d(self.local_buffer, is_border)
 
-    def compute_adjoint(self,res : np.ndarray , local_data_h : np.ndarray, local_data_v : np.ndarray) -> None :
-        [m,n] = self.adj_cart_comm_v.cartslicer.tile_size
-        self.local_buffer_adj_v[-m:,-n:] = local_data_v.copy()
-        self.local_buffer_adj_h[-m:,-n:] = local_data_h.copy()
+    def compute_adjoint(
+        self, res: np.ndarray, local_data_h: np.ndarray, local_data_v: np.ndarray
+    ) -> None:
+        [m, n] = self.adj_cart_comm_v.cartslicer.tile_size
+        self.local_buffer_adj_v[-m:, -n:] = local_data_v.copy()
+        self.local_buffer_adj_h[-m:, -n:] = local_data_h.copy()
 
         self.adj_cart_comm_v.update_borders(self.local_buffer_adj_v)
         self.adj_cart_comm_h.update_borders(self.local_buffer_adj_h)
 
         grid_size = self.cart_comm.grid_size
         ranknd = self.cart_comm.ranknd
-        is_first = np.asarray([ ranknd[0] == 0 , ranknd[1] == 0  ])
-        is_last = np.asarray( [ ranknd[0] == (grid_size[0]-1), ranknd[1] == (grid_size[1]-1) ] )
+        is_first = np.asarray([ranknd[0] == 0, ranknd[1] == 0])
+        is_last = np.asarray(
+            [ranknd[0] == (grid_size[0] - 1), ranknd[1] == (grid_size[1] - 1)]
+        )
 
-        chunk_gradient_2d_adjoint(self.local_buffer_adj_h, self.local_buffer_adj_v, res, is_first, is_last)
-        return 
-
+        chunk_gradient_2d_adjoint(
+            self.local_buffer_adj_h, self.local_buffer_adj_v, res, is_first, is_last
+        )
+        return

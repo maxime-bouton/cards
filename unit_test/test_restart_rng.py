@@ -20,8 +20,10 @@ def test_rng_state():
 
     a = rng.standard_normal(N)
 
-    loaded_state_state = np.array( bytearray( new_state_state.to_bytes(32, sys.byteorder) ) )
-    loaded_state_inc = np.array( bytearray( new_state_inc.to_bytes(32, sys.byteorder) ) )                        
+    loaded_state_state = np.array(
+        bytearray(new_state_state.to_bytes(32, sys.byteorder))
+    )
+    loaded_state_inc = np.array(bytearray(new_state_inc.to_bytes(32, sys.byteorder)))
 
     rng2 = np.random.default_rng(5678)
     new_state = rng2.bit_generator.__getstate__()

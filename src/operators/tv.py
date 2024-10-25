@@ -1,4 +1,4 @@
-""" Implementation of the discrete istropic total variation, with a smoothed
+"""Implementation of the discrete istropic total variation, with a smoothed
 variant. Functions do not benefit from numba jit compilation. Includes a
 version supporting input tensors.
 """

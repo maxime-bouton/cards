@@ -1,4 +1,4 @@
-""" Set of helper functions to pad a numpy array to a predefined size under
+"""Set of helper functions to pad a numpy array to a predefined size under
 several boundary conditions, with the implementation of the associated adjoint
 operator.
 """

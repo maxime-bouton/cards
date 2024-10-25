@@ -96,8 +96,7 @@ def patch_extractor(
         sel = tuple(
             [
                 np.s_[
-                    c[d]
-                    * stride[d] : np.minimum(
+                    c[d] * stride[d] : np.minimum(
                         c[d] * stride[d] + dilation[d] * patch_size[d], input_size[d]
                     ) : dilation[d]
                 ]
@@ -162,8 +161,7 @@ def adjoint_patch_extractor(
         sel = tuple(
             [
                 np.s_[
-                    c[d]
-                    * stride[d] : np.minimum(
+                    c[d] * stride[d] : np.minimum(
                         c[d] * stride[d] + dilation[d] * patch_size[d], output_size[d]
                     ) : dilation[d]
                 ]

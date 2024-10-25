@@ -7,14 +7,17 @@ import h5py
 from time import perf_counter
 from os.path import join
 
-class Sampler():
-    def __init__(self,
-                batch_size : int,
-                nb_batches : int,
-                seed : int, #! use generator instead of seed
-                file_name : str,
-                save_path : str,
-                model : BaseModel  ) -> None:
+
+class Sampler:
+    def __init__(
+        self,
+        batch_size: int,
+        nb_batches: int,
+        seed: int,  #! use generator instead of seed
+        file_name: str,
+        save_path: str,
+        model: BaseModel,
+    ) -> None:
         """
         Parameters
         ----------
@@ -47,13 +50,12 @@ class Sampler():
         self.computation_time = np.zeros([self.batch_size])
 
         self.data_manager = DataManager()
-        
+
     def sample(self):
         """sampler Main method. Call the update method of the model inside a loop and save the current state at regular intarvales.
         A partial estimator is built along the iterations.
         """
         for batch_num in range(self.start_batch_num, self.nb_batches):
-
             self.model.estimator_builder.reset()
 
             for i in range(self.batch_size):
@@ -62,7 +64,7 @@ class Sampler():
                 end = perf_counter()
 
                 self.potential[i] = self.model.compute_potential()
-                self.model.aggregate_states() #! slow down -> bench
+                self.model.aggregate_states()  #! slow down -> bench
 
                 self.computation_time[i] = end - start
 
@@ -80,8 +82,7 @@ class Sampler():
             print("Potential :", self.potential[-1])
             print("Time :", self.computation_time[-1])
 
-
-    def set_rng(self, state_array : np.ndarray, inc_array : np.ndarray) -> None :
+    def set_rng(self, state_array: np.ndarray, inc_array: np.ndarray) -> None:
         """set_rng Set the internal state of the random number generator to the the one given in entry.
 
         Parameters
@@ -100,8 +101,7 @@ class Sampler():
 
         self.rng.bit_generator.__setstate__(new_rng_state)
 
-
-    def restart(self, file_name : str, batch_restart : int, new_save_path : str):
+    def restart(self, file_name: str, batch_restart: int, new_save_path: str):
         """restart Resume the sampling at a given state. It may be used to start a second where a first run had been interrupted.
         This second run will generate the exact same data that the first run would have.
         It must be called after the constructor.
@@ -116,14 +116,9 @@ class Sampler():
             Path to the location where we will save the samples.
         """
 
-        data = self.data_manager.load_h5( file_name)
-        self.set_rng( data["rng_state_array"], data["rng_inc_array"] )
+        data = self.data_manager.load_h5(file_name)
+        self.set_rng(data["rng_state_array"], data["rng_inc_array"])
         self.model.set_states(data)
 
         self.save_path = new_save_path
         self.start_batch_num = batch_restart
-
-
-
-
-    

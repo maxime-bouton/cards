@@ -26,7 +26,7 @@ classDiagram
     +Slicer slicer
     +update_border()
     }
-   
+
     class DistributedLinearOperator{
     +Communicator DirectComm
     +Communicator AdjointComm
@@ -82,18 +82,18 @@ classDiagram
 
     Slicer --o Communicator
     Communicator --o DistributedLinearOperator
-    
+
 
     DistributedLinearOperator <| -- DistributedConvolution
     DistributedLinearOperator <| -- DistributedGradient
     DistributedLinearOperator <| -- DistributedInpainting
 
     DistributedLinearOperator --o Model
-    
+
 
     TransitionKernel "1..n" --o "1" Model
-    
-    DataManager "1" --* "1" Sampler : Read/Write data from/to disk 
+
+    DataManager "1" --* "1" Sampler : Read/Write data from/to disk
     Model -- DataManager : Send/Recieve states value
 
 ```
