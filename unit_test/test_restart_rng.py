@@ -9,7 +9,6 @@ May be unstable due to the use a private method of np.random.
 import numpy as np
 import sys
 
-import pytest
 
 def test_rng_state():
     N = 10000000
@@ -34,4 +33,4 @@ def test_rng_state():
 
     b = rng2.standard_normal(N)
 
-    assert np.allclose(a,b)
+    assert np.allclose(a, b)

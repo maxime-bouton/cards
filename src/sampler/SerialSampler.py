@@ -70,15 +70,17 @@ class Sampler:
 
             self.model.estimator_builder.build_estimator(self.batch_size)
 
-            #save data on disk
-            full_name = join( self.save_path  , self.file_name + str(batch_num) + ".h5")
-            with h5py.File( full_name , 'w') as file :
-                self.data_manager.save_dict( self.model.get_states(), file ) 
-                self.data_manager.save_array(   self.potential, file, "potential" )
-                self.data_manager.save_rng( self.rng, file)
-                self.data_manager.save_array( self.computation_time, file, "computation_time")
+            # save data on disk
+            full_name = join(self.save_path, self.file_name + str(batch_num) + ".h5")
+            with h5py.File(full_name, "w") as file:
+                self.data_manager.save_dict(self.model.get_states(), file)
+                self.data_manager.save_array(self.potential, file, "potential")
+                self.data_manager.save_rng(self.rng, file)
+                self.data_manager.save_array(
+                    self.computation_time, file, "computation_time"
+                )
 
-            print("Batch", batch_num+1, "out of", self.nb_batches, "computed.")
+            print("Batch", batch_num + 1, "out of", self.nb_batches, "computed.")
             print("Potential :", self.potential[-1])
             print("Time :", self.computation_time[-1])
 

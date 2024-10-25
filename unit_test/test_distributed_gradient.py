@@ -4,7 +4,6 @@ from mpi4py import MPI
 from distributed_operators.gradient import distributed_gradient2d
 from operators.jtv import gradient_2d
 
-import pytest
 
 def test_distributed_gradient():
     M = 100
@@ -51,12 +50,14 @@ def test_distributed_gradient():
     if rank == 0:
         global_grad = gradient_2d(X)
 
-    comm.send(chunk_grad,dest=0)
-    if rank == 0 :
-        for i in range( comm.Get_size() ):
-            chunk_grad=comm.recv(source=i)
-            distributed_grad[:, slices_0_start[i]:slices_0_end[i] , slices_1_start[i]:slices_1_end[i] ] = chunk_grad.copy()
+    comm.send(chunk_grad, dest=0)
+    if rank == 0:
+        for i in range(comm.Get_size()):
+            chunk_grad = comm.recv(source=i)
+            distributed_grad[
+                :,
+                slices_0_start[i] : slices_0_end[i],
+                slices_1_start[i] : slices_1_end[i],
+            ] = chunk_grad.copy()
 
-        assert np.allclose( global_grad,distributed_grad ) 
-
-    
+        assert np.allclose(global_grad, distributed_grad)
