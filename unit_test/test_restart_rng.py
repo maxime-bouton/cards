@@ -1,7 +1,17 @@
+r"""
+Test the exctration/insertion of an internal state of a generator.
+
+NOTE
+----
+May be unstable due to the use a private method of np.random.
+"""
+
 import numpy as np
 import sys
 
-if __name__ == '__main__' :
+import pytest
+
+def test_rng_state():
     N = 10000000
 
     rng = np.random.default_rng(1234)
@@ -21,7 +31,5 @@ if __name__ == '__main__' :
     rng2.bit_generator.__setstate__(new_state)
 
     b = rng2.standard_normal(N)
-    
-    #print(a,'\n', b)
-    #print(loaded_state_state)
-    print(np.allclose(a,b))
+
+    assert np.allclose(a,b)

@@ -1,13 +1,12 @@
 from models import BaseModel
 from DataManager.DataManager import DataManager
-from estimator.GpuEstimatorBuilder import BaseGpuEstimatorBuilder
 
 import torch
 import cupy as cp
 import numpy as np
-import sys
 import h5py
 from time import perf_counter
+from os.path import join
 
 class GpuSampler():
     def __init__(self,
@@ -65,6 +64,7 @@ class GpuSampler():
                 for i in range(self.batch_size):
                     start = perf_counter()
                     self.model.update(self.rng)
+                    #cp.cuda.runtime.deviceSynchronize()
                     end = perf_counter()
 
                     elapsed = end-start
@@ -76,15 +76,16 @@ class GpuSampler():
                 self.model.estimator_builder.build_estimator(self.batch_size)
 
                 #save data on disk
-                full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
+                full_name  = join(self.save_path, self.file_name + str(batch_num) + ".h5" )
                 with h5py.File( full_name , 'w') as file :
                     self.data_manager.save_dict( self.model.get_states(), file ) 
                     self.data_manager.save_array( self.potential, file, "potential" )
                     self.data_manager.save_array( self.computation_time, file, "computation_time")
                     self.data_manager.save_offset( self.rng, file)
 
-                print("Batch", batch_num, "out of", self.nb_batches, "computed.")
+                print("Batch", batch_num+1, "out of", self.nb_batches, "computed.")
                 print("Potential :", self.potential[-1])
+                print("Time : ", self.computation_time[-1])
 
     def restart_rng(self, offset):
         #self.rng = cp.random.RandomState(seed = self.seed, method  = cp.cuda.curand.CURAND_RNG_PSEUDO_DEFAULT)

@@ -12,8 +12,9 @@ import numpy as np
 
 
 if __name__ == '__main__' :
-    #config_path = "/home/stephane/dev/python-mcmc/example/distributedInpainting/config.json"
+    #config_path = "/home/stephane/dev/python-mcmc/example/inpainting/config_debug.json"
     config_file = open("config.json")
+    #config_file = open("config_peppers.json")
     #config_file = open(config_path)
     params = json.load(config_file)
 
@@ -25,7 +26,7 @@ if __name__ == '__main__' :
 
     split_coeff = params["alpha"]
     reg_coeff = params["regularizationCoefficient"]
-    seed = params["seed"]
+    seed = params["seed"] #! root_seed
 
     data_path = params["dataPath"]
 
@@ -35,10 +36,13 @@ if __name__ == '__main__' :
     mpi_cart_comm = MPI.COMM_WORLD.Create_cart( grid_size )
     ranknd = np.asarray(mpi_cart_comm.Get_coords(rank) )
 
-    data_path ="/home/stephane/dev/python-mcmc/data/inpainting_data_cameraman_ds1_isnr40.h5"
+    #data_path ="/home/stephane/dev/python-mcmc/data/inpainting_data_cameraman_ds1_isnr40.h5"
+    
     with h5py.File(data_path,'r',driver='mpio', comm=MPI.COMM_WORLD) as data_file:
         mask = data_file["mask01"][:]
-        sigma2 = data_file["sig2"][:]
+        #mask = data_file["mask"][:]
+        #sigma2 = data_file["sig2"][:]
+        sigma2 = data_file["sig2"][()]
         observations = data_file["data"][:]
         img_size = observations.shape
 
@@ -49,11 +53,9 @@ if __name__ == '__main__' :
     observations = observations[slice]
 
     step_size_X = 0.99 * 1./( 8./split_coeff + 1./sigma2 )
-    #X = PSGLA(observations.shape, step_size_X) #! size must be changed to tile_size
     X = PSGLA( tile_size, step_size_X) 
 
     step_size_Z = 0.99 / split_coeff
-    #Z = PSGLA( (2,*X.current_state.shape), step_size_Z) #! size must be changed to tile_size
     Z = PSGLA( (2,*tile_size), step_size_Z)
     
     model = DistributedGaussianInpaintingModel(
@@ -77,8 +79,9 @@ if __name__ == '__main__' :
         model
     )
     
-    load_path = "../../produced_data/sample/sample"+ str(num_batch-1)+".h5"
-    sampler.restart("../../produced_data/sample/sample5.h5", restart_save_path, num_batch) #? +1
+    #load_path = "../../produced_data/sample/sample"+ str(num_batch-1)+".h5"
+    #load_path = "/home/stephane/dev/python-mcmc/produced_data/sample/sample"+ str(num_batch-1)+".h5"
+    #sampler.restart(load_path, restart_save_path, num_batch) #? +1
     #sampler.restart("../../produced_data/sample/sample5.h5", restart_save_path, 1)
     
     sampler.sample()

@@ -4,7 +4,7 @@
 from models.BaseModel import BaseDistributedModel
 from TransitionKernel.TransitionKernel import BaseSerialTransitionKernel, PSGLA
 from estimator.estimatorBuilder import MMSEBuilder
-from distributed_operators.gradient import chunk_gradient_2d, chunk_gradient_2d_adjoint, distributed_gradient2d
+from distributed_operators.gradient import distributed_gradient2d
 
 import numpy as np
 
@@ -86,9 +86,11 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         slices["X"] = self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
         slices["Z"] = ( np.s_[:] , *self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile())
         slices["MMSE"] = self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
+        #debug, to be deleted
+        slices["grad"] = ( np.s_[:] , *self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile())
+        slices["adj"] = self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
         return slices
 
-    #! need tile range for each entry ?
     #! local buffer
     def get_states(self) -> dict:
         """get_states
@@ -101,8 +103,11 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         """
         states = {}
         states['X'] = self.X.current_state
-        states['Z'] = self.Z.current_state #! pb on slices
+        states['Z'] = self.Z.current_state 
         states['MMSE'] = self.estimator_builder.estimator
+        #debug, to be deleted
+        states['grad'] = self.gradX
+        states['adj'] = self.adj_buffer
         return states
     
     def set_states(self, states: dict) -> None:
@@ -117,14 +122,21 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         """
         self.X.current_state = states["X"].copy()
         self.Z.current_state = states["Z"].copy()
+        #debug, to be deleted
+        #self.gradX = states["grad"].copy()
+        #self.adj_buffer = states["adj"].copy()
         self.gradX = self.gradient_handler.compute_grad(self.X.current_state)
         self.gradient_handler.compute_adjoint(self.adj_buffer, self.gradX[0] - self.Z.current_state[0], self.gradX[1] - self.Z.current_state[1] )
+        #! need the Z from the previous step?
 
     def set_global_sizes(self) -> dict:
         sizes = {}
         sizes["X"] = np.asarray(self.full_size , dtype=int)
         sizes["Z"] = np.asarray( [2, *self.full_size] , dtype=int )
         sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
+         #debug, to be deleted
+        sizes["grad"] = np.asarray( [2, *self.full_size] , dtype=int )
+        sizes["adj"] = np.asarray(self.full_size , dtype=int)
         return sizes
     
     def update(self, rng : np.random.Generator ) -> None:
@@ -135,6 +147,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         rng : np.random.Generator
             Random number generator, given by the sampler.
         """
+        
         self.X.mc_step(rng)
 
         self.gradX = self.gradient_handler.compute_grad(self.X.current_state)
@@ -148,8 +161,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         self.estimator_builder.estimator += self.X.current_state
 
     def compute_potential(self) -> float:
-        """compute_potential Computes the potential."""
-        #! local indexes does not match for observations
+        """compute_potential Computes the partial potential."""
         p = 0
         p += np.sum( ( self.observations - self.mask * self.X.current_state)**2 ) / (2 * self.sigma2 ) # suboptimal
         p += np.sum( (self.gradX - self.Z.current_state) ** 2 ) / (2*self.split_coeff)

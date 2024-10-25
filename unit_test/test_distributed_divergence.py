@@ -5,11 +5,12 @@ from mpi4py import MPI
 from distributed_operators.gradient import distributed_gradient2d
 from operators.jtv import  gradient_2d_adjoint
 
+import pytest
 
-if __name__ == '__main__' :
+def test_distributed_divergence():
 
     M = 100
-    N = 150
+    N = 50
     global_size = np.asarray([M,N])
 
     comm = MPI.COMM_WORLD
@@ -31,9 +32,6 @@ if __name__ == '__main__' :
 
     if rank == 0 :
         X= np.random.rand(2,M,N)
-        #X = np.ones([2,M,N])
-        #X[0,:,:] = np.zeros([M,N])
-        #X[1,:,:] = np.zeros([M,N])
 
     slice_0 = gradient_handler.adj_cart_comm_h.cartslicer._get_slice_global_buffer_to_tile()
     slice_1 = gradient_handler.adj_cart_comm_v.cartslicer._get_slice_global_buffer_to_tile()
@@ -65,17 +63,11 @@ if __name__ == '__main__' :
 
     distributed_adj = np.zeros([M,N])
 
-    #comm.Send([chunk_adj, MPI.DOUBLE], 0)
     comm.send(chunk_adj, dest=0)
 
     if rank == 0 :
         for i in range( comm.Get_size() ):
-        #    comm.Recv([chunk_adj,MPI.DOUBLE], i )
             chunk_adj = comm.recv(source=i)
-
             distributed_adj[ slices_0[i][0] , slices_1[i][1] ] = chunk_adj.copy()
 
-        #print( (global_adj-distributed_adj)[:M,:N], '\n')
-        #print(distributed_adj,'\n')
-        #print(global_adj)
-        print(np.allclose( global_adj,distributed_adj ) )
+        assert np.allclose( global_adj,distributed_adj ) 

@@ -140,7 +140,7 @@ class DistributedDataManager():
             Rank of the process.
         """
 
-        new_state = rng.bit_generator.__getstate__()
+        new_state = rng.bit_generator.__getstate__() #! use of private method, unstable
 
         loaded_state = file["rng_state_array"][rank]
         loaded_inc  = file["rng_inc_array"][rank]
@@ -148,6 +148,6 @@ class DistributedDataManager():
         new_state_state = int.from_bytes( loaded_state , sys.byteorder)
         new_state_inc = int.from_bytes(loaded_inc , sys.byteorder)
         new_state[0]["state"]["state"] = new_state_state
-        new_state[0]["state"]["inc"] = new_state_inc #! convertion error?
+        new_state[0]["state"]["inc"] = new_state_inc 
 
         rng.bit_generator.__setstate__(new_state)

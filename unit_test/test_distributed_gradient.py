@@ -4,12 +4,9 @@ from mpi4py import MPI
 from distributed_operators.gradient import distributed_gradient2d
 from operators.jtv import  gradient_2d
 
+import pytest
 
-
-if __name__ == '__main__' :
- # not generic enough
- #TODO adaptative number thread/ dimensions
- #! loop/freeze for high dimensions?
+def test_distributed_gradient():
     M = 100
     N = 50
     global_size = np.asarray([M,N])
@@ -53,19 +50,12 @@ if __name__ == '__main__' :
     if rank == 0 :
         global_grad = gradient_2d(X)
 
-
-    #comm.Send([chunk_grad, MPI.DOUBLE], 0)
     comm.send(chunk_grad,dest=0)
     if rank == 0 :
         for i in range( comm.Get_size() ):
-            #comm.Recv([chunk_grad,MPI.DOUBLE], i )
             chunk_grad=comm.recv(source=i)
-
             distributed_grad[:, slices_0_start[i]:slices_0_end[i] , slices_1_start[i]:slices_1_end[i] ] = chunk_grad.copy()
 
-        #print( (global_grad[0]-distributed_grad[0])[:M,:N], '\n')
-        #print( (global_grad[1]-distributed_grad[1])[:M,:N], '\n'))
-        #print(distributed_grad)
-        print(np.allclose( global_grad,distributed_grad ) )
+        assert np.allclose( global_grad,distributed_grad ) 
 
     

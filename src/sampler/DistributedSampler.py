@@ -4,9 +4,9 @@ from DataManager.DistributedDataManager import DistributedDataManager
 
 from mpi4py import MPI
 import numpy as np
-import sys
 import h5py
 from time import perf_counter
+from os.path import join
 
 class DistributedSampler():
     def __init__(self,
@@ -80,7 +80,7 @@ class DistributedSampler():
             self.model.estimator_builder.build_estimator(self.batch_size)
             
             #save data on disk
-            full_name =  self.save_path  + self.file_name + str(batch_num) + ".h5"
+            full_name = join(self.save_path, self.file_name + str(batch_num)+".h5")
             with h5py.File( full_name , 'w', driver='mpio', comm=MPI.COMM_WORLD) as file :
                 self.data_manager.save_dict( self.model.get_states(), file, self.model.global_sizes, self.model.slices )
                 self.data_manager.save_rng(self.rng, file, self.rank, MPI.COMM_WORLD.Get_size())

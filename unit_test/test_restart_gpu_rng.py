@@ -1,8 +1,10 @@
 import cupy as cp
 import torch
-from numpy import zeros, alltrue
+from numpy import zeros, all
 
-if __name__ == '__main__' :
+import pytest
+
+def test_restart_gpu_rng():
 
     rng = torch.Generator(device='cuda').manual_seed(1234)
 
@@ -15,7 +17,7 @@ if __name__ == '__main__' :
         A = cp.asarray( torch.normal( torch.as_tensor(cp.zeros_like(A), device='cuda'), torch.as_tensor(cp.ones_like(A), device='cuda'),generator=rng) )
 
     rng2 = torch.Generator(device='cuda').manual_seed(1234)
-    rng_state = rng.get_state()
+
     offset = rng.get_offset()
     rng2.set_offset(offset)
     B = cp.zeros(shape)
@@ -28,4 +30,4 @@ if __name__ == '__main__' :
 
         check[i] = cp.allclose(A,B)
 
-    print( alltrue(check) )
+    assert all(check)
