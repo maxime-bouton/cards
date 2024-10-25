@@ -32,9 +32,9 @@ if __name__ == '__main__' :
 
     size = MPI.COMM_WORLD.Get_size()
     rank = MPI.COMM_WORLD.Get_rank()
-    grid_size = np.asarray( MPI.Compute_dims(MPI.COMM_WORLD.Get_size(), 2) ,dtype = int )
-    mpi_cart_comm = MPI.COMM_WORLD.Create_cart( grid_size )
-    ranknd = np.asarray(mpi_cart_comm.Get_coords(rank) )
+    grid_size = np.asarray(MPI.Compute_dims(MPI.COMM_WORLD.Get_size(), 2), dtype=int)
+    mpi_cart_comm = MPI.COMM_WORLD.Create_cart(grid_size)
+    ranknd = np.asarray(mpi_cart_comm.Get_coords(rank))
 
     #data_path ="/home/stephane/dev/python-mcmc/data/inpainting_data_cameraman_ds1_isnr40.h5"
     
@@ -46,10 +46,12 @@ if __name__ == '__main__' :
         observations = data_file["data"][:]
         img_size = observations.shape
 
-    slicer = CartesianCommSlicer(ranknd, grid_size, observations.shape, np.asarray([0,0]), np.asarray([0,0]))
+    slicer = CartesianCommSlicer(
+        ranknd, grid_size, observations.shape, np.asarray([0, 0]), np.asarray([0, 0])
+    )
     tile_size = slicer.tile_size
     slice = slicer._get_slice_global_buffer_to_tile()
-    mask = mask[ slice]
+    mask = mask[slice]
     observations = observations[slice]
 
     step_size_X = 0.99 * 1./( 8./split_coeff + 1./sigma2 )
@@ -59,24 +61,12 @@ if __name__ == '__main__' :
     Z = PSGLA( (2,*tile_size), step_size_Z)
     
     model = DistributedGaussianInpaintingModel(
-                img_size,
-                grid_size,
-                observations ,
-                mask,
-                X ,
-                Z ,
-                sigma2,
-                reg_coeff,
-                split_coeff)
+        img_size, grid_size, observations, mask, X, Z, sigma2, reg_coeff, split_coeff
+    )
     # conditionnals are set in the constructor
 
     sampler = DistributedSampler(
-        batch_size,
-        nb_batches,
-        seed,
-        "sample",
-        save_path,
-        model
+        batch_size, nb_batches, seed, "sample", save_path, model
     )
     
     #load_path = "../../produced_data/sample/sample"+ str(num_batch-1)+".h5"

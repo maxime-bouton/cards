@@ -1,6 +1,7 @@
-""" 
-    Implement a denoising model for the inpainting problem with guassian noise.
 """
+Implement a denoising model for the inpainting problem with guassian noise.
+"""
+
 from models.BaseModel import BaseDistributedModel
 from TransitionKernel.TransitionKernel import BaseSerialTransitionKernel, PSGLA
 from estimator.estimatorBuilder import MMSEBuilder
@@ -10,22 +11,24 @@ import numpy as np
 
 from functionals.numpy.prox import l21_norm, prox_l21norm
 
+
 def prox_nonegativity(x):
-    return np.maximum(x,0)
+    return np.maximum(x, 0)
 
 
 class DistributedGaussianInpaintingModel(BaseDistributedModel):
-    def __init__(self,
-                full_size : np.ndarray,
-                grid_size : np.ndarray,
-                observations : np.ndarray,
-                mask : np.ndarray,
-                X : BaseSerialTransitionKernel,
-                Z : BaseSerialTransitionKernel,
-                sigma2 : float,
-                reg_coeff : float ,
-                split_coeff : float
-                ) -> None:
+    def __init__(
+        self,
+        full_size: np.ndarray,
+        grid_size: np.ndarray,
+        observations: np.ndarray,
+        mask: np.ndarray,
+        X: BaseSerialTransitionKernel,
+        Z: BaseSerialTransitionKernel,
+        sigma2: float,
+        reg_coeff: float,
+        split_coeff: float,
+    ) -> None:
         """
         Parameters
         ----------
@@ -57,38 +60,53 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         self.split_coeff = split_coeff
         self.sigma2 = sigma2
 
-        self.gradient_handler = distributed_gradient2d(np.asarray(self.full_size), grid_size)
-        self.adj_buffer = np.zeros(self.gradient_handler.cart_comm.cartslicer.tile_size) #! buffer linked to the kernel used
+        self.gradient_handler = distributed_gradient2d(
+            np.asarray(self.full_size), grid_size
+        )
+        self.adj_buffer = np.zeros(
+            self.gradient_handler.cart_comm.cartslicer.tile_size
+        )  #! buffer linked to the kernel used
 
         self.slices = self.set_slices()
         self.global_sizes = self.set_global_sizes()
 
-        self.estimator_builder = MMSEBuilder( self.gradient_handler.cart_comm.cartslicer.tile_size )
+        self.estimator_builder = MMSEBuilder(
+            self.gradient_handler.cart_comm.cartslicer.tile_size
+        )
 
         match type(X).__qualname__:
             case PSGLA.__qualname__:
-                self.X.prox = prox_nonegativity # implement prox 
-                self.X.grad = lambda x :  self.mask*( x - self.observations ) / self.sigma2  + self.adj_buffer / self.split_coeff         
+                self.X.prox = prox_nonegativity  # implement prox
+                self.X.grad = (
+                    lambda x: self.mask * (x - self.observations) / self.sigma2
+                    + self.adj_buffer / self.split_coeff
+                )
             case _:
-                print("Kernel type not yet supported by this model.") #! move to logger
-        
+                print("Kernel type not yet supported by this model.")  #! move to logger
+
         match type(Z).__qualname__:
             case PSGLA.__qualname__:
-                self.Z.prox = lambda z : ( prox_l21norm( z, self.Z.step_size * self.reg_coeff ) )
-                self.Z.grad = lambda z : ( z - self.gradX ) / self.split_coeff
+                self.Z.prox = lambda z: (
+                    prox_l21norm(z, self.Z.step_size * self.reg_coeff)
+                )
+                self.Z.grad = lambda z: (z - self.gradX) / self.split_coeff
             case _:
-                print("Kernel type not yet supported by this model.") #! move to logger
+                print("Kernel type not yet supported by this model.")  #! move to logger
 
-        self.gradX = np.zeros( (2, *self.X.current_state.shape) )
+        self.gradX = np.zeros((2, *self.X.current_state.shape))
 
     def set_slices(self) -> dict:
-        slices ={}
-        slices["X"] = self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
-        slices["Z"] = ( np.s_[:] , *self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile())
-        slices["MMSE"] = self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
-        #debug, to be deleted
-        slices["grad"] = ( np.s_[:] , *self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile())
-        slices["adj"] = self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
+        slices = {}
+        slices["X"] = (
+            self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
+        )
+        slices["Z"] = (
+            np.s_[:],
+            *self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile(),
+        )
+        slices["MMSE"] = (
+            self.gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
+        )
         return slices
 
     #! local buffer
@@ -102,16 +120,13 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
             Dictionnary containing the curent states of the variables.
         """
         states = {}
-        states['X'] = self.X.current_state
-        states['Z'] = self.Z.current_state 
-        states['MMSE'] = self.estimator_builder.estimator
-        #debug, to be deleted
-        states['grad'] = self.gradX
-        states['adj'] = self.adj_buffer
+        states["X"] = self.X.current_state
+        states["Z"] = self.Z.current_state  #! pb on slices
+        states["MMSE"] = self.estimator_builder.estimator
         return states
-    
+
     def set_states(self, states: dict) -> None:
-        """set_states 
+        """set_states
         Read the dictionnary given in entry and set the variables of the model to the values contained in it.
         The keys used by the dictionnary must be the same as in "get_states"
 
@@ -122,24 +137,23 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         """
         self.X.current_state = states["X"].copy()
         self.Z.current_state = states["Z"].copy()
-        #debug, to be deleted
-        #self.gradX = states["grad"].copy()
-        #self.adj_buffer = states["adj"].copy()
+        
         self.gradX = self.gradient_handler.compute_grad(self.X.current_state)
-        self.gradient_handler.compute_adjoint(self.adj_buffer, self.gradX[0] - self.Z.current_state[0], self.gradX[1] - self.Z.current_state[1] )
-        #! need the Z from the previous step?
+        self.gradient_handler.compute_adjoint(
+            self.adj_buffer,
+            self.gradX[0] - self.Z.current_state[0],
+            self.gradX[1] - self.Z.current_state[1],
+        )
 
     def set_global_sizes(self) -> dict:
         sizes = {}
-        sizes["X"] = np.asarray(self.full_size , dtype=int)
-        sizes["Z"] = np.asarray( [2, *self.full_size] , dtype=int )
+        sizes["X"] = np.asarray(self.full_size, dtype=int)
+        sizes["Z"] = np.asarray([2, *self.full_size], dtype=int)
         sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
-         #debug, to be deleted
-        sizes["grad"] = np.asarray( [2, *self.full_size] , dtype=int )
-        sizes["adj"] = np.asarray(self.full_size , dtype=int)
+        
         return sizes
-    
-    def update(self, rng : np.random.Generator ) -> None:
+
+    def update(self, rng: np.random.Generator) -> None:
         """update Gobal update of the model. Updates every kernel used by the model and computes annex variables.
 
         Parameters
@@ -155,7 +169,11 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         self.Z.mc_step(rng)
 
         self.adj_buffer[:] = 0
-        self.gradient_handler.compute_adjoint(self.adj_buffer, self.gradX[0] - self.Z.current_state[0], self.gradX[1] - self.Z.current_state[1] )
+        self.gradient_handler.compute_adjoint(
+            self.adj_buffer,
+            self.gradX[0] - self.Z.current_state[0],
+            self.gradX[1] - self.Z.current_state[1],
+        )
 
     def aggregate_states(self):
         self.estimator_builder.estimator += self.X.current_state
@@ -163,7 +181,9 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
     def compute_potential(self) -> float:
         """compute_potential Computes the partial potential."""
         p = 0
-        p += np.sum( ( self.observations - self.mask * self.X.current_state)**2 ) / (2 * self.sigma2 ) # suboptimal
-        p += np.sum( (self.gradX - self.Z.current_state) ** 2 ) / (2*self.split_coeff)
+        p += np.sum((self.observations - self.mask * self.X.current_state) ** 2) / (
+            2 * self.sigma2
+        )  # suboptimal
+        p += np.sum((self.gradX - self.Z.current_state) ** 2) / (2 * self.split_coeff)
         p += self.reg_coeff * l21_norm(self.Z.current_state)
-        return p 
+        return p

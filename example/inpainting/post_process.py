@@ -3,10 +3,11 @@
 
 # %%
 
-import numpy as np
-import h5py
 import json
+
+import h5py
 import matplotlib.pyplot as plt
+import numpy as np
 from skimage.metrics import structural_similarity as ssim
 
 # %%
@@ -49,7 +50,6 @@ plt.imshow(observations.T, cmap="gray", vmin=pixelMin, vmax=pixelMax)
 plt.title("Observations")
 plt.colorbar()
 plt.show()
-
 
 
 # %% forming the MMSE estimator and the potential

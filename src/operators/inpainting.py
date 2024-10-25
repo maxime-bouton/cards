@@ -2,7 +2,6 @@ import numpy as np
 from mpi4py import MPI
 
 import dsgs.utils.communications as ucomm
-import dsgs.utils.communicators as comms
 from dsgs.operators.linear_operator import LinearOperator
 
 

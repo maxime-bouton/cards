@@ -1,5 +1,4 @@
-"""Helper functions to implement the FFT-based convolution operator.
-"""
+"""Helper functions to implement the FFT-based convolution operator."""
 
 # author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
 #

@@ -1,5 +1,5 @@
 """
-    Object than handles any reading/writing on disk.
+Object than handles any reading/writing on disk.
 """
 
 import h5py
@@ -7,9 +7,10 @@ import numpy as np
 import sys
 import torch
 
-class DataManager():
-    def save_dict(self,data : dict , file ) -> None:
-        """save_dict Saves the dictionnary given in entry in the .h5 file given in entry. 
+
+class DataManager:
+    def save_dict(self, data: dict, file) -> None:
+        """save_dict Saves the dictionnary given in entry in the .h5 file given in entry.
 
         Parameters
         ----------
@@ -20,8 +21,8 @@ class DataManager():
         """
         for key in data:
             file[key] = data[key]
-   
-    def load_h5( self, file_name : str ) -> dict :
+
+    def load_h5(self, file_name: str) -> dict:
         """load_h5 Read a .h5 file and return its content in the form of a dictionnary.
 
         Parameters
@@ -35,16 +36,15 @@ class DataManager():
             Dictionnary containing the data of the file.
         """
         data = {}
-        with h5py.File(file_name, 'r') as file:
+        with h5py.File(file_name, "r") as file:
             for key in file.keys():
                 if file[key].size > 1:
                     data[key] = file[key][:]
-                else :
+                else:
                     data[key] = file[key][()]
         return data
 
-
-    def save_array(self,data : np.ndarray , file, name : str) -> None:
+    def save_array(self, data: np.ndarray, file, name: str) -> None:
         """save_array Save the array given in entry in the .h5 file given in entry.
 
         Parameters
@@ -59,7 +59,7 @@ class DataManager():
         file[name] = data
 
     #! numpy behaviour has changed, return None now
-    def save_rng(self, rng, file) -> None :
+    def save_rng(self, rng, file) -> None:
         """save_rng Save the internal state of the random number generator given in entry to the .h5 file given in entry.
 
         Parameters
@@ -69,8 +69,20 @@ class DataManager():
         file : _type_
             File to write the internal state.
         """
-        state_array = np.array( bytearray(rng.bit_generator.__getstate__()[0]["state"]["state"].to_bytes(32, sys.byteorder)) )
-        inc_array = np.array( bytearray(rng.bit_generator.__getstate__()[0]["state"]["inc"].to_bytes(32, sys.byteorder)) )
+        state_array = np.array(
+            bytearray(
+                rng.bit_generator.__getstate__()[0]["state"]["state"].to_bytes(
+                    32, sys.byteorder
+                )
+            )
+        )
+        inc_array = np.array(
+            bytearray(
+                rng.bit_generator.__getstate__()[0]["state"]["inc"].to_bytes(
+                    32, sys.byteorder
+                )
+            )
+        )
 
         file["rng_state_array"] = state_array
         file["rng_inc_array"] = inc_array
@@ -92,7 +104,7 @@ class DataManager():
         rng.bit_generator.__setstate__(new_rng_state)
     """
 
-    def save_offset(self, rng : torch.Generator, file) -> None :
+    def save_offset(self, rng: torch.Generator, file) -> None:
         """save_offset Write the offset on a .h5 file.
 
         Parameters
@@ -102,4 +114,4 @@ class DataManager():
         file : _type_
             File to be written on.
         """
-        file['offset'] = rng.get_offset()
+        file["offset"] = rng.get_offset()

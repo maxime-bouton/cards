@@ -4,10 +4,9 @@ from sampler.SerialSampler import Sampler
 
 import h5py
 import json
-import numpy as np
 
 
-if __name__ == '__main__' :
+if __name__ == "__main__":
     config_file = open("config.json")
     #config_file = open("config_peppers.json")
     params = json.load(config_file)
@@ -24,18 +23,18 @@ if __name__ == '__main__' :
 
     data_path = params["dataPath"]
 
-    with h5py.File(data_path,'r') as data_file:
+    with h5py.File(data_path, "r") as data_file:
         mask = data_file["mask01"][:]
         #mask = data_file["mask"][:]
         #sigma2 = data_file["sig2"][:]
         sigma2 = data_file["sig2"][()]
         observations = data_file["data"][:]
 
-    step_size_X = 0.99 * 1./( 8./split_coeff + 1./sigma2 )
+    step_size_X = 0.99 * 1.0 / (8.0 / split_coeff + 1.0 / sigma2)
     X = PSGLA(observations.shape, step_size_X)
 
     step_size_Z = 0.99 / split_coeff
-    Z = PSGLA( (2,*X.current_state.shape), step_size_Z)
+    Z = PSGLA((2, *X.current_state.shape), step_size_Z)
 
     model = GaussianInpaintingModel(
                 observations ,

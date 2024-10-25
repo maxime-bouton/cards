@@ -1,5 +1,4 @@
-"""Abstract linear operator class.
-"""
+"""Abstract linear operator class."""
 
 # author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
 #

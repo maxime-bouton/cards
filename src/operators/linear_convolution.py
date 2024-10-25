@@ -1,5 +1,4 @@
-""" Serial and distributed linear convolution operators.
-"""
+"""Serial and distributed linear convolution operators."""
 
 # author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
 #
@@ -8,7 +7,6 @@
 # [arxiv preprint 2210.02341](http://arxiv.org/abs/2210.02341), October 2022.
 
 import numpy as np
-from mpi4py import MPI
 
 import dsgs.utils.communications as ucomm
 import dsgs.utils.communicators as comms

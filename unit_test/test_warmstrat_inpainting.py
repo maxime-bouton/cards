@@ -5,7 +5,7 @@ from sampler.SerialSampler import Sampler
 import pytest
 import h5py
 import numpy as np
-from os import mkdir, system, path
+from os import path
 
 def test_wramstart_inpainting(tmp_path):
 
