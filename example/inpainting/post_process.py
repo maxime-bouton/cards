@@ -12,7 +12,8 @@ from skimage.metrics import structural_similarity as ssim
 # %%
 
 # ! relative path to the configuration file, may need to be changed
-configFile = open("config.json")
+#configFile = open("config.json")
+configFile = open("config_peppers.json")
 param = json.load(configFile)
 path_origin = param["originPath"]
 
@@ -40,8 +41,9 @@ plt.show()
 
 with h5py.File(dataPath, "r") as file:
     observations = file["data"][:]
-    mask = file["mask"][:]
-    sigma = np.sqrt(file["/sig2"][:])
+    mask = file["mask01"][:]
+    #sigma = np.sqrt(file["/sig2"][:])
+    sigma = np.sqrt(file["/sig2"][()])
 
 plt.imshow(observations.T, cmap="gray", vmin=pixelMin, vmax=pixelMax)
 plt.title("Observations")
@@ -55,6 +57,7 @@ file_name = path + "sample" + str(0) + ".h5"
 with h5py.File(file_name, "r") as file:
     MMSE = np.zeros(original.shape, dtype="d")
     potential = file["/potential"][:]
+    time = file["/computation_time"][:]
 
 burnin = 5
 for i in range(burnin, nbBatch):
@@ -66,12 +69,13 @@ for i in range(1, nbBatch):
     file_name = path + "sample" + str(i) + ".h5"
 
     with h5py.File(file_name, "r") as file:
-        potential = np.append(potential, file["/potential"])
+        potential = np.append(potential, file["/potential"][:])
+        time = np.append(time, file["/computation_time"][:])
 
-# MMSE = MMSE / np.amax(MMSE)
 MMSE = MMSE / (nbBatch - burnin)
-#atime = np.mean(time)
-#std_time = np.std(time)
+atime = np.mean(time)
+std_time = np.std(time)
+total_time = np.sum(time)
 
 # %% display estimator
 plt.imshow(MMSE.T, cmap="gray", vmin=pixelMin, vmax=pixelMax)
@@ -87,7 +91,7 @@ plt.show()
 
 plt.plot(potential)
 plt.title("Potential")
-# plt.savefig("potential")
+#plt.savefig("potential")
 plt.show()
 
 # mmse = MMSE.astype(np.uint8)
@@ -117,10 +121,9 @@ print("Observations/Truth SNR : ", SNR_ori)
 print("Reconstruction/Truth SNR : ", SNR)
 print("Observations/Truth SSIM : ", ssim_noise)
 print("Reconstruction/Truth SSIM : ", ssim_recon)
-"""
+
 print(
     "Reconstruction total time={:.3e}, atime={:.3e}, std={:.3e}".format(
         total_time, atime, std_time
     )
 )
-"""

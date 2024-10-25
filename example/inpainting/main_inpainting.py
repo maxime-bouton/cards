@@ -1,8 +1,6 @@
 from TransitionKernel.TransitionKernel import PSGLA
 from models.GaussianInpaintingModel import GaussianInpaintingModel
 from sampler.SerialSampler import Sampler
-from functionals.numpy.prox import prox_l21norm
-from estimator.estimatorBuilder import MMSEBuilder
 
 import h5py
 import json
@@ -11,6 +9,7 @@ import numpy as np
 
 if __name__ == '__main__' :
     config_file = open("config.json")
+    #config_file = open("config_peppers.json")
     params = json.load(config_file)
 
     nb_batches = params["nbCheckpoint"]
@@ -27,7 +26,9 @@ if __name__ == '__main__' :
 
     with h5py.File(data_path,'r') as data_file:
         mask = data_file["mask01"][:]
-        sigma2 = data_file["sig2"][:]
+        #mask = data_file["mask"][:]
+        #sigma2 = data_file["sig2"][:]
+        sigma2 = data_file["sig2"][()]
         observations = data_file["data"][:]
 
     step_size_X = 0.99 * 1./( 8./split_coeff + 1./sigma2 )
@@ -44,9 +45,7 @@ if __name__ == '__main__' :
                 sigma2,
                 reg_coeff,
                 split_coeff)
-    # conditionnals are set in the constructor
-
-    mmse_handler = MMSEBuilder( X.current_state.shape )
+    # conditionnals are set in the initialization
 
     sampler = Sampler(
                 batch_size,
@@ -56,7 +55,7 @@ if __name__ == '__main__' :
                 save_path,
                 model)
     
-    load_path = "../../produced_data/sample/sample"+str(num_batch-1)+".h5"
-    sampler.restart(load_path, num_batch, restart_save_path)
+    #load_path = "../../produced_data/sample/sample"+str(num_batch-1)+".h5"
+    #sampler.restart(load_path, num_batch, restart_save_path)
 
     sampler.sample()
