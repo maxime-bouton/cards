@@ -1,10 +1,10 @@
 from mpi4py import MPI
 
-from TransitionKernel.TransitionKernel import PSGLA
-from models.DistributedGaussianInpainting import DistributedGaussianInpaintingModel
-from sampler.DistributedSampler import DistributedSampler
+from mcmc.TransitionKernel.TransitionKernel import PSGLA
+from mcmc.models.DistributedGaussianInpainting import DistributedGaussianInpaintingModel
+from mcmc.sampler.DistributedSampler import DistributedSampler
 
-from slicer.cartesian_comm_slicer import CartesianCommSlicer
+from mcmc.slicer.cartesian_comm_slicer import CartesianCommSlicer
 
 import h5py
 import json

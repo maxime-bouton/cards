@@ -1,6 +1,6 @@
-from TransitionKernel.GpuTransitionKernel import GpuPSGLA
-from models.GpuGaussianInpaintingModel import GpuGaussianInpaintingModel
-from sampler.GpuSampler import GpuSampler
+from mcmc.TransitionKernel.GpuTransitionKernel import GpuPSGLA
+from mcmc.models.GpuGaussianInpaintingModel import GpuGaussianInpaintingModel
+from mcmc.sampler.GpuSampler import GpuSampler
 
 import h5py
 import json
