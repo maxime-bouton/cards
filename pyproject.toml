@@ -1,0 +1,9 @@
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "mpi: parallel tests requiring mpi",
+    "numpy: tests relying on torch as a computing backend",
+    "torch: tests relying on numpy as a computing backend",
+]
+addopts = "-ra -q -vv"
+testpaths = "tests"

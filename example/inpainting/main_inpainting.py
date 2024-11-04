@@ -1,6 +1,6 @@
-from TransitionKernel.TransitionKernel import PSGLA
-from models.GaussianInpaintingModel import GaussianInpaintingModel
-from sampler.SerialSampler import Sampler
+from mcmc.TransitionKernel.TransitionKernel import PSGLA
+from mcmc.models.GaussianInpaintingModel import GaussianInpaintingModel
+from mcmc.sampler.SerialSampler import Sampler
 
 import h5py
 import json
