@@ -163,9 +163,7 @@ def load_rng_np(rng: np.random.Generator, h5file: h5py.File) -> None:
     ----
     Requires ``numpy>=2.0``.
     """
-    loaded_state_array = h5file["rng_state_array"][:]
-    loaded_inc_array = h5file["rng_inc_array"][:]
-    restore_rng_state(rng, loaded_inc_array, loaded_state_array)
+    restore_rng_state(rng, h5file["rng_state_array"][:], h5file["rng_inc_array"][:])
     return
 
 

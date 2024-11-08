@@ -4,7 +4,7 @@ Implement a denoising model for the inpainting problem with guassian noise.
 
 from mcmc.models.BaseModel import BaseModel
 from mcmc.TransitionKernel.TransitionKernel import BaseSerialTransitionKernel, PSGLA
-from mcmc.estimator.estimatorBuilder import MMSEBuilder
+from mcmc.estimator.SerialMMSEBuilder import SerialMMSEBuilder
 
 import numpy as np
 
@@ -67,7 +67,7 @@ class GaussianInpaintingModel(BaseModel):
         self.split_coeff = split_coeff
         self.sigma2 = sigma2
 
-        self.estimator_builder = MMSEBuilder(observations.shape)
+        self.estimator_builder = SerialMMSEBuilder(observations.shape)
 
         match type(X).__qualname__:
             case PSGLA.__qualname__:

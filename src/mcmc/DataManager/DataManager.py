@@ -9,6 +9,9 @@ import torch
 
 
 class DataManager:
+    def __init__(self):
+        pass
+
     def save_dict(self, data: dict, file) -> None:
         """save_dict Saves the dictionnary given in entry in the .h5 file given in entry.
 
@@ -58,7 +61,6 @@ class DataManager:
         """
         file[name] = data
 
-    #! numpy behaviour has changed, return None now
     def save_rng(self, rng, file) -> None:
         """save_rng Save the internal state of the random number generator given in entry to the .h5 file given in entry.
 
@@ -86,7 +88,6 @@ class DataManager:
 
         file["rng_state_array"] = state_array
         file["rng_inc_array"] = inc_array
-        #! check saved as uint8
 
     """
     def load_rng(self, rng, file_name : str) -> None:

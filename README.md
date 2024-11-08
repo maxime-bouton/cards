@@ -29,7 +29,7 @@ The use of random number generators on GPU seems to be incompatible with `numpy`
   pip install torch  # ok for 2.5.1 version, not the case yet with mamba
   mamba install numba
   mamba install pytest pre-commit ruff conda-build
-  pip install coverage
+  mamba install pytest-cov
   pip install docstr-coverage
 
   # export manual configuration in a .yml file
@@ -38,10 +38,10 @@ The use of random number generators on GPU seems to be incompatible with `numpy`
   conda develop src
   ```
 
-- To create an envorinment from the provided `.yml` file
+- To create an environment from the provided `.yml` file
 
   ```bash
-  mamba create --name pymcmc --file gpu-linux-64.yml
+  mamba env create --file gpu-linux-64.yml
   conda develop src
   ```
 

@@ -4,7 +4,7 @@ Implement a denoising model for the inpainting problem with guassian noise.
 
 from mcmc.models.BaseModel import BaseModel
 from mcmc.TransitionKernel.GpuTransitionKernel import BaseGpuTransitionKernel, GpuPSGLA
-from mcmc.estimator.GpuEstimatorBuilder import GpuMMSEBuilder
+from mcmc.estimator.GPUMMSEBuilder import GPUMMSEBuilder
 
 import numpy as np
 import cupy as cp
@@ -86,7 +86,7 @@ class GpuGaussianInpaintingModel(BaseModel):
         self.split_coeff = split_coeff
         self.sigma2 = sigma2
 
-        self.estimator_builder = GpuMMSEBuilder(observations.shape)
+        self.estimator_builder = GPUMMSEBuilder(observations.shape)
 
         match type(X).__qualname__:
             case GpuPSGLA.__qualname__:
@@ -167,9 +167,7 @@ class GpuGaussianInpaintingModel(BaseModel):
         p = 0
         p += cp.sum((self.observations - self.mask * self.X.current_state) ** 2) / (
             2 * self.sigma2
-        )  # suboptimal
+        )
         p += cp.sum((self.gradX - self.Z.current_state) ** 2) / (2 * self.split_coeff)
-        p += self.reg_coeff * l21_norm(
-            self.Z.current_state
-        )  #! must be defined on gpu with cupy
+        p += self.reg_coeff * l21_norm(self.Z.current_state)
         return p

@@ -2,8 +2,6 @@
 Object than handles any reading/writing on disk with parallel memory acces.
 """
 
-#! the use of private method to write the internal state of the generator may bring some compatibility issues
-
 import h5py
 import numpy as np
 import sys
@@ -29,7 +27,7 @@ class DistributedDataManager:
         """
         for key in data:
             #! acces mode must be set in parallel
-            dset = file.create_dataset(key, global_sizes[key], dtype="f")
+            dset = file.create_dataset(key, global_sizes[key], dtype=data[key].dtype)
             dset[slices[key]] = data[key]
 
     def save_array(
@@ -55,8 +53,8 @@ class DistributedDataManager:
         name : str
             Name of the datafield in the file.
         """
-        dset = file.create_dataset(name, global_size, dtype="f")
-        dset[*slices] = data
+        dset = file.create_dataset(name, global_size, dtype=data.dtype)
+        dset[slices] = data
 
     def save_seed(self, seed: int, rank: int, comm_size: int, file: h5py.File):
         """save_seed Save the seeds used on each process. It expects the given file to be open in paralell mode.
@@ -107,7 +105,7 @@ class DistributedDataManager:
         """
         data = {}
         for key in slices.keys():
-            data[key] = file[key][slices[key]]
+            data[key] = np.asarray(file[key][slices[key]], dtype=file[key].dtype)
         return data
 
     def save_rng(
@@ -147,9 +145,7 @@ class DistributedDataManager:
         dset[rank] = state_array
 
         size = np.asarray([comm_size, *inc_array.shape])
-        dset = file.create_dataset(
-            "rng_inc_array", size, dtype=np.uint8
-        )  # inc_array.dtype
+        dset = file.create_dataset("rng_inc_array", size, dtype=np.uint8)
         dset[rank] = inc_array
 
     def load_rng(self, rng: np.random.Generator, file: h5py.File, rank: int) -> None:
