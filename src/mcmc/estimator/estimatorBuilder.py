@@ -1,13 +1,18 @@
-import numpy as np
+r"""Abstract class used to build statistic estimators."""
+
 from abc import ABC, abstractmethod
+from typing import Any
 
 
 class BaseEstimatorBuilder(ABC):
-    def __init__(self, shape) -> None:
-        self.estimator = np.zeros(shape)
+    estimator: Any
+    """Internal state of the estimator, its internal_state depends on the implementation"""
+
+    __name: str
+    """A human readable name for this estimator"""
 
     @abstractmethod
-    def aggregate_states(self, state: np.ndarray) -> None:
+    def aggregate_states(self, state: Any) -> None:
         pass
 
     @abstractmethod
@@ -15,15 +20,27 @@ class BaseEstimatorBuilder(ABC):
         pass
 
     def reset(self) -> None:
-        self.estimator = np.zeros_like(self.estimator)
+        """Reset the internal state of the estimator."""
+        pass
 
 
-class MMSEBuilder(BaseEstimatorBuilder):
-    def __init__(self, shape) -> None:
-        super().__init__(shape)
-        self.name = "MMSE"
+class BaseMMSEBuilder(BaseEstimatorBuilder):
+    r"""Numpy implementation of a MMSE estimator.
 
-    def aggregate_states(self, state: np.ndarray) -> None:
+    Numpy implementation of :class:`mcmc.estimator.estimatorBuilder.BaseMMSEBuilder`.
+
+    Attributes
+    ----------
+    estimator : Any
+        Internal state of the MMSE estimator.
+    __name : str
+        Name of the estimator.
+    """
+
+    def __init__(self):
+        self.__name = "MMSE"
+
+    def aggregate_states(self, state: Any) -> None:
         self.estimator += state
 
     def build_estimator(self, N: int) -> None:

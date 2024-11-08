@@ -4,7 +4,7 @@ Implement a denoising model for the inpainting problem with guassian noise.
 
 from mcmc.models.BaseModel import BaseDistributedModel
 from mcmc.TransitionKernel.TransitionKernel import BaseSerialTransitionKernel, PSGLA
-from mcmc.estimator.estimatorBuilder import MMSEBuilder
+from mcmc.estimator.SerialMMSEBuilder import SerialMMSEBuilder
 from mcmc.distributed_operators.gradient import distributed_gradient2d
 
 import numpy as np
@@ -70,7 +70,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         self.slices = self.set_slices()
         self.global_sizes = self.set_global_sizes()
 
-        self.estimator_builder = MMSEBuilder(
+        self.estimator_builder = SerialMMSEBuilder(
             self.gradient_handler.cart_comm.cartslicer.tile_size
         )
 

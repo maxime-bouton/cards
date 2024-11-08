@@ -63,7 +63,6 @@ if __name__ == "__main__":
     model = DistributedGaussianInpaintingModel(
         img_size, grid_size, observations, mask, X, Z, sigma2, reg_coeff, split_coeff
     )
-    # conditionnals are set in the constructor
 
     sampler = DistributedSampler(
         batch_size, nb_batches, seed, "sample", save_path, model
