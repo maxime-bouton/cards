@@ -86,13 +86,13 @@ def test_warmstart_rng_np_mpi(comm, seed, new_seed, n_samples):
     assert np.linalg.norm(x) > 0
 
     with h5py.File(filename, "w", driver="mpio", comm=comm) as f:
-        save_rng_np_mpi(comm, local_rng, f)
+        save_rng_np_mpi(rank, size, local_rng, f)
 
     y = local_rng.standard_normal(size=(n_samples,))
 
     new_local_rng = np.random.default_rng(new_seed)
     with h5py.File(filename, "r") as f:
-        load_rng_np_mpi(comm, new_local_rng, f)
+        load_rng_np_mpi(rank, new_local_rng, f)
 
     z = new_local_rng.standard_normal(size=(n_samples,))
 
@@ -122,6 +122,7 @@ def test_warmstart_rng_offset_torch_mpi(comm, seed, new_seed, n_samples, device)
     an initial seed. Tested in a distributed setting."""
     filename = "warmstart_rng_offset_torch_mpi.h5"
     rank = comm.Get_rank()
+    size = comm.Get_size()
 
     # ! doubt about the statistical robustness of multi-GPU sampling with
     # ! torch, compared to cupy/numpy, where this feature is explicitly
@@ -136,7 +137,7 @@ def test_warmstart_rng_offset_torch_mpi(comm, seed, new_seed, n_samples, device)
     assert torch.linalg.vector_norm(x) > 0
 
     with h5py.File(filename, "w", driver="mpio", comm=comm) as f:
-        save_rng_offset_torch_mpi(comm, rng, seed, f)
+        save_rng_offset_torch_mpi(rank, size, rng, seed, f)
 
     y = torch.randn((n_samples,), generator=rng, device=device)
 
@@ -144,7 +145,7 @@ def test_warmstart_rng_offset_torch_mpi(comm, seed, new_seed, n_samples, device)
         int("{}{}".format(rank, new_seed))
     )
     with h5py.File(filename, "r", driver="mpio", comm=comm) as f:
-        load_rng_offset_torch_mpi(comm, new_rng, f)
+        load_rng_offset_torch_mpi(rank, new_rng, f)
 
     z = torch.randn((n_samples,), generator=new_rng, device=device)
 
@@ -162,6 +163,7 @@ def test_warmstart_rng_torch_mpi(comm, seed, new_seed, n_samples, device):
     state in a distributed setting."""
     filename = "warmstart_rng_torch_mpi.h5"
     rank = comm.Get_rank()
+    size = comm.Get_size()
 
     # ! doubt about the statistical robustness of multi-GPU sampling with
     # ! torch, compared to cupy/numpy, where this feature is explicitly
@@ -176,7 +178,7 @@ def test_warmstart_rng_torch_mpi(comm, seed, new_seed, n_samples, device):
     assert torch.linalg.vector_norm(x) > 0
 
     with h5py.File(filename, "w", driver="mpio", comm=comm) as f:
-        save_rng_torch_mpi(comm, rng, seed, f)
+        save_rng_torch_mpi(rank, size, rng, seed, f)
 
     y = torch.randn((n_samples,), generator=rng, device=device)
 
@@ -184,7 +186,7 @@ def test_warmstart_rng_torch_mpi(comm, seed, new_seed, n_samples, device):
         int("{}{}".format(rank, new_seed))
     )
     with h5py.File(filename, "r", driver="mpio", comm=comm) as f:
-        load_rng_torch_mpi(comm, new_rng, f)
+        load_rng_torch_mpi(rank, new_rng, f)
 
     z = torch.randn((n_samples,), generator=new_rng, device=device)
 

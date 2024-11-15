@@ -209,7 +209,7 @@ def proj_box(x, low, high):
     # return np.clip(x, low, high)
 
 
-@jit(nopython=True, cache=True)
+# @jit(nopython=True, cache=True)
 def l21_norm(x, axis=0):
     r"""Compute the :math:`\ell_{2,1}` norm of an array.
 

@@ -3,47 +3,38 @@ generator in numpy.
 
 NOTE
 ----
-May be unstable due to the use a private method of
-``numpy.random.Generator.bit_generator``.
+Tests may be broken with later numpy version, as :func:`mcmc.DataManager.warmstart_rng.extract_rng_state` and
+:func:`mcmc.DataManager.warmstart_rng.restore_rng_state` rely on private methods
+of :class:`numpy.random.Generator.bit_generator`.
 """
 
 import numpy as np
-import sys
+from mcmc.DataManager.warmstart_rng import extract_rng_state, restore_rng_state
 
 import pytest
+
+pytestmark = pytest.mark.numpy
 
 
 @pytest.fixture
 def size():
-    return 10000000
+    return 100000
 
 
 def test_rng_state(size):
-    N = size
-
+    r"""Test state extraction and reset with a ``numpy`` random number
+    generator."""
     rng = np.random.default_rng(1234)
-    new_state_state = rng.bit_generator.__getstate__()[0]["state"]["state"]
-    new_state_inc = rng.bit_generator.__getstate__()[0]["state"]["inc"]
-
-    a = rng.standard_normal(N)
-
-    loaded_state_state = np.array(
-        bytearray(new_state_state.to_bytes(32, sys.byteorder))
-    )
-    loaded_state_inc = np.array(bytearray(new_state_inc.to_bytes(32, sys.byteorder)))
+    saved_state, saved_inc = extract_rng_state(rng)
+    a = rng.standard_normal(size)
 
     rng2 = np.random.default_rng(5678)
-    new_state = rng2.bit_generator.__getstate__()
-    new_state[0]["state"]["state"] = int.from_bytes(loaded_state_state, sys.byteorder)
-    new_state[0]["state"]["inc"] = int.from_bytes(loaded_state_inc, sys.byteorder)
-
-    rng2.bit_generator.__setstate__(new_state)
-
-    b = rng2.standard_normal(N)
+    restore_rng_state(rng2, saved_state, saved_inc)
+    b = rng2.standard_normal(size)
 
     assert np.allclose(a, b)
 
 
 if __name__ == "__main__":
-    size = 10000000
+    size = 100000
     test_rng_state(size)

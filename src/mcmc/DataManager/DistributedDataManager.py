@@ -4,7 +4,10 @@ Object than handles any reading/writing on disk with parallel memory acces.
 
 import h5py
 import numpy as np
-import sys
+
+from mcmc.DataManager.warmstart_rng_mpi import load_rng_np_mpi, save_rng_np_mpi
+
+# ! need a base class setting up the interface, and create subclasses through inheritance (numpy-based, torch-based)
 
 
 class DistributedDataManager:
@@ -26,7 +29,7 @@ class DistributedDataManager:
             Dictionnary containing the indexes of the vertices delimiting the position of the local buffer in the global buffer.
         """
         for key in data:
-            #! acces mode must be set in parallel
+            #! acces mode must be set in parallel so that variables can be created in parallel
             dset = file.create_dataset(key, global_sizes[key], dtype=data[key].dtype)
             dset[slices[key]] = data[key]
 
@@ -54,9 +57,9 @@ class DistributedDataManager:
             Name of the datafield in the file.
         """
         dset = file.create_dataset(name, global_size, dtype=data.dtype)
-        dset[slices] = data
+        dset[*slices] = data
 
-    def save_seed(self, seed: int, rank: int, comm_size: int, file: h5py.File):
+    def save_seed(self, seed: int, rank: int, comm_size: int, file: h5py.File) -> None:
         """save_seed Save the seeds used on each process. It expects the given file to be open in paralell mode.
 
         Parameters
@@ -70,10 +73,10 @@ class DistributedDataManager:
         file : h5py.File
             File to be written on.
         """
-        dset = file.create_dataset("seed", np.asarray([comm_size]), dtype=int)
+        dset = file.create_dataset("seed", (comm_size,), dtype=int)
         dset[rank] = seed
 
-    def save_local_array(self, data: np.ndarray, name: str, file: h5py.File):
+    def save_local_array(self, data: np.ndarray, name: str, file: h5py.File) -> None:
         """save_local_array Save an array on a .h5 file. It expects the given file to be open in serial mode.
 
         Parameters
@@ -85,7 +88,9 @@ class DistributedDataManager:
         file : h5py.File
             File to be written on.
         """
-        file[name] = data
+        dset = file.create_dataset(name, data.shape, dtype=data.dtype)
+        dset[:] = data
+        return
 
     def load_h5(self, file: h5py.File, slices: dict) -> dict:
         """load_h5 Read a .5 file and load the local value of the array on each process.
@@ -105,7 +110,7 @@ class DistributedDataManager:
         """
         data = {}
         for key in slices.keys():
-            data[key] = np.asarray(file[key][slices[key]], dtype=file[key].dtype)
+            data[key] = file[key][slices[key]][:]
         return data
 
     def save_rng(
@@ -115,38 +120,15 @@ class DistributedDataManager:
 
         Parameters
         ----------
+        comm : MPI.Comm
+            Current MPI communicator.
         rng : np.random.Generator
             Local random number generator.
         file : h5py.File
             File to be written on.
-        rank : int
-            Rank of the process.
-        comm_size : int
-            Number of processes.
         """
-
-        state_array = np.array(
-            bytearray(
-                rng.bit_generator.__getstate__()[0]["state"]["state"].to_bytes(
-                    32, sys.byteorder
-                )
-            )
-        )
-        inc_array = np.array(
-            bytearray(
-                rng.bit_generator.__getstate__()[0]["state"]["inc"].to_bytes(
-                    32, sys.byteorder
-                )
-            )
-        )
-
-        size = np.asarray([comm_size, *state_array.shape])
-        dset = file.create_dataset("rng_state_array", size, dtype=np.uint8)
-        dset[rank] = state_array
-
-        size = np.asarray([comm_size, *inc_array.shape])
-        dset = file.create_dataset("rng_inc_array", size, dtype=np.uint8)
-        dset[rank] = inc_array
+        save_rng_np_mpi(rank, comm_size, rng, file)
+        return
 
     def load_rng(self, rng: np.random.Generator, file: h5py.File, rank: int) -> None:
         """load_rng Load the internal state of the random number generator for each process.
@@ -160,15 +142,5 @@ class DistributedDataManager:
         rank : int
             Rank of the process.
         """
-
-        new_state = rng.bit_generator.__getstate__()
-
-        loaded_state = file["rng_state_array"][rank]
-        loaded_inc = file["rng_inc_array"][rank]
-
-        new_state_state = int.from_bytes(loaded_state, sys.byteorder)
-        new_state_inc = int.from_bytes(loaded_inc, sys.byteorder)
-        new_state[0]["state"]["state"] = new_state_state
-        new_state[0]["state"]["inc"] = new_state_inc
-
-        rng.bit_generator.__setstate__(new_state)
+        load_rng_np_mpi(rank, rng, file)
+        return

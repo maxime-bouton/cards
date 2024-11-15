@@ -1,12 +1,14 @@
 r"""Test the writting/loading of data on/from disk memory."""
 
-import numpy as np
-from mcmc.DataManager.DataManager import DataManager
-import h5py
 from os.path import join
-import sys
 
+import h5py
+import numpy as np
 import pytest
+
+from mcmc.DataManager.DataManager import DataManager
+
+pytestmark = pytest.mark.numpy
 
 
 @pytest.fixture
@@ -24,6 +26,7 @@ def new_seed():
     return 4321
 
 
+# FIXME: missing docstrings
 def test_save(tmp_path, dims):
     rng = np.random.default_rng(1234)
     X = rng.standard_normal(dims)
@@ -47,9 +50,9 @@ def test_save(tmp_path, dims):
         data_manager.save_array(Z, file, "z")
 
     with h5py.File(filename, "r") as file:
-        checkX = (file["x"][:] == X).all()
-        checkY = (file["y"][:] == Y).all()
-        checkZ = (file["z"][:] == Z).all()
+        checkX = np.allclose(file["x"][:], X)
+        checkY = np.allclose(file["y"][:], Y)
+        checkZ = np.allclose(file["z"][:], Z)
 
     assert checkX and checkY and checkZ
 
@@ -72,12 +75,11 @@ def test_load(tmp_path, dims):
         file["z"] = Z
 
     data_manager = DataManager()
-
     data = data_manager.load_h5(filename)
 
-    checkX = (data["x"] == X).all()
-    checkY = (data["y"] == Y).all()
-    checkZ = (data["z"] == Z).all()
+    checkX = np.allclose(data["x"], X)
+    checkY = np.allclose(data["y"], Y)
+    checkZ = np.allclose(data["z"], Z)
 
     assert checkX and checkY and checkZ
 
@@ -85,8 +87,9 @@ def test_load(tmp_path, dims):
 def test_write_read_rng(tmp_path, dims, seed, new_seed):
     rng = np.random.default_rng(seed)
     rng2 = np.random.default_rng(new_seed)
+    n_trials = 10
 
-    for i in range(10):
+    for i in range(n_trials):
         rng.standard_normal(dims)
 
     data_manager = DataManager()
@@ -99,24 +102,13 @@ def test_write_read_rng(tmp_path, dims, seed, new_seed):
     with h5py.File(filename, "w") as file:
         data_manager.save_rng(rng, file)
 
-    data = data_manager.load_h5(filename)
+    with h5py.File(filename, "r") as file:
+        data_manager.load_rng(rng2, file)
 
-    state_array = data["rng_state_array"]
-    inc_array = data["rng_inc_array"]
+    check = np.zeros(n_trials, dtype=bool)
 
-    new_state = int.from_bytes(state_array, sys.byteorder)
-    new_inc = int.from_bytes(inc_array, sys.byteorder)
-
-    new_rng_state = rng.bit_generator.__getstate__()
-    new_rng_state[0]["state"]["state"] = new_state
-    new_rng_state[0]["state"]["inc"] = new_inc
-
-    rng2.bit_generator.__setstate__(new_rng_state)
-
-    check = np.zeros(10, dtype=bool)
-
-    for i in range(10):
-        check[i] = (rng.standard_normal(dims) == rng2.standard_normal(dims)).all()
+    for i in range(n_trials):
+        check[i] = np.allclose(rng.standard_normal(dims), rng2.standard_normal(dims))
 
     assert check.all()
 

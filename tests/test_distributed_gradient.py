@@ -2,13 +2,13 @@ r"""Testing the MPI-distributed implementation of the 2D discrete gradient
 operator."""
 
 import numpy as np
+import pytest
 from mpi4py import MPI
 
 from mcmc.distributed_operators.gradient import distributed_gradient2d
 from mcmc.operators.jtv import gradient_2d
 
-
-import pytest
+pytestmark = [pytest.mark.mpi, pytest.mark.numpy]
 
 
 @pytest.fixture
@@ -21,6 +21,7 @@ def comm():
     return MPI.COMM_WORLD
 
 
+@pytest.mark.numpy
 def test_distributed_gradient(comm, dims):
     global_size = dims
     rank = comm.Get_rank()
