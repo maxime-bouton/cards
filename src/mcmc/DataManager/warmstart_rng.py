@@ -157,7 +157,7 @@ def load_rng_np(rng: np.random.Generator, h5file: h5py.File) -> None:
     rng : np.random.Generator
         Numpy random number generator.
     h5file : h5py.File
-        Handle to a `.h5` file to save the state of the generator.
+        Handle to a `.h5` file from which the state of the generator will be loeaded.
 
     Note
     ----
@@ -252,10 +252,8 @@ def load_rng_torch(rng: torch._C.Generator, h5file: h5py.File) -> None:
     h5file : h5py.File
         Handle to a `.h5` file to save the state of the generator.
     """
-    # ! the loaded state should a priori be move to the GPU device, but at the
-    # ! moment.
-    # ! rng.set_state yields an error (state should be a torch.ByteTensor)
-    # ! for the moment, loaded state is kept on the cpu
+    # ! the loaded state should a priori be moved to the GPU device
+    # ! rng.set_state yields currently yields an error (state should be a torch.ByteTensor). Loaded state is kept on the cpu for now.
     loaded_state = torch.tensor(
         h5file["torch_rng_state"][:], dtype=torch.uint8, device="cpu"
     )

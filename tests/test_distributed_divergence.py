@@ -10,6 +10,8 @@ from mcmc.operators.jtv import gradient_2d_adjoint
 
 import pytest
 
+pytestmark = [pytest.mark.mpi, pytest.mark.numpy]
+
 
 @pytest.fixture
 def dims():

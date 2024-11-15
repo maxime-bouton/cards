@@ -13,8 +13,8 @@ import numpy as np
 
 if __name__ == "__main__":
     # config_path = "/home/stephane/dev/python-mcmc/example/inpainting/config_debug.json"
-    config_file = open("config.json")
-    # config_file = open("config_peppers.json")
+    # config_file = open("config.json")
+    config_file = open("config_peppers.json")
     # config_file = open(config_path)
     params = json.load(config_file)
 
@@ -68,9 +68,9 @@ if __name__ == "__main__":
         batch_size, nb_batches, seed, "sample", save_path, model
     )
 
-    # load_path = "../../produced_data/sample/sample"+ str(num_batch-1)+".h5"
+    load_path = "../../produced_data/sample/sample" + str(num_batch - 1) + ".h5"
     # load_path = "/home/stephane/dev/python-mcmc/produced_data/sample/sample"+ str(num_batch-1)+".h5"
-    # sampler.restart(load_path, restart_save_path, num_batch) #? +1
+    sampler.restart(load_path, restart_save_path, num_batch)  # ? +1
     # sampler.restart("../../produced_data/sample/sample5.h5", restart_save_path, 1)
 
     sampler.sample()

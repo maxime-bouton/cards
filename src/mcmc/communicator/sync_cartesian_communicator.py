@@ -14,8 +14,6 @@ from mcmc.communicator.mpi_utils import (
 )
 
 
-# TODO : modify to accommodate circular communications (mod to be added)
-# TODO: debug in circular communication mod, need to make sure more than one element along a dimension to use this option
 def send_rank(ranknd, grid_size, backward=True, circular=False):
     r"""Identify rank of destination worker for a given communication (sync. comm.).
 
@@ -196,7 +194,7 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
             dtype=self.dtype,
         )
 
-    # TODO: directly maintain the array to be updated within the communicator?
+    # NOTE: directly maintain the array to be updated within the communicator?
     def update_borders(self, local_array):
         """Update the borders of a local array using the communication scheme
         defined in the communicator.

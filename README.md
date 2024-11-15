@@ -19,7 +19,8 @@ The use of random number generators on GPU seems to be incompatible with `numpy`
   mamba install cuda # or nvidia::cuda
   which nvcc # should be located in miniforge folder or so
   mamba install cupy ipykernel ipyparallel
-  mamba install openmpi ucx mpi4py
+  # mamba install openmpi ucx mpi4py  # currently, issues with mpi4py openmpi
+  mamba install mpich mpi4py ucx
 
   # choose the build of h5py including "mpi_openmpi_py\<>" with the right python version
   # mamba search h5py
@@ -27,13 +28,13 @@ The use of random number generators on GPU seems to be incompatible with `numpy`
 
   # mamba install pytorch
   pip install torch  # ok for 2.5.1 version, not the case yet with mamba
-  mamba install numba
+  mamba install numba  # issue with numba for now (need more recent numpy?)
   mamba install pytest pre-commit ruff conda-build
   mamba install pytest-cov
   pip install docstr-coverage
 
   # export manual configuration in a .yml file
-  mamba env export --name pymcmc --file gpu-linux-64.yml
+  mamba env export --name pymcmc --file gpu-mpich-linux-64.yml
 
   conda develop src
   ```

@@ -2,14 +2,13 @@
 Implement a denoising model for the inpainting problem with guassian noise.
 """
 
-from mcmc.models.BaseModel import BaseDistributedModel
-from mcmc.TransitionKernel.TransitionKernel import BaseSerialTransitionKernel, PSGLA
-from mcmc.estimator.SerialMMSEBuilder import SerialMMSEBuilder
-from mcmc.distributed_operators.gradient import distributed_gradient2d
-
 import numpy as np
 
+from mcmc.distributed_operators.gradient import distributed_gradient2d
+from mcmc.estimator.SerialMMSEBuilder import SerialMMSEBuilder
 from mcmc.functionals.numpy.prox import l21_norm, prox_l21norm
+from mcmc.models.BaseModel import BaseDistributedModel
+from mcmc.TransitionKernel.TransitionKernel import PSGLA, BaseSerialTransitionKernel
 
 
 def prox_nonegativity(x):
@@ -76,7 +75,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
 
         match type(X).__qualname__:
             case PSGLA.__qualname__:
-                self.X.prox = prox_nonegativity  # implement prox
+                self.X.prox = prox_nonegativity
                 self.X.grad = (
                     lambda x: self.mask * (x - self.observations) / self.sigma2
                     + self.adj_buffer / self.split_coeff
@@ -121,7 +120,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         """
         states = {}
         states["X"] = self.X.current_state
-        states["Z"] = self.Z.current_state  #! pb on slices
+        states["Z"] = self.Z.current_state
         states["MMSE"] = self.estimator_builder.estimator
         return states
 
@@ -139,6 +138,8 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         self.Z.current_state = states["Z"].copy()
 
         self.gradX = self.gradient_handler.compute_grad(self.X.current_state)
+
+        self.adj_buffer[:] = 0
         self.gradient_handler.compute_adjoint(
             self.adj_buffer,
             self.gradX[0] - self.Z.current_state[0],
@@ -175,6 +176,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
             self.gradX[1] - self.Z.current_state[1],
         )
 
+    # ! should be removed, calling method from estimator object
     def aggregate_states(self):
         self.estimator_builder.estimator += self.X.current_state
 
