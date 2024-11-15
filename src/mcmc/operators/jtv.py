@@ -31,7 +31,7 @@ from numba import jit
 # https://numba.pydata.org/numba-doc/0.17.0/reference/types.html
 
 
-# @jit(nopython=True, cache=True)
+@jit(nopython=True, cache=True)
 def gradient_2d(x):
     r"""Compute 2d discrete gradient (with jit support).
 
@@ -61,7 +61,7 @@ def gradient_2d(x):
     return uh, uv
 
 
-# @jit(nopython=True, cache=True)
+@jit(nopython=True, cache=True)
 def gradient_2d_adjoint(uh, uv):
     r"""Adjoint of the 2d discrete gradient operator (with jit support).
 
@@ -167,14 +167,14 @@ def chunk_gradient_2d(x, islast):
 
 # ! try to simplify the structure of this function make sure uh and uv are
 # ! directly concatenated
-# @jit(
-#     [
-#         "void(f8[:,:], f8[:,:], f8[:,:], b1[:], b1[:])",
-#         "void(c16[:,:], c16[:,:], c16[:,:], b1[:], b1[:])",
-#     ],
-#     nopython=True,
-#     cache=True,
-# )
+@jit(
+    [
+        "void(f8[:,:], f8[:,:], f8[:,:], b1[:], b1[:])",
+        "void(c16[:,:], c16[:,:], c16[:,:], b1[:], b1[:])",
+    ],
+    nopython=True,
+    cache=True,
+)
 def chunk_gradient_2d_adjoint(uh, uv, v, isfirst, islast):
     r"""Chunk of the adjoint 2d discrete gradient (with jit support).
 

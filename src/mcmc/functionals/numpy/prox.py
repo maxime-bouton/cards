@@ -209,7 +209,7 @@ def proj_box(x, low, high):
     # return np.clip(x, low, high)
 
 
-# @jit(nopython=True, cache=True)
+@jit(nopython=True, cache=True)
 def l21_norm(x, axis=0):
     r"""Compute the :math:`\ell_{2,1}` norm of an array.
 
@@ -264,9 +264,7 @@ def prox_l21norm_conj(x, lam=1.0, axis=0):
     return x / np.maximum(np.sqrt(np.sum(x**2, axis=axis)) / lam, 1.0)
 
 
-# ! to be debugged with jit: creates segfault when using a large number of MPI
-# ! cores
-# @jit(nopython=True, cache=True)
+@jit(nopython=True, cache=True)
 def prox_l21norm(x, lam=1.0, axis=0):
     r"""Proximal operator of :math:`\ell_{2,1}` norm.
 
