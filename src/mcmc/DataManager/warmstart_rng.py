@@ -174,7 +174,7 @@ def save_rng_offset_torch(rng: torch._C.Generator, seed: int, h5file: h5py.File)
     Parameters
     ----------
     rng : torch._C.Generator
-        Pytorch random number generator.
+        Pytorch random number generator on the GPU.
     seed : int
         Seed used to initialize the generator.
     h5file : h5py.File
@@ -182,7 +182,7 @@ def save_rng_offset_torch(rng: torch._C.Generator, seed: int, h5file: h5py.File)
 
     Note
     ----
-    Requires ``pythorch>=2.5``.
+    Requires ``pythorch>=2.5``. Only supported for generators on the GPU.
     """
     # ! 1. built-in int type from Python can be very large, and cannot be saved
     # as is to .h5. They need to be converted to hex format (later to an array of ints) to be saved in an .h5 file
@@ -211,7 +211,7 @@ def load_rng_offset_torch(rng: torch._C.Generator, h5file: h5py.File):
 
     Note
     ----
-    Requires ``pythorch>=2.5``.
+    Requires ``pythorch>=2.5``. Only supported for generators on the GPU.
     """
     # ! an offset is relative to some initial seed, which also needs to be
     # ! loaded and set

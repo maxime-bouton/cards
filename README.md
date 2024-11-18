@@ -11,34 +11,6 @@ The use of random number generators on GPU seems to be incompatible with `numpy`
 
 ## Setup
 
-- Manual installation using latest compatible versions of the packages, tested on `epeautre`.
-
-  ```bash
-  mamba create -n pymcmc python=3.12
-  mamba activate pymcmc
-  mamba install cuda # or nvidia::cuda
-  which nvcc # should be located in miniforge folder or so
-  mamba install cupy ipykernel ipyparallel
-  # mamba install openmpi ucx mpi4py  # currently, issues with mpi4py openmpi
-  mamba install mpich mpi4py ucx
-
-  # choose the build of h5py including "mpi_openmpi_py\<>" with the right python version
-  # mamba search h5py
-  mamba install "h5py>=2.9=mpi*"
-
-  # mamba install pytorch
-  pip install torch  # ok for 2.5.1 version, not the case yet with mamba
-  mamba install numba  # issue with numba for now (need more recent numpy?)
-  mamba install pytest pre-commit ruff conda-build
-  mamba install pytest-cov
-  pip install docstr-coverage
-
-  # export manual configuration in a .yml file
-  mamba env export --name pymcmc --file gpu-mpich-linux-64.yml
-
-  conda develop src
-  ```
-
 - To create an environment from the provided `.yml` file
 
   ```bash
@@ -56,6 +28,70 @@ The use of random number generators on GPU seems to be incompatible with `numpy`
       -np 2 pytest --with-mpi test.py
   # mpiexec --mca pml ucx --mca osc ucx --mca coll_ucc_enable 1 --mca opal_cuda_support 1 -x UCX_MEMTYPE_CACHE=n -n 2 test.py...
   ```
+
+- Manual installation using latest compatible versions of the packages is detailed below.
+
+<details>
+
+<summary>Ubuntu</summary>
+
+### Ubuntu
+
+Instructions tested on `epeautre`.
+
+```bash
+mamba create -n pymcmc python=3.12
+mamba activate pymcmc
+mamba install cuda # or nvidia::cuda
+which nvcc # should be located in miniforge folder or so
+mamba install cupy ipykernel ipyparallel
+# mamba install openmpi ucx mpi4py  # currently, issues with mpi4py openmpi
+mamba install mpich mpi4py ucx
+
+# choose the build of h5py including "mpi_openmpi_py\<>" with the right python version
+# mamba search h5py
+mamba install "h5py>=2.9=mpi*"
+
+# mamba install pytorch
+pip install torch  # ok for 2.5.1 version, not the case yet with mamba
+mamba install numba  # issue with numba for now (need more recent numpy?)
+mamba install pytest pre-commit ruff conda-build
+mamba install pytest-cov
+pip install docstr-coverage
+
+# export manual configuration in a .yml file
+mamba env export --name pymcmc --file gpu-mpich-linux-64.yml
+
+conda develop src
+```
+
+</details>
+
+<details>
+
+<summary>OSX</summary>
+
+### OSX
+
+All features relying on `cupy` are not supported on MAC for now.
+
+```bash
+mamba create -n pymcmc
+mamba activate pymcmc
+mamba install mpich mpi4py  # openmpi
+mamba install "h5py>=2.9=mpi*"
+mamba install numpy numba pytorch
+mamba install pytest pre-commit ruff conda-build
+mamba install pytest-cov
+pip install docstr-coverage
+
+conda develop src
+
+# export manual configuration in a .yml file
+mamba env export --name pymcmc --file osx-64.yml
+```
+
+</details>
 
 ## Running tests
 

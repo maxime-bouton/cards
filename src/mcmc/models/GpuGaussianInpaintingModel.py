@@ -2,12 +2,11 @@
 Implement a denoising model for the inpainting problem with guassian noise.
 """
 
+import cupy as cp
+import numpy as np
+from mcmc.estimator.GPUMMSEBuilder import GPUMMSEBuilder
 from mcmc.models.BaseModel import BaseModel
 from mcmc.TransitionKernel.GpuTransitionKernel import BaseGpuTransitionKernel, GpuPSGLA
-from mcmc.estimator.GPUMMSEBuilder import GPUMMSEBuilder
-
-import numpy as np
-import cupy as cp
 
 # from operators.jtv import gradient_2d
 # from functionals.numpy.prox import l21_norm, prox_l21norm
@@ -88,25 +87,21 @@ class GpuGaussianInpaintingModel(BaseModel):
 
         self.estimator_builder = GPUMMSEBuilder(observations.shape)
 
-        match type(X).__qualname__:
-            case GpuPSGLA.__qualname__:
-                self.X.prox = prox_nonegativity  # implement prox
-                self.X.grad = (
-                    lambda x: self.mask * (x - self.observations) / self.sigma2
-                    + gradient_2d_adjoint(self.gradX - self.Z.current_state)
-                    / self.split_coeff
-                )
-            case _:
-                print("Kernel type not yet supported by this model.")  #! move to logger
+        if type(X) is GpuPSGLA:
+            self.X.prox = prox_nonegativity
+            self.X.grad = (
+                lambda x: self.mask * (x - self.observations) / self.sigma2
+                + gradient_2d_adjoint(self.gradX - self.Z.current_state)
+                / self.split_coeff
+            )
+        else:
+            print("Kernel type not yet supported by this model.")  #! move to logger
 
-        match type(Z).__qualname__:
-            case GpuPSGLA.__qualname__:
-                self.Z.prox = lambda z: (
-                    prox_l21norm(z, self.Z.step_size * self.reg_coeff)
-                )
-                self.Z.grad = lambda z: (z - self.gradX) / self.split_coeff
-            case _:
-                print("Kernel type not yet supported by this model.")  #! move to logger
+        if type(Z) is GpuPSGLA:
+            self.Z.prox = lambda z: (prox_l21norm(z, self.Z.step_size * self.reg_coeff))
+            self.Z.grad = lambda z: (z - self.gradX) / self.split_coeff
+        else:
+            print("Kernel type not yet supported by this model.")  #! move to logger
 
         self.gradX = cp.zeros((2, *self.X.current_state.shape))
 

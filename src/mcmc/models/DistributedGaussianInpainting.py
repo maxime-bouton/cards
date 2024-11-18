@@ -3,7 +3,6 @@ Implement a denoising model for the inpainting problem with guassian noise.
 """
 
 import numpy as np
-
 from mcmc.distributed_operators.gradient import distributed_gradient2d
 from mcmc.estimator.SerialMMSEBuilder import SerialMMSEBuilder
 from mcmc.functionals.numpy.prox import l21_norm, prox_l21norm
@@ -73,24 +72,20 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
             self.gradient_handler.cart_comm.cartslicer.tile_size
         )
 
-        match type(X).__qualname__:
-            case PSGLA.__qualname__:
-                self.X.prox = prox_nonegativity
-                self.X.grad = (
-                    lambda x: self.mask * (x - self.observations) / self.sigma2
-                    + self.adj_buffer / self.split_coeff
-                )
-            case _:
-                print("Kernel type not yet supported by this model.")  #! move to logger
+        if type(X) is PSGLA:
+            self.X.prox = prox_nonegativity
+            self.X.grad = (
+                lambda x: self.mask * (x - self.observations) / self.sigma2
+                + self.adj_buffer / self.split_coeff
+            )
+        else:
+            print("Kernel type not yet supported by this model.")  #! move to logger
 
-        match type(Z).__qualname__:
-            case PSGLA.__qualname__:
-                self.Z.prox = lambda z: (
-                    prox_l21norm(z, self.Z.step_size * self.reg_coeff)
-                )
-                self.Z.grad = lambda z: (z - self.gradX) / self.split_coeff
-            case _:
-                print("Kernel type not yet supported by this model.")  #! move to logger
+        if type(Z) is PSGLA:
+            self.Z.prox = lambda z: (prox_l21norm(z, self.Z.step_size * self.reg_coeff))
+            self.Z.grad = lambda z: (z - self.gradX) / self.split_coeff
+        else:
+            print("Kernel type not yet supported by this model.")  #! move to logger
 
         self.gradX = np.zeros((2, *self.X.current_state.shape))
 
