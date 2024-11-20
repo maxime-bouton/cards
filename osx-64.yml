@@ -17,7 +17,6 @@ dependencies:
   - cctools_osx-64=949.0.1=hc7db93f_25
   - certifi=2024.8.30=py311hecd8cb5_0
   - cffi=1.17.1=py311h9205ec4_0
-  - cfgv=3.4.0=py311hecd8cb5_0
   - chardet=4.0.0=py311hecd8cb5_1003
   - charset-normalizer=3.3.2=pyhd3eb1b0_0
   - click=8.1.7=py311hecd8cb5_0
@@ -26,9 +25,7 @@ dependencies:
   - conda-index=0.5.0=py311hecd8cb5_0
   - conda-package-handling=2.4.0=py311hecd8cb5_0
   - conda-package-streaming=0.11.0=py311hecd8cb5_0
-  - coverage=7.6.1=py311h46256e1_0
   - cryptography=43.0.3=py311h30e54ef_0
-  - distlib=0.3.8=py311hecd8cb5_0
   - filelock=3.13.1=py311hecd8cb5_0
   - frozendict=2.4.2=py311hecd8cb5_0
   - fsspec=2024.6.1=py311hecd8cb5_0
@@ -37,7 +34,6 @@ dependencies:
   - h5py=3.12.1=mpi_mpich_py311h4c95283_2
   - hdf5=1.14.3=mpi_mpich_hcca1a62_5
   - icu=75.1=h120a0e1_0
-  - identify=2.5.5=py311hecd8cb5_0
   - idna=3.7=py311hecd8cb5_0
   - iniconfig=1.1.1=pyhd3eb1b0_0
   - jinja2=3.1.4=py311hecd8cb5_1
@@ -90,7 +86,6 @@ dependencies:
   - mpmath=1.3.0=py311hecd8cb5_0
   - ncurses=6.4=hcec6c5f_0
   - networkx=3.2.1=py311hecd8cb5_0
-  - nodeenv=1.7.0=py311hecd8cb5_0
   - numba=0.60.0=py311h0e5bd6a_0
   - numpy=2.0.1=py311h13f252e_1
   - numpy-base=2.0.1=py311ha745260_1
@@ -99,9 +94,7 @@ dependencies:
   - patch=2.7.6=h1de35cc_1001
   - pip=24.2=py311hecd8cb5_0
   - pkginfo=1.10.0=py311hecd8cb5_0
-  - platformdirs=3.10.0=py311hecd8cb5_0
   - pluggy=1.0.0=py311hecd8cb5_1
-  - pre-commit=3.4.0=py311hecd8cb5_1
   - psutil=5.9.0=py311h6c40b1e_0
   - py-lief=0.12.3=py311hcec6c5f_0
   - pycosat=0.6.6=py311h6c40b1e_1
@@ -109,7 +102,6 @@ dependencies:
   - pyopenssl=24.2.1=py311hecd8cb5_0
   - pysocks=1.7.1=py311hecd8cb5_0
   - pytest=7.4.4=py311hecd8cb5_0
-  - pytest-cov=4.1.0=py311hecd8cb5_1
   - python=3.11.0=he7542f4_1_cpython
   - python-libarchive-c=5.1=pyhd3eb1b0_0
   - python_abi=3.11=2_cp311
@@ -130,14 +122,11 @@ dependencies:
   - tapi=1000.10.8=ha1b3eb9_0
   - tbb=2021.8.0=ha357a0b_0
   - tk=8.6.13=h1abcd95_1
-  - toml=0.10.2=pyhd3eb1b0_0
   - tqdm=4.66.5=py311h85bffb1_0
   - truststore=0.8.0=py311hecd8cb5_0
   - typing_extensions=4.11.0=py311hecd8cb5_0
   - tzdata=2024b=h04d1e81_0
-  - ukkonen=1.0.1=py311ha357a0b_0
   - urllib3=2.2.3=py311hecd8cb5_0
-  - virtualenv=20.26.1=py311hecd8cb5_0
   - wheel=0.44.0=py311hecd8cb5_0
   - xz=5.4.6=h6c40b1e_1
   - yaml=0.2.5=haf1e3a3_0

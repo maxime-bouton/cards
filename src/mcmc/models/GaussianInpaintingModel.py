@@ -1,6 +1,4 @@
-"""
-Implement a denoising model for the inpainting problem with guassian noise.
-"""
+r"""Implements a denoising model to solve an inpainting problem under additive white Gaussian noise. Relies on ``numpy`` as a computing backend."""
 
 import numpy as np
 from mcmc.estimator.SerialMMSEBuilder import SerialMMSEBuilder
@@ -10,6 +8,7 @@ from mcmc.operators.jtv import gradient_2d
 from mcmc.TransitionKernel.TransitionKernel import PSGLA, BaseSerialTransitionKernel
 
 
+# FIXME: auxiliary functions must be defined elsewhere
 def prox_nonegativity(x):
     return np.maximum(x, 0)
 
@@ -23,9 +22,6 @@ def gradient_2d_adjoint(X):
     v[:, 1:-1] += X[0, :, :-2] - X[0, :, 1:-1]  # -np.diff(uv[:,:-1],1,1)
     v[:, -1] += X[0, :, -2]
     return v
-
-
-#! those two functions must be defined elsewhere
 
 
 class GaussianInpaintingModel(BaseModel):
@@ -75,13 +71,13 @@ class GaussianInpaintingModel(BaseModel):
                 / self.split_coeff
             )
         else:
-            print("Kernel type not yet supported by this model.")  #! move to logger
+            raise ValueError("Kernel type not yet supported by this model.")
 
         if type(Z) is PSGLA:
             self.Z.prox = lambda z: (prox_l21norm(z, self.Z.step_size * self.reg_coeff))
             self.Z.grad = lambda z: (z - self.gradX) / self.split_coeff
         else:
-            print("Kernel type not yet supported by this model.")  #! move to logger
+            raise ValueError("Kernel type not yet supported by this model.")
 
         self.gradX = np.zeros((2, *self.X.current_state.shape))
 

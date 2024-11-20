@@ -1,6 +1,4 @@
-"""
-Implement a denoising model for the inpainting problem with guassian noise.
-"""
+r"""Implements a denoising model to solve an inpainting problem under additive white Gaussian noise. Relies on ``numpy`` as a computing backend and ``mpi4py``."""
 
 import numpy as np
 from mcmc.distributed_operators.gradient import distributed_gradient2d
@@ -79,13 +77,13 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
                 + self.adj_buffer / self.split_coeff
             )
         else:
-            print("Kernel type not yet supported by this model.")  #! move to logger
+            raise ValueError("Kernel type not yet supported by this model.")
 
         if type(Z) is PSGLA:
             self.Z.prox = lambda z: (prox_l21norm(z, self.Z.step_size * self.reg_coeff))
             self.Z.grad = lambda z: (z - self.gradX) / self.split_coeff
         else:
-            print("Kernel type not yet supported by this model.")  #! move to logger
+            raise ValueError("Kernel type not yet supported by this model.")
 
         self.gradX = np.zeros((2, *self.X.current_state.shape))
 

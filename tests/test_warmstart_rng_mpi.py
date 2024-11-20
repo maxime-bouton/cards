@@ -14,8 +14,6 @@ import h5py
 import numpy as np
 import pytest
 import torch
-from mpi4py import MPI
-
 from mcmc.DataManager.warmstart_rng_mpi import (
     load_rng_np_mpi,
     load_rng_offset_torch_mpi,
@@ -24,6 +22,7 @@ from mcmc.DataManager.warmstart_rng_mpi import (
     save_rng_offset_torch_mpi,
     save_rng_torch_mpi,
 )
+from mpi4py import MPI
 
 pytestmark = pytest.mark.mpi
 
@@ -129,6 +128,8 @@ def test_warmstart_rng_offset_torch_mpi(comm, seed, new_seed, n_samples, device)
     # ! documented (Philox, ...)
     # https://docs.cupy.dev/en/stable/reference/random.html
     # https://numpy.org/doc/stable/reference/random/parallel.html
+    # TODO: check https://pytorch.org/docs/stable/notes/randomness.html for
+    # parallel random number generation with torch
     rng = torch.Generator(device=device).manual_seed(int("{}{}".format(rank, seed)))
 
     print("Worker: {}, GPU device: {}".format(rank, device))
@@ -170,6 +171,8 @@ def test_warmstart_rng_torch_mpi(comm, seed, new_seed, n_samples, device):
     # ! documented (Philox, ...)
     # https://docs.cupy.dev/en/stable/reference/random.html
     # https://numpy.org/doc/stable/reference/random/parallel.html
+    # TODO: check https://pytorch.org/docs/stable/notes/randomness.html for
+    # parallel random number generation with torch
     rng = torch.Generator(device=device).manual_seed(int("{}{}".format(rank, seed)))
 
     print("Worker: {}, GPU device: {}".format(rank, device))

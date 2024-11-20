@@ -1,5 +1,6 @@
 r"""Testing sampler warmstart functionality on a Gaussian inpainting model."""
 
+import logging
 from os import path
 
 import h5py
@@ -46,6 +47,8 @@ def test_warmstart_inpainting(
         save_path.mkdir()
         restart_save_path = tmp_path / "resumed/"
         restart_save_path.mkdir()
+        logfilename = path.join(tmp_path.as_posix(), "warmstart_inpainting.log")
+
     else:
         from pathlib import Path
 
@@ -53,6 +56,15 @@ def test_warmstart_inpainting(
         Path(save_path).mkdir(parents=True, exist_ok=True)
         restart_save_path = "resumed"
         Path(restart_save_path).mkdir(parents=True, exist_ok=True)
+        logfilename = "warmstart_inpainting.log"
+
+    logger = logging.getLogger(__name__)
+    logging.basicConfig(
+        filename=logfilename,
+        level=logging.INFO,
+        filemode="w",
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
 
     split_coeff = 1
     reg_coeff = 1
@@ -75,7 +87,9 @@ def test_warmstart_inpainting(
         observations, mask, X, Z, sigma2, reg_coeff, split_coeff
     )
 
-    sampler = Sampler(batch_size, nb_batches, seed, "sample", str(save_path), model)
+    sampler = Sampler(
+        batch_size, nb_batches, seed, "sample", str(save_path), model, logger
+    )
 
     # first run
     sampler.sample()

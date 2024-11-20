@@ -75,7 +75,8 @@ def test_load(tmp_path, dims):
         file["z"] = Z
 
     data_manager = DataManager()
-    data = data_manager.load_h5(filename)
+    with h5py.File(filename, "r") as file:
+        data = data_manager.load_h5(file)
 
     checkX = np.allclose(data["x"], X)
     checkY = np.allclose(data["y"], Y)
@@ -115,6 +116,7 @@ def test_write_read_rng(tmp_path, dims, seed, new_seed):
 
 if __name__ == "__main__":
     tmp_path = None
+    dims = np.array([100, 50], dtype=int)
     seed = 1234
     new_seed = 4321
 

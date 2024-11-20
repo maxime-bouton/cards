@@ -84,7 +84,7 @@ mamba install "h5py>=2.9=mpi*"
 mamba install numpy numba pytorch
 mamba install matplotlib scikit-image
 mamba install pytest pre-commit ruff conda-build
-mamba install pytest-cov
+# mamba install pytest-cov
 pip install docstr-coverage
 
 conda develop src

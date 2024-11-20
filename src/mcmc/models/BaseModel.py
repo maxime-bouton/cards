@@ -1,5 +1,5 @@
-"""Abstract class that descibes the interface of the model class.
-The methods declared here will be used by the sampler.
+r"""Abstract class that descibes the interface of the model class. The methods
+declared here will be called within the sampler.
 """
 
 from abc import ABC, abstractmethod

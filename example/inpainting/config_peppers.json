@@ -9,5 +9,7 @@
     "numLoadedBatch" : 5,
     "reloadSavePath" : "../../produced_data/resumed/",
     "originPath" : "../../data/peppers.h5",
-    "seed" : 1234
+    "seed" : 1234,
+    "burnin" : 2,
+    "logFilename": "../../produced_data/inpainting_peppers.log"
 }
