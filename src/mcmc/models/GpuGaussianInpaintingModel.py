@@ -1,6 +1,4 @@
-"""
-Implement a denoising model for the inpainting problem with guassian noise.
-"""
+r"""Implements a denoising model to solve an inpainting problem under additive white Gaussian noise. Relies on ``numpy`` as a computing backend."""
 
 import cupy as cp
 import numpy as np
@@ -9,6 +7,7 @@ from mcmc.models.BaseModel import BaseModel
 from mcmc.TransitionKernel.GpuTransitionKernel import BaseGpuTransitionKernel, GpuPSGLA
 
 
+# FIXME: auxiliary functions must be defined elsewhere
 def prox_nonegativity(x):
     return cp.maximum(x, 0)
 
@@ -40,9 +39,6 @@ def prox_l21norm(x, lam=1.0, axis=0):
     if lam <= 0:
         raise ValueError("`lam` should be positive.")
     return x * (1 - 1 / cp.maximum(cp.sqrt(cp.sum(x**2, axis=axis)) / lam, 1.0))
-
-
-#! those four functions must be defined elsewhere
 
 
 class GpuGaussianInpaintingModel(BaseModel):
@@ -92,13 +88,13 @@ class GpuGaussianInpaintingModel(BaseModel):
                 / self.split_coeff
             )
         else:
-            print("Kernel type not yet supported by this model.")  #! move to logger
+            raise ValueError("Kernel type not yet supported by this model.")
 
         if type(Z) is GpuPSGLA:
             self.Z.prox = lambda z: (prox_l21norm(z, self.Z.step_size * self.reg_coeff))
             self.Z.grad = lambda z: (z - self.gradX) / self.split_coeff
         else:
-            print("Kernel type not yet supported by this model.")  #! move to logger
+            raise ValueError("Kernel type not yet supported by this model.")
 
         self.gradX = cp.zeros((2, *self.X.current_state.shape))
 

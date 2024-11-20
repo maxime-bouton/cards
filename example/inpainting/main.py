@@ -1,4 +1,5 @@
 import json
+import logging
 import pathlib
 from os.path import exists, join
 
@@ -204,6 +205,7 @@ def compute_step_size(split_coef: float, sigma2: float):
 
 
 def compute_distributed(
+    logger: logging.Logger,
     split_coef: float,
     reg_coef: float,
     batch_size: int,
@@ -216,6 +218,8 @@ def compute_distributed(
 
     Parameters
     ----------
+    logger: logging.Logger
+        Logger object.
     split_coef : float
         Splitting coefficient, parameter of the model.
     reg_coef : float
@@ -247,9 +251,8 @@ def compute_distributed(
         ranknd, grid_size, observations.shape, np.asarray([0, 0]), np.asarray([0, 0])
     )
     tile_size = slicer.tile_size
-    slice = slicer._get_slice_global_buffer_to_tile()
-    mask = mask[slice]
-    observations = observations[slice]
+    mask = mask[slicer.slice_global_buffer_to_tile]
+    observations = observations[slicer.slice_global_buffer_to_tile]
 
     step_size_X, step_size_Z = compute_step_size(split_coef, sigma2)
     X = PSGLA(tile_size, step_size_X)
@@ -260,13 +263,14 @@ def compute_distributed(
     )
 
     sampler = DistributedSampler(
-        comm, batch_size, nb_batches, seed, "sample", save_path, model
+        comm, batch_size, nb_batches, seed, "sample", save_path, model, logger
     )
 
     sampler.sample()
 
 
 def compute_gpu(
+    logger: logging.Logger,
     split_coef: float,
     reg_coef: float,
     batch_size: int,
@@ -279,6 +283,8 @@ def compute_gpu(
 
     Parameters
     ----------
+    logger: logging.Logger
+        Logger object.
     split_coef : float
         Splitting coefficient, parameter of the model.
     reg_coef : float
@@ -312,12 +318,15 @@ def compute_gpu(
         split_coef,
     )
 
-    sampler = GpuSampler(batch_size, nb_batches, seed, "sample", save_path, model)
+    sampler = GpuSampler(
+        batch_size, nb_batches, seed, "sample", save_path, model, logger
+    )
 
     sampler.sample()
 
 
 def compute_serial(
+    logger: logging.Logger,
     split_coef: float,
     reg_coef: float,
     batch_size: int,
@@ -330,6 +339,8 @@ def compute_serial(
 
     Parameters
     ----------
+    logger: logging.Logger
+        Logger object.
     split_coef : float
         Splitting coefficient, parameter of the model.
     reg_coef : float
@@ -356,7 +367,7 @@ def compute_serial(
         observations, mask, X, Z, sigma2, reg_coef, split_coef
     )
 
-    sampler = Sampler(batch_size, nb_batches, seed, "sample", save_path, model)
+    sampler = Sampler(batch_size, nb_batches, seed, "sample", save_path, model, logger)
 
     sampler.sample()
 
@@ -387,12 +398,26 @@ def main(mode, config_file_name):
 
     if mode == "serial":
         pathlib.Path(params["savePath"]).mkdir(parents=True, exist_ok=True)
-        compute_serial(**args)
+        logger = logging.getLogger(__name__)
+        logging.basicConfig(
+            filename=params["logFilename"],
+            level=logging.INFO,
+            filemode="w",
+            format="%(asctime)s %(levelname)s %(message)s",
+        )
+        compute_serial(logger, **args)
         analyze_data(**args_analysis, output_file_name="results_inpainting_serial")
 
     if mode == "gpu":
         pathlib.Path(params["savePath"]).mkdir(parents=True, exist_ok=True)
-        compute_gpu(**args)
+        logger = logging.getLogger(__name__)
+        logging.basicConfig(
+            filename=params["logFilename"],
+            level=logging.INFO,
+            filemode="w",
+            format="%(asctime)s %(levelname)s %(message)s",
+        )
+        compute_gpu(logger, **args)
         analyze_data(**args_analysis, output_file_name="results_inpainting_gpu")
 
     if mode == "distributed":
@@ -400,8 +425,17 @@ def main(mode, config_file_name):
 
         if MPI.COMM_WORLD.Get_rank() == 0:
             pathlib.Path(params["savePath"]).mkdir(parents=True, exist_ok=True)
+            logger = logging.getLogger(__name__)
+            logging.basicConfig(
+                filename=params["logFilename"],
+                level=logging.INFO,
+                filemode="w",
+                format="%(asctime)s %(levelname)s %(message)s",
+            )
+        else:
+            logger = None
 
-        compute_distributed(**args)
+        compute_distributed(logger, **args)
 
         if MPI.COMM_WORLD.Get_rank() == 0:
             analyze_data(**args_analysis, output_file_name="results_inpainting_mpi")

@@ -10,5 +10,6 @@
     "reloadSavePath" : "../../produced_data/resumed/",
     "originPath" : "../../data/cameraman.h5",
     "seed" : 1234,
-    "burnin" : 2
+    "burnin" : 2,
+    "logFilename": "../../produced_data/inpainting_cameraman.log"
 }

@@ -1,8 +1,10 @@
+import logging
 from os.path import join
 from time import perf_counter
 
 import h5py
 import numpy as np
+from tqdm import tqdm
 
 from mcmc.DataManager.DataManager import DataManager
 from mcmc.models import BaseModel
@@ -17,6 +19,7 @@ class Sampler:
         file_name: str,
         save_path: str,
         model: BaseModel,
+        logger: logging.Logger,
     ) -> None:
         """
         Parameters
@@ -33,6 +36,8 @@ class Sampler:
             Path to the location where we will save the samples.
         model : BaseModel
             Model used to solve an inverse problem.
+        logger : logging.Logger
+            Logger object.
         """
         self.batch_size = batch_size
         self.nb_batches = nb_batches
@@ -46,15 +51,19 @@ class Sampler:
 
         self.model = model
 
+        self.logger = logger
+
         self.potential = np.zeros([self.batch_size])
         self.computation_time = np.zeros([self.batch_size])
 
         self.data_manager = DataManager()
 
     def sample(self) -> None:
-        """sampler Main method. Call the update method of the model inside a loop and save the current state at regular intarvales.
+        r"""sampler Main method. Call the update method of the model inside a loop and save the current state at regular intarvales.
         A partial estimator is built along the iterations.
         """
+        pbar = tqdm(total=self.nb_batches, desc="Sampling", unit="it")
+        pbar.update(self.start_batch_num)
         for batch_num in range(self.start_batch_num, self.nb_batches + 1):
             self.model.estimator_builder.reset()
 
@@ -80,13 +89,15 @@ class Sampler:
                     self.computation_time, file, "computation_time"
                 )
 
-            # FIXME move to logger
-            print("Batch", batch_num, "out of", self.nb_batches, "computed.")
-            print("Potential :", self.potential[-1])
-            print("Time :", self.computation_time[-1])
+            pbar.update()
+            self.logger.info(
+                "Batch {} out of {} computed".format(batch_num, self.nb_batches)
+            )
+            self.logger.info("Potential: {:1.3e}".format(self.potential[-1]))
+            self.logger.info("Time: {:1.3e}".format(self.computation_time[-1]))
 
     def restart(self, file_name: str, batch_restart: int, new_save_path: str) -> None:
-        """restart Resume the sampling at a given state. It may be used to start a second where a first run had been interrupted.
+        r"""restart Resume the sampling at a given state. It may be used to start a second where a first run had been interrupted.
         This second run will generate the exact same data that the first run would have.
         It must be called after the constructor.
 
@@ -108,6 +119,8 @@ class Sampler:
         self.model.set_states(data)
 
         potential = self.model.compute_potential()
-
-        # FIXME move to logger
-        print("Potential after restart: {}".format(potential))
+        self.logger.info(
+            "Potential after restart from batch {}: {:1.3e}".format(
+                batch_restart, potential
+            )
+        )

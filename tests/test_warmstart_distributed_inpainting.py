@@ -1,5 +1,6 @@
 r"""Testing sampler warmstart functionality on a Gaussian inpainting model with the distributed implementation."""
 
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -42,7 +43,6 @@ def seed():
     return 1234
 
 
-# FIXME: missing docstrings
 def test_warmstart_distributed_inpainting(
     nb_batches, num_batch_load, batch_size, dims, seed
 ):
@@ -56,10 +56,20 @@ def test_warmstart_distributed_inpainting(
     tmp_path = "./"
     save_path = os.path.join(tmp_path, "sample/")
     restart_save_path = os.path.join(tmp_path, "resumed/")
+    logfilename = os.path.join(save_path, "warmstart_distributed_inpainting.log")
 
     if rank == 0:
         Path(save_path).mkdir(parents=True, exist_ok=True)
         Path(restart_save_path).mkdir(parents=True, exist_ok=True)
+        logger = logging.getLogger(__name__)
+        logging.basicConfig(
+            filename=logfilename,
+            level=logging.INFO,
+            filemode="w",
+            format="%(asctime)s %(levelname)s %(message)s",
+        )
+    else:
+        logger = None
 
     split_coeff = 1
     reg_coeff = 1
@@ -97,7 +107,7 @@ def test_warmstart_distributed_inpainting(
     )
 
     sampler = DistributedSampler(
-        comm, batch_size, nb_batches, seed, "sample", str(save_path), model
+        comm, batch_size, nb_batches, seed, "sample", str(save_path), model, logger
     )
 
     # first run
@@ -105,36 +115,56 @@ def test_warmstart_distributed_inpainting(
 
     # resumed run
     load_filename = os.path.join(save_path, "sample" + str(num_batch_load)) + ".h5"
-    sampler.restart(load_filename, restart_save_path, num_batch_load)
+    sampler.restart(load_filename, num_batch_load, restart_save_path)
     sampler.sample()
 
     # check consistency of samples and values for the potential function
-    # FIXME: test should be done in parallel, not only on worker 0
+    X = np.zeros(
+        (
+            nb_batches - num_batch_load,
+            *model.gradient_handler.cart_comm.cartslicer.tile_size,
+        )
+    )
+    resumed_X = np.zeros(
+        (
+            nb_batches - num_batch_load,
+            *model.gradient_handler.cart_comm.cartslicer.tile_size,
+        )
+    )
     if rank == 0:
-        X = np.zeros((nb_batches - num_batch_load, *dims))
-        resumed_X = np.zeros((nb_batches - num_batch_load, *dims))
         potential = np.zeros(((nb_batches - num_batch_load) * batch_size,))
         resumed_potential = np.zeros(((nb_batches - num_batch_load) * batch_size,))
 
-        for i in range(num_batch_load + 1, nb_batches + 1):
-            j = i - (num_batch_load + 1)
+    for i in range(num_batch_load + 1, nb_batches + 1):
+        j = i - (num_batch_load + 1)
 
-            with h5py.File(save_path + "/sample" + str(i) + ".h5") as file:
+        with h5py.File(
+            save_path + "/sample" + str(i) + ".h5", "r", driver="mpio", comm=comm
+        ) as file:
+            X[j] = file["X"][
+                model.gradient_handler.cart_comm.cartslicer.slice_global_buffer_to_tile
+            ]
+            if rank == 0:
                 potential[j * batch_size : (j + 1) * batch_size] = file["potential"][:]
-                X[j] = file["X"][:]
 
-            with h5py.File(restart_save_path + "/sample" + str(i) + ".h5") as file:
+        with h5py.File(
+            restart_save_path + "/sample" + str(i) + ".h5",
+            "r",
+            driver="mpio",
+            comm=comm,
+        ) as file:
+            resumed_X[j] = file["X"][
+                model.gradient_handler.cart_comm.cartslicer.slice_global_buffer_to_tile
+            ]
+            if rank == 0:
                 resumed_potential[j * batch_size : (j + 1) * batch_size] = file[
                     "potential"
                 ][:]
-                resumed_X[j] = file["X"][:]
 
-        test_check = np.allclose(potential, resumed_potential) and np.allclose(
-            X, resumed_X
-        )
+    assert np.allclose(X, resumed_X)
 
     if rank == 0:
-        assert test_check
+        assert np.allclose(potential, resumed_potential)
         shutil.rmtree(save_path)
         shutil.rmtree(restart_save_path)
 

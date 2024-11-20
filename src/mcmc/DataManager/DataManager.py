@@ -8,13 +8,13 @@ import torch
 
 from mcmc.DataManager.warmstart_rng import (
     load_rng_np,
+    load_rng_offset_torch,
     save_rng_np,
     save_rng_offset_torch,
-    load_rng_offset_torch,
 )
 
-
 # FIXME: this class will need to be adapted to accommodate torch array
+# FIXME: need to add chunking options and other functionalities when saving
 
 
 class DataManager:

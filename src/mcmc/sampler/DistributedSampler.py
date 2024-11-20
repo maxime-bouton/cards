@@ -1,11 +1,11 @@
+import logging
 from os.path import join
 from time import perf_counter
 
 import h5py
 import numpy as np
-
-# from estimator.estimatorBuilder import BaseEstimatorBuilder
 from mpi4py import MPI
+from tqdm import tqdm
 
 from mcmc.DataManager.DistributedDataManager import DistributedDataManager
 from mcmc.models.BaseModel import BaseDistributedModel
@@ -21,6 +21,7 @@ class DistributedSampler:
         file_name: str,
         save_path: str,
         model: BaseDistributedModel,
+        logger: logging.Logger | None,
     ) -> None:
         """
         Parameters
@@ -39,6 +40,8 @@ class DistributedSampler:
             Path to the location where we will save the samples.
         model : BaseModel
             Model used to solve an inverse problem.
+        logger : logging.Logger
+            Logger object.
         """
         self.batch_size = batch_size
         self.nb_batches = nb_batches
@@ -62,9 +65,13 @@ class DistributedSampler:
 
         self.model = model
 
-        # FIXME: memory management, useless except on root
-        self.potential = np.zeros([self.batch_size])
-        self.computation_time = np.zeros([self.batch_size])
+        self.logger = logger
+
+        if self.rank == 0:
+            self.potential = np.zeros([self.batch_size])
+            self.computation_time = np.zeros([self.batch_size])
+        self.global_potential = 0.0
+        self.global_computation_time = 0.0
 
         self.data_manager = DistributedDataManager()
 
@@ -72,6 +79,9 @@ class DistributedSampler:
         """sampler Main method. Call the update method of the model inside a loop and save the current state at regular intarvales.
         A partial estimator is built along the iterations.
         """
+        if self.rank == 0:
+            pbar = tqdm(total=self.nb_batches, desc="Sampling", unit="it")
+            pbar.update(self.start_batch_num)
         for batch_num in range(self.start_batch_num, self.nb_batches + 1):
             self.model.estimator_builder.reset()
 
@@ -85,10 +95,16 @@ class DistributedSampler:
                 partial_potential = self.model.compute_potential()
                 elapsed = end - start
 
-                self.potential[i] = self.comm.reduce(
+                self.global_potential = self.comm.reduce(
                     partial_potential, MPI.SUM, root=0
-                )  # sum -> full potential
-                self.computation_time[i] = self.comm.reduce(elapsed, MPI.MAX, root=0)
+                )
+                self.global_computation_time = self.comm.reduce(
+                    elapsed, MPI.MAX, root=0
+                )
+
+                if self.rank == 0:
+                    self.potential[i] = self.global_potential
+                    self.computation_time[i] = self.global_computation_time
 
                 self.model.aggregate_states()
 
@@ -116,22 +132,24 @@ class DistributedSampler:
                         self.computation_time, "computation_time", file
                     )
 
-                # FIXME move to logger
-                print("Batch", batch_num, "out of", self.nb_batches, "computed.")
-                print("Potential :", self.potential[-1])
-                print("Time :", self.computation_time[-1])
+                pbar.update()
+                self.logger.info(
+                    "Batch {} out of {} computed".format(batch_num, self.nb_batches)
+                )
+                self.logger.info("Potential: {:1.3e}".format(self.potential[-1]))
+                self.logger.info("Time: {:1.3e}".format(self.computation_time[-1]))
 
-    def restart(self, file_name: str, new_save_path: str, batch_restart: int) -> None:
+    def restart(self, file_name: str, batch_restart: int, new_save_path: str) -> None:
         """Restart the sampler from a checkpoint file saved to disk.
 
         Parameters
         ----------
         file_name : str
             Name of the file from which checkpoint data are loaded.
-        new_save_path : str
-            Save path for the remaining samples.
         batch_restart : int
             Index of the iteration at which the checkpoint file has been saved.
+        new_save_path : str
+            Save path for the remaining samples.
         """
         with h5py.File(file_name, "r", driver="mpio", comm=self.comm) as file:
             data = self.data_manager.load_h5(file, self.model.slices)
@@ -144,6 +162,9 @@ class DistributedSampler:
         partial_potential = self.model.compute_potential()
         potential = self.comm.reduce(partial_potential, MPI.SUM, root=0)
 
-        # FIXME move to logger
         if self.rank == 0:
-            print("Potential after restart: {}".format(potential))
+            self.logger.info(
+                "Potential after restart from batch {}: {:1.3e}".format(
+                    batch_restart, potential
+                )
+            )
