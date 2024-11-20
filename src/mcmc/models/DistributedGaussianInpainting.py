@@ -63,7 +63,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         )
         self.adj_buffer = np.zeros(
             self.gradient_handler.cart_comm.cartslicer.tile_size
-        )  #! buffer linked to the kernel used
+        )  #! buffer linked to the kernel used, must be set to 0 due to the implementation of the operator
 
         self.slices = self.set_slices()
         self.global_sizes = self.set_global_sizes()
@@ -173,7 +173,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
 
     # ! should be removed, calling method from estimator object
     def aggregate_states(self):
-        self.estimator_builder.estimator += self.X.current_state
+        self.estimator_builder.aggregate_states(self.X.current_state)
 
     def compute_potential(self) -> float:
         """compute_potential Computes the partial potential."""

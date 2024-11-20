@@ -8,9 +8,6 @@ from mcmc.estimator.GPUMMSEBuilder import GPUMMSEBuilder
 from mcmc.models.BaseModel import BaseModel
 from mcmc.TransitionKernel.GpuTransitionKernel import BaseGpuTransitionKernel, GpuPSGLA
 
-# from operators.jtv import gradient_2d
-# from functionals.numpy.prox import l21_norm, prox_l21norm
-
 
 def prox_nonegativity(x):
     return cp.maximum(x, 0)
@@ -149,7 +146,7 @@ class GpuGaussianInpaintingModel(BaseModel):
         self.Z.mc_step(rng)
 
     def aggregate_states(self):
-        self.estimator_builder.estimator += self.X.current_state
+        self.estimator_builder.aggregate_states(self.X.current_state)
 
     def compute_potential(self) -> float:
         """compute_potential Computes the potential.

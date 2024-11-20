@@ -129,7 +129,7 @@ class GaussianInpaintingModel(BaseModel):
         self.Z.mc_step(rng)
 
     def aggregate_states(self):
-        self.estimator_builder.estimator += self.X.current_state
+        self.estimator_builder.aggregate_states(self.X.current_state)
 
     def compute_potential(self) -> float:
         """compute_potential Computes the potential.
@@ -142,7 +142,7 @@ class GaussianInpaintingModel(BaseModel):
         p = 0
         p += np.sum((self.observations - self.mask * self.X.current_state) ** 2) / (
             2 * self.sigma2
-        )  # suboptimal
+        )
         p += np.sum((self.gradX - self.Z.current_state) ** 2) / (2 * self.split_coeff)
         p += self.reg_coeff * l21_norm(self.Z.current_state)
         return p
