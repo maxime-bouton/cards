@@ -47,6 +47,7 @@ which nvcc # should be located in miniforge folder or so
 mamba install cupy ipykernel ipyparallel
 # mamba install openmpi ucx mpi4py  # currently, issues with mpi4py openmpi
 mamba install mpich mpi4py ucx
+mamba install matplotlib scikit-image
 
 # choose the build of h5py including "mpi_openmpi_py\<>" with the right python version
 # mamba search h5py
@@ -81,6 +82,7 @@ mamba activate pymcmc
 mamba install mpich mpi4py  # openmpi
 mamba install "h5py>=2.9=mpi*"
 mamba install numpy numba pytorch
+mamba install matplotlib scikit-image
 mamba install pytest pre-commit ruff conda-build
 mamba install pytest-cov
 pip install docstr-coverage

@@ -29,7 +29,7 @@ def num_batch_load():
 
 @pytest.fixture
 def batch_size():
-    return 100
+    return 1000
 
 
 @pytest.fixture
