@@ -132,7 +132,6 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
 
         self.gradX = self.gradient_handler.compute_grad(self.X.current_state)
 
-        self.adj_buffer[:] = 0
         self.gradient_handler.compute_adjoint(
             self.adj_buffer,
             self.gradX[0] - self.Z.current_state[0],
@@ -162,7 +161,6 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
 
         self.Z.mc_step(rng)
 
-        self.adj_buffer[:] = 0
         self.gradient_handler.compute_adjoint(
             self.adj_buffer,
             self.gradX[0] - self.Z.current_state[0],

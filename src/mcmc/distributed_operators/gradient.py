@@ -104,6 +104,9 @@ def chunk_gradient_2d_adjoint(uh, uv, x, isfirst, islast):
         len(uh.shape) == len(uv.shape) == 2
     ), "gradient_2d_adjoint: Invalid input, expected len(uh.shape) == len(uv.shape) == 2"
 
+    # set buffer to 0
+    x[:] = 0
+
     # vertical: uv = u[1, :, :]
     if isfirst[0]:  # no overlap along axis 0
         x[0, :] -= uv[0, :]
