@@ -1,0 +1,19 @@
+{
+    "dataPath" : "../../data/gaussian_deconvolution_house_isnr40.h5",
+    "sampleSize" : 1000,
+    "nbCheckpoint" : 5,
+    "alpha" : 1e-3,
+    "regularizationCoefficient" : 1e3,
+    "savePath" : "../../produced_data/house/sample/",
+    "reload" : false,
+    "numLoadedBatch" : 5,
+    "reloadSavePath" : "../../produced_data/house/resumed/",
+    "originPath" : "../../data/house.h5",
+    "kernel_size" : 3,
+    "kernel_std" : 1,
+    "data_seed" : 1234,
+    "isnr" : 40,
+    "seed" : 5678,
+    "burnin" : 2,
+    "logFilename": "../../produced_data/house/gaussian_deconvolution_house.log"
+}

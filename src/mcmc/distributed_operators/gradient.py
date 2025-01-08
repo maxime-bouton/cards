@@ -143,23 +143,32 @@ def chunk_gradient_2d_adjoint(uh, uv, x, isfirst, islast):
 class distributed_gradient2d:
     def __init__(self, global_size: np.ndarray, grid_size: np.ndarray) -> None:
         overlap = np.asarray([1, 1])
+        self.dtype = np.float64
         self.cart_comm = SyncCartesianCommunicator(
-            MPI.COMM_WORLD, grid_size, global_size, overlap, overlap, backward=False
+            MPI.COMM_WORLD,
+            grid_size,
+            global_size,
+            overlap,
+            overlap,
+            backward=False,
+            dtype=self.dtype,
         )
         self.adj_cart_comm_v = SyncCartesianCommunicator(
             MPI.COMM_WORLD,
             grid_size,
             global_size,
-            np.asarray([1, 0]),
-            np.asarray([1, 0]),
+            np.asarray([1, 0], dtype=int),
+            np.asarray([1, 0], dtype=int),
+            dtype=self.dtype,
             backward=True,
         )
         self.adj_cart_comm_h = SyncCartesianCommunicator(
             MPI.COMM_WORLD,
             grid_size,
             global_size,
-            np.asarray([0, 1]),
-            np.asarray([0, 1]),
+            np.asarray([0, 1], dtype=int),
+            np.asarray([0, 1], dtype=int),
+            dtype=self.dtype,
             backward=True,
         )
 

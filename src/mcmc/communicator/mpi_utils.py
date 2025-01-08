@@ -50,7 +50,7 @@ def mpi_create_subarray_type(
         Size of the communication ("overlap size") with contiguous workers
         along each dimension.
     comm_rank : numpy.ndarray[int]
-        List of process ranks with which the current process needs to communicate. Contains the value -1 for any invalid communication.
+        List of process ranks with which the current process needs to communicate. Contains the value ``MPI_PROC_NULL`` for any invalid communication.
     comm_starts : numpy.ndarray[int]
         nD index of the starting point of the subarray to be extracted.
     comm_subsizes : numpy.ndarray[int]
@@ -69,7 +69,7 @@ def mpi_create_subarray_type(
     For synchronous communications, ``ndims_comm`` communications maximum need
     to be performed per worker (one along each axis of the Cartesian grid.
     Whenever a communication along an axis is not valid, ``comm_rank`` is
-    expected to contain the value -1 in the corresponding entry.
+    expected to contain the value ``MPI.PROC_NULL`` in the corresponding entry.
     """
     # Useful references
     # 1. https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report/node83.htm#Node83
@@ -97,7 +97,7 @@ def mpi_create_subarray_type(
 
         for comm_id in range(ncomms):
             if (
-                comm_rank[comm_id] > -1
+                comm_rank[comm_id] > MPI.PROC_NULL
             ):  # if valid communication, create new Datatype, keep None otherwise
                 subarray = mpi_datatype.Create_subarray(
                     array_size,

@@ -22,10 +22,14 @@ from mcmc.TransitionKernel.TransitionKernel import PSGLA
 
 
 def load_from_h5(filename):
-    """load the mask01, sig2 and data entries from the h5 file"""
+    """load the mask, sig2 and data entries from the h5 file"""
     with h5py.File(filename, "r") as data_file:
-        mask = data_file["mask01"][:]
-        sigma2 = data_file["sigma2"][()]
+        mask = data_file["mask"][:]
+        sigma2 = data_file[
+            "sig2"
+        ][
+            ()
+        ]  # ! name temporarily modified for compatibility with data generated with older library
         observations = data_file["data"][:]
     return mask, sigma2, observations
 
@@ -119,8 +123,8 @@ def compute_gpu(
 
     step_size_X, step_size_Z = compute_step_size(split_coef, sigma2)
 
-    X = GpuPSGLA(observations.shape, step_size_X)
-    Z = GpuPSGLA((2, *X.current_state.shape), step_size_Z)
+    X = GpuPSGLA(observations.shape, cp.asarray(step_size_X))
+    Z = GpuPSGLA((2, *X.current_state.shape), cp.asarray(step_size_Z))
 
     model = GpuGaussianInpaintingModel(
         cp.asarray(observations),

@@ -1,6 +1,7 @@
 r"""Implements a denoising model to solve an inpainting problem under additive white Gaussian noise. Relies on ``numpy`` as a computing backend and ``mpi4py``."""
 
 import numpy as np
+
 from mcmc.distributed_operators.gradient import distributed_gradient2d
 from mcmc.estimator.SerialMMSEBuilder import SerialMMSEBuilder
 from mcmc.functionals.numpy.prox import l21_norm, prox_l21norm
@@ -35,13 +36,13 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         observations : np.ndarray
             Local subarray of the deteriorated picture than can be observed.
         mask : np.ndarray
-            Local mask. Sub-matrix of ones and zeros associated to the inapinting operator.
+            Local mask. Sub-matrix of ones and zeros associated to the inpainting operator.
         X : BaseSerialTransitionKernel
-            Subarray of the random variable following the approximation of the targeted law.
+            Transition kernel for a subarray of the main variable.
         Z : BaseSerialTransitionKernel
-            Subarray of the plitting variable.
+            Transition kernel for a subarray of splitting variable.
         sigma2 : float
-            Standard deviation of the gausssian noise, expexted to be known.
+            Variance of the gaussian noise affecting the observations.
         reg_coeff : float
             Regularisation coefficient.
         split_coeff : float
@@ -59,16 +60,18 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
         self.gradient_handler = distributed_gradient2d(
             np.asarray(self.full_size), grid_size
         )
+        self.estimator_builder = SerialMMSEBuilder(
+            self.gradient_handler.cart_comm.cartslicer.tile_size
+        )
+
+        # self.gradX = np.zeros((2, *self.X.current_state.shape))
+        self.gradX = self.gradient_handler.compute_grad(self.X.current_state)
         self.adj_buffer = np.zeros(
             self.gradient_handler.cart_comm.cartslicer.tile_size
         )  #! buffer linked to the kernel used, must be set to 0 due to the implementation of the operator
 
         self.slices = self.set_slices()
         self.global_sizes = self.set_global_sizes()
-
-        self.estimator_builder = SerialMMSEBuilder(
-            self.gradient_handler.cart_comm.cartslicer.tile_size
-        )
 
         if type(X) is PSGLA:
             self.X.prox = prox_nonegativity
@@ -80,12 +83,12 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
             raise ValueError("Kernel type not yet supported by this model.")
 
         if type(Z) is PSGLA:
-            self.Z.prox = lambda z: (prox_l21norm(z, self.Z.step_size * self.reg_coeff))
+            self.Z.prox = lambda z: (
+                prox_l21norm(z, lam=self.Z.step_size * self.reg_coeff)
+            )
             self.Z.grad = lambda z: (z - self.gradX) / self.split_coeff
         else:
             raise ValueError("Kernel type not yet supported by this model.")
-
-        self.gradX = np.zeros((2, *self.X.current_state.shape))
 
     def set_slices(self) -> dict:
         slices = {}
@@ -104,7 +107,7 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
     #! local buffer
     def get_states(self) -> dict:
         """get_states
-        Exctracts the current state of the transition kernel and other variables of interest and return it in a dictionnary.
+        Extracts the current state of the transition kernel and other variables of interest and return it in a dictionnary.
 
         Returns
         -------
@@ -167,16 +170,14 @@ class DistributedGaussianInpaintingModel(BaseDistributedModel):
             self.gradX[1] - self.Z.current_state[1],
         )
 
-    # ! should be removed, calling method from estimator object
     def aggregate_states(self):
         self.estimator_builder.aggregate_states(self.X.current_state)
 
     def compute_potential(self) -> float:
         """compute_potential Computes the partial potential."""
-        p = 0
-        p += np.sum((self.observations - self.mask * self.X.current_state) ** 2) / (
+        p = np.sum((self.observations - self.mask * self.X.current_state) ** 2) / (
             2 * self.sigma2
-        )  # suboptimal
+        )
         p += np.sum((self.gradX - self.Z.current_state) ** 2) / (2 * self.split_coeff)
         p += self.reg_coeff * l21_norm(self.Z.current_state)
         return p

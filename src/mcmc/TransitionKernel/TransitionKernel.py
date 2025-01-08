@@ -1,6 +1,6 @@
-import numpy as np
-
 from abc import ABC, abstractmethod
+
+import numpy as np
 
 
 class BaseSerialTransitionKernel(ABC):
@@ -16,7 +16,11 @@ class PSGLA(BaseSerialTransitionKernel):
     def __init__(self, dims, step_size):
         super(PSGLA, self).__init__(dims)
         self.step_size = step_size
+        # FIXME: add prox parameter here, so that it can be taken into account directly in mc_step, and not rewritten each time in the implementation of prox (prox_step = step_size * prox_parameter)
+        # FIXME: add default method to compute step-size from Lipshitz constant?
 
+    # FIXME: return an error, not just print! The method should be astract at this stage
+    # https://stackoverflow.com/questions/10374527/dynamically-assigning-function-implementation-in-python
     def prox(self, state: np.ndarray) -> np.ndarray:
         print("Warning : proximal operator not defined !")
         return NotImplemented
@@ -39,8 +43,7 @@ class MYULA(BaseSerialTransitionKernel):
         super(PSGLA, self).__init__(dims)
         self.step_size = step_size
         self.reg_coeff = reg_coeff
-
-        #! check step_size? need lipschitz
+        # FIXME: add default method to compute step-size from Lipshitz constant?
 
     def prox(self, state: np.ndarray) -> np.ndarray:
         print("Warning : proximal operator has not be defined !")
