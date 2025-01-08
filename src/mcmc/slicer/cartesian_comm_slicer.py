@@ -560,92 +560,92 @@ class CartesianCommSlicer(CommSlicer):
         )
 
 
-if __name__ == "__main__":
-    import dsgs.experimental.communicators.async_cartesian_communicator as async_cart_comm
-    import dsgs.experimental.communicators.sync_cartesian_communicator as sync_cart_comm
+# if __name__ == "__main__":
+#     import dsgs.experimental.communicators.async_cartesian_communicator as async_cart_comm
+#     import dsgs.experimental.communicators.sync_cartesian_communicator as sync_cart_comm
 
-    # ! serial debug
-    N = np.array([20, 20], dtype="i")
-    M = np.array([2, 2], dtype="i")
-    size_send = M - 1
-    size_recv = M - 1
-    ndims = 2
-    size = 2
-    grid_size = np.array([size, size], dtype="i")
+#     # ! serial debug
+#     N = np.array([20, 20], dtype="i")
+#     M = np.array([2, 2], dtype="i")
+#     size_send = M - 1
+#     size_recv = M - 1
+#     ndims = 2
+#     size = 2
+#     grid_size = np.array([size, size], dtype="i")
 
-    rank = 0
-    backward = False  # direction of overlap along all axes
-    ranknd = np.array(np.unravel_index(rank, grid_size), dtype="i")
+#     rank = 0
+#     backward = False  # direction of overlap along all axes
+#     ranknd = np.array(np.unravel_index(rank, grid_size), dtype="i")
 
-    cart_slicer = CartesianCommSlicer(
-        ranknd,
-        grid_size,
-        N,
-        size_send,
-        size_recv,
-        backward=backward,
-    )
+#     cart_slicer = CartesianCommSlicer(
+#         ranknd,
+#         grid_size,
+#         N,
+#         size_send,
+#         size_recv,
+#         backward=backward,
+#     )
 
-    dest = sync_cart_comm.send_rank(ranknd, grid_size, backward=backward)
-    dest_cricular = sync_cart_comm.send_rank(
-        ranknd, grid_size, backward=backward, circular=True
-    )
-    async_src = async_cart_comm.send_rank(ranknd, grid_size, backward=not backward)
-    facet = np.full(cart_slicer.facet_size, rank + 1, dtype="d")
+#     dest = sync_cart_comm.send_rank(ranknd, grid_size, backward=backward)
+#     dest_cricular = sync_cart_comm.send_rank(
+#         ranknd, grid_size, backward=backward, circular=True
+#     )
+#     async_src = async_cart_comm.send_rank(ranknd, grid_size, backward=not backward)
+#     facet = np.full(cart_slicer.facet_size, rank + 1, dtype="d")
 
-    # if backward:
-    #     increment_src = -1
-    # else:
-    #     increment_src = 1
+#     # if backward:
+#     #     increment_src = -1
+#     # else:
+#     #     increment_src = 1
 
-    # increment_nd = np.zeros((ndims,), dtype="i")
-    # mask = np.full(ndims, False)
+#     # increment_nd = np.zeros((ndims,), dtype="i")
+#     # mask = np.full(ndims, False)
 
-    # simulate insertion of values from neighbours (correct)
-    # for k in range(ndims - 1):
-    #     mask[k] = True
-    #     for d in range(ndims):
-    #         increment_nd[mask] = increment_src
+#     # simulate insertion of values from neighbours (correct)
+#     # for k in range(ndims - 1):
+#     #     mask[k] = True
+#     #     for d in range(ndims):
+#     #         increment_nd[mask] = increment_src
 
-    #         neighbour_ranknd = ranknd + increment_nd
-    #         neighbour_rank = np.array(
-    #             np.ravel_multi_index(neighbour_ranknd, grid_size), dtype="i"
-    #         )
-    #         facet[cart_slicer.slice_async_recv[k * ndims + d]] = neighbour_rank + 1
+#     #         neighbour_ranknd = ranknd + increment_nd
+#     #         neighbour_rank = np.array(
+#     #             np.ravel_multi_index(neighbour_ranknd, grid_size), dtype="i"
+#     #         )
+#     #         facet[cart_slicer.slice_async_recv[k * ndims + d]] = neighbour_rank + 1
 
-    #         increment_nd[mask] = 0
-    #         mask = np.roll(mask, 1)
+#     #         increment_nd[mask] = 0
+#     #         mask = np.roll(mask, 1)
 
-    # increment_nd = np.full(ndims, increment_src)
-    # neighbour_ranknd = ranknd + increment_nd
-    # neighbour_rank = np.array(
-    #     np.ravel_multi_index(neighbour_ranknd, grid_size), dtype="i"
-    # )
-    # facet[cart_slicer.slice_async_recv[-1]] = neighbour_rank + 1
+#     # increment_nd = np.full(ndims, increment_src)
+#     # neighbour_ranknd = ranknd + increment_nd
+#     # neighbour_rank = np.array(
+#     #     np.ravel_multi_index(neighbour_ranknd, grid_size), dtype="i"
+#     # )
+#     # facet[cart_slicer.slice_async_recv[-1]] = neighbour_rank + 1
 
-    # # shorter version
-    for k in range(len(cart_slicer.slice_async_recv)):
-        facet[cart_slicer.slice_async_recv[k]] = async_src[k] + 1
+#     # # shorter version
+#     for k in range(len(cart_slicer.slice_async_recv)):
+#         facet[cart_slicer.slice_async_recv[k]] = async_src[k] + 1
 
-    # test retrieving slice from facet
-    tile = facet[cart_slicer.slice_facet_to_tile]
-    recv_values = facet[cart_slicer.slice_recv[0]]
-    send_values = facet[cart_slicer.slice_send[0]]
+#     # test retrieving slice from facet
+#     tile = facet[cart_slicer.slice_facet_to_tile]
+#     recv_values = facet[cart_slicer.slice_recv[0]]
+#     send_values = facet[cart_slicer.slice_send[0]]
 
-    # test_facet = np.empty_like(facet)
-    # test_facet[cart_slicer.slice_facet_to_tile] = tile
-    # test_facet[cart_slicer.slice_recv[0]] = recv_values
+#     # test_facet = np.empty_like(facet)
+#     # test_facet[cart_slicer.slice_facet_to_tile] = tile
+#     # test_facet[cart_slicer.slice_recv[0]] = recv_values
 
-    # assert np.allclose(test_facet, facet)
+#     # assert np.allclose(test_facet, facet)
 
-    # W0 should receive nothing, W1 should receive sth
-    print("W{}, facet: {}".format(rank, facet))
-    print("W{}, recv_values: {}".format(rank, recv_values))
-    print("W{0}, recv_values.shape: {1}".format(rank, recv_values.shape))
+#     # W0 should receive nothing, W1 should receive sth
+#     print("W{}, facet: {}".format(rank, facet))
+#     print("W{}, recv_values: {}".format(rank, recv_values))
+#     print("W{0}, recv_values.shape: {1}".format(rank, recv_values.shape))
 
-    print("W{}, send_values: {}".format(rank, send_values))
-    print("W{0}, send_values.shape: {1}".format(rank, send_values.shape))
+#     print("W{}, send_values: {}".format(rank, send_values))
+#     print("W{0}, send_values.shape: {1}".format(rank, send_values.shape))
 
-    pass
+#     pass
 
 # mpiexec -n 2 python -m mpi4py src/dsgs/experimental/slicer/cartesian_comm_slicer.py

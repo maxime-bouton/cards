@@ -12,6 +12,7 @@ from mcmc.communicator.mpi_utils import (
     free_custom_mpi_types,
     mpi_create_subarray_type,
 )
+from mpi4py.MPI import PROC_NULL
 
 
 def send_rank(ranknd, grid_size, backward=True, circular=False):
@@ -37,7 +38,7 @@ def send_rank(ranknd, grid_size, backward=True, circular=False):
     Returns
     -------
     dest : numpy.ndarray[int]
-        Linear rank of the destination workers. The value -1 is used to encode invalid destination ranks.
+        Linear rank of the destination workers. The value MPI.PROC_NULL is used to encode invalid destination ranks (`MPI.PROC_NULL=-2` currently in openMPI).
 
     Note
     ----
@@ -65,12 +66,12 @@ def send_rank(ranknd, grid_size, backward=True, circular=False):
             )
             nbr_ranknd[axis] = ranknd[axis]
     else:
-        # return -1 index for invalid communications
+        # return MPI.PROC_NULL index for invalid communications
         for axis in range(ndims):
             nbr_ranknd[axis] += increment
 
             if np.any(np.bitwise_or(nbr_ranknd < 0, nbr_ranknd > grid_size - 1)):
-                dest[axis] = -1
+                dest[axis] = PROC_NULL
             else:
                 dest[axis] = np.ravel_multi_index(
                     nbr_ranknd,
@@ -173,8 +174,10 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
         # set to zero on workers for which no communication is possible along
         # a given dimension (i.e., at the border of the communicator it
         # circular boundaries not used)
-        # ! -1 value used for invalid src/dest rank to accommodate Sendrecv instructions
+        # ! MPI.PROC_NULL value used for invalid src/dest rank to accommodate Sendrecv instructions
         self.dest = send_rank(self.ranknd, self.grid_size, backward=self.backward)
+        # ! forces MPI.PROC_NULL value for communications with 0 overlap size
+        self.dest[self.cartslicer.send_size <= 0] = PROC_NULL
 
         self.resizedsendsubarray = mpi_create_subarray_type(
             self.cartslicer.facet_size,
@@ -185,6 +188,8 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
         )
 
         self.src = send_rank(self.ranknd, self.grid_size, backward=not self.backward)
+        # ! forces MPI.PROC_NULL value for communications with 0 overlap size
+        self.src[self.cartslicer.recv_size <= 0] = PROC_NULL
 
         self.resizedrecvsubarray = mpi_create_subarray_type(
             self.cartslicer.facet_size,
@@ -195,6 +200,7 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
         )
 
     # NOTE: directly maintain the array to be updated within the communicator?
+    # TODO: add error if local_array.dtype different from self.dtype
     def update_borders(self, local_array):
         """Update the borders of a local array using the communication scheme
         defined in the communicator.

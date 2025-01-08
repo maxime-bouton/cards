@@ -69,9 +69,8 @@ class DistributedSampler:
 
         if self.rank == 0:
             self.potential = np.zeros([self.batch_size])
-            self.computation_time = np.zeros([self.batch_size])
+        self.local_computation_time = np.zeros([self.batch_size])
         self.global_potential = 0.0
-        self.global_computation_time = 0.0
 
         self.data_manager = DistributedDataManager()
 
@@ -93,18 +92,14 @@ class DistributedSampler:
                 self.comm.Barrier()
 
                 partial_potential = self.model.compute_potential()
-                elapsed = end - start
+                self.local_computation_time[i] = end - start
 
                 self.global_potential = self.comm.reduce(
                     partial_potential, MPI.SUM, root=0
                 )
-                self.global_computation_time = self.comm.reduce(
-                    elapsed, MPI.MAX, root=0
-                )
 
                 if self.rank == 0:
                     self.potential[i] = self.global_potential
-                    self.computation_time[i] = self.global_computation_time
 
                 self.model.aggregate_states()
 
@@ -123,13 +118,18 @@ class DistributedSampler:
                     self.rng, file, self.rank, self.comm.Get_size()
                 )
 
+                self.data_manager.save_thread_array(
+                    self.local_computation_time,
+                    self.rank,
+                    self.comm.Get_size(),
+                    "computation_time",
+                    file,
+                )
+
             if self.rank == 0:
                 with h5py.File(full_name, "r+") as file:
                     self.data_manager.save_local_array(
                         self.potential, "potential", file
-                    )
-                    self.data_manager.save_local_array(
-                        self.computation_time, "computation_time", file
                     )
 
                 pbar.update()
@@ -137,7 +137,9 @@ class DistributedSampler:
                     "Batch {} out of {} computed".format(batch_num, self.nb_batches)
                 )
                 self.logger.info("Potential: {:1.3e}".format(self.potential[-1]))
-                self.logger.info("Time: {:1.3e}".format(self.computation_time[-1]))
+                self.logger.info(
+                    "Time: {:1.3e}".format(self.local_computation_time[-1])
+                )
 
     def restart(self, file_name: str, batch_restart: int, new_save_path: str) -> None:
         """Restart the sampler from a checkpoint file saved to disk.

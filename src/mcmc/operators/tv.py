@@ -253,23 +253,3 @@ def gradient_smooth_tv(x, eps):
     u = gradient_2d(x)
     v = gradient_2d_adjoint(u / np.sqrt(np.sum(np.abs(u) ** 2, axis=0) + eps))
     return v
-
-
-# if __name__ == "__main__":
-#     rng = np.random.default_rng(1234)
-#     x = rng.standard_normal((5, 5))
-#     eps = np.finfo(float).eps
-
-#     u2 = gradient_2d(x)
-#     y2 = gradient_2d_adjoint(u2)
-
-#     u = gradient_nd(x)
-#     y = gradient_nd_adjoint(u)
-
-#     err_ = np.linalg.norm(y - y2)
-#     print("Error: {0:1.5e}".format(err_))
-
-#     tv_x = tv_nd(x)
-#     tv_x_2d = tv(x)
-#     err = np.linalg.norm(tv_x - tv_x_2d)
-#     print("Error: {0:1.5e}".format(err))

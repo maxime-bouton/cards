@@ -269,7 +269,7 @@ $RECYCLE.BIN/
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python,macos,linux,windows
 
 ### Project-specific folders
-./produced_data/*
+*produced_data/*
 *.pyc
 .vscode
 *.h5

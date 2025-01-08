@@ -49,7 +49,7 @@ class DistributedDataManager:
             Array of data to write on file.
         global_size:
             Golbal dimensions of the buffers.
-        slices: dict
+        slices: slice
             Indexes of the vertices delimiting the position of the local buffer in the global buffer.
         file : h5py.File
             File on wich we write the data.
@@ -57,7 +57,7 @@ class DistributedDataManager:
             Name of the datafield in the file.
         """
         dset = file.create_dataset(name, global_size, dtype=data.dtype)
-        dset[*slices] = data
+        dset[slices] = data
 
     def save_seed(self, seed: int, rank: int, comm_size: int, file: h5py.File) -> None:
         """save_seed Save the seeds used on each process. It expects the given file to be open in paralell mode.
@@ -90,6 +90,28 @@ class DistributedDataManager:
         """
         dset = file.create_dataset(name, data.shape, dtype=data.dtype)
         dset[:] = data
+        return
+
+    def save_thread_array(
+        self, data: np.ndarray, rank: int, comm_size: int, name: str, file: h5py.File
+    ) -> None:
+        """save_thread_array Simultaneously save an array along each thread.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Local array.
+        rank : int
+            Rank of the current thread.
+        comm_size : int
+            Number of thread available int he commuicator.
+        name : str
+            Name of the datafield.
+        file : h5py.File
+            File where to writte the data.
+        """
+        dset = file.create_dataset(name, (comm_size, *data.shape), dtype=data.dtype)
+        dset[rank, ...] = data
         return
 
     def load_h5(self, file: h5py.File, slices: dict) -> dict:
