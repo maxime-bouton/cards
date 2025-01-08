@@ -5,20 +5,16 @@
 ![Python](https://img.shields.io/badge/python-3670A0?style=flat&logo=python&logoColor=ffdd54)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Note: two environments may be temporarily needed during development, one with `numpy>=2.0`, another `pythorch>=2.5`.
-
-The use of random number generators on GPU seems to be incompatible with `numpy`, and currently needs to be investigated.
-
 ## Setup
 
-- To create an environment from the provided `.yml` file
+- To create an environment from the provided `.yml` file on a computer running with an `ubuntu` OS, issue the following command in a terminal.
 
   ```bash
-  mamba env create --file gpu-linux-64.yml
+  mamba env create --name mcmc --file zeus_linux_x86_64_environment.yml
   conda develop src
   ```
 
-- Checking everything went well using a multi-GPU test (or Hello-world file)
+- Checking everything went well using a multi-GPU test
 
   ```bash
   mpirun -x OMPI_MCA_pml=ucx \
@@ -29,7 +25,7 @@ The use of random number generators on GPU seems to be incompatible with `numpy`
   # mpiexec --mca pml ucx --mca osc ucx --mca coll_ucc_enable 1 --mca opal_cuda_support 1 -x UCX_MEMTYPE_CACHE=n -n 2 test.py...
   ```
 
-- Manual installation using latest compatible versions of the packages is detailed below.
+- Manual environment setup latest compatible versions of the packages is detailed below.
 
 <details>
 
@@ -37,60 +33,32 @@ The use of random number generators on GPU seems to be incompatible with `numpy`
 
 ### Ubuntu
 
-Instructions tested on `epeautre`.
+Instructions tested on `epeautre` and the [HPC computer grid of the University of Lille](https://hpc-doc.univ-lille.fr/docs/accueil/).
 
 ```bash
-mamba create -n pymcmc python=3.12
-mamba activate pymcmc
-mamba install cuda # or nvidia::cuda
-which nvcc # should be located in miniforge folder or so
-mamba install cupy ipykernel ipyparallel
-# mamba install openmpi ucx mpi4py  # currently, issues with mpi4py openmpi
-mamba install mpich mpi4py ucx
-mamba install matplotlib scikit-image
+# https://stackoverflow.com/questions/62359175/pytorch-says-that-cuda-is-not-available-on-ubuntu
+mamba create --name mcmc numba numpy openmpi ucx cuda cudatoolkit cupy pytorch torchvision -c pytorch -c conda-forge -c nvidia
+mamba activate mcmc
 
-# choose the build of h5py including "mpi_openmpi_py\<>" with the right python version
-# mamba search h5py
-mamba install "h5py>=2.9=mpi*"
+# mamba install -c conda-forge cuda-nvcc cuda-nvrtc "cuda-version>=12.0"
+# mamba install cuda-cudart cuda-version=12
+# mamba install nccl
 
-# mamba install pytorch
-pip install torch  # ok for 2.5.1 version, not the case yet with mamba
-mamba install numba  # issue with numba for now (need more recent numpy?)
-mamba install pytest pre-commit ruff conda-build
-mamba install pytest-cov
-pip install docstr-coverage
+mamba install mpi4py openmpi "h5py>=2.9=mpi*" scipy imageio tqdm conda-build matplotlib
+# mamba install scikit-image -c conda-forge  # ! this downgrades numpy for now and imposes cpu version of pytorch: using pip install instead for now
+pip install scikit-image
+# mamba install mpi4jax
+# mamba install ipykernel ipyparallel # for notebooks
 
-# export manual configuration in a .yml file
-mamba env export --name pymcmc --file gpu-mpich-linux-64.yml
+# optional install (contributing: code formatting and building documentation)
+mamba install pytest isort coverage pre-commit furo sphinx sphinx_rtd_theme sphinxcontrib-bibtex sphinx-autoapi sphinx-design
+pip install sphinxcontrib-apa sphinx_copybutton docstr-coverage genbadge wily
 
-conda develop src
-```
-
-</details>
-
-<details>
-
-<summary>OSX</summary>
-
-### OSX
-
-All features relying on `cupy` are not supported on MAC for now.
-
-```bash
-mamba create -n pymcmc
-mamba activate pymcmc
-mamba install mpich mpi4py  # openmpi
-mamba install "h5py>=2.9=mpi*"
-mamba install numpy numba pytorch
-mamba install matplotlib scikit-image
-mamba install pytest pre-commit ruff conda-build
-# mamba install pytest-cov
-pip install docstr-coverage
-
+# installing package in development mode
 conda develop src
 
-# export manual configuration in a .yml file
-mamba env export --name pymcmc --file osx-64.yml
+# export
+mamba env export > zeus_linux_`uname -m`_environment.yml
 ```
 
 </details>
@@ -102,7 +70,7 @@ mamba env export --name pymcmc --file osx-64.yml
 To test the code/docstring coverage locally, run the following commands
 
 ```bash
-mamba activate pymcmc
+mamba activate mcmc
 python -m pytest --collect-only
 export NUMBA_DISABLE_JIT=1 # need to disable jit compilation to check test coverage
 coverage run -m pytest # check all tests
@@ -116,7 +84,7 @@ docstr-coverage . # check docstring coverage and generate the associated badge
 To launch a single test, run a command of the form
 
 ```bash
-mamba activate pymcmc
+mamba activate mcmc
 python -m pytest tests/test_module.py
 pytest --markers  # check full list of markers availables
 pytest -m "not mpi" --ignore-glob=**/floder_to_ignore/* # run all tests not marked as mpi + ignore files in any directory "/floder_to_ignore/"
