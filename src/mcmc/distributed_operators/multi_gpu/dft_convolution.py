@@ -2,9 +2,48 @@ import numpy as np
 import cupy as cp
 
 import mcmc.communicator.sync_cartesian_communicator as comms
-from mcmc.operators.gpu.convolution import fft_conv
 
 from mcmc.operators.linear_operator import LinearOperator
+
+
+def fft_conv(x: cp.ndarray, fft_h: cp.ndarray, shape, rank: int) -> cp.ndarray:
+    r"""FFT-based nd convolution.
+
+    Convolve the array ``x`` with the kernel of Fourier transform ``fft_h``
+    using the FFT. Performs linear or circular convolution depending on
+    the 0-padding initially adopted for ``fft_h``.
+
+    Parameters
+    ----------
+    x : cuy.ndarray
+        Input array (of size :math:`N`).
+    fft_h : cupy.ndarray
+        Input kernel (of size
+        :math:`\lfloor K/2 \rfloor + 1` if real, :math:`K` otherwise).
+    shape : tuple[int]
+        Full shape of the convolution (referred to as :math:`K` above).
+
+    Returns
+    -------
+    y : cupy.ndarray
+        Convolution results.
+    """
+    # turn shape into a list if only given as a scalar
+    with cp.cuda.Device(rank):
+        if cp.isscalar(shape):
+            shape_ = [shape]
+        else:
+            shape_ = shape
+        if x.dtype.kind == "c":
+            y = cp.fft.ifftn(fft_h * cp.fft.fftn(x, shape_, axes=range(len(shape_))))
+        else:  # assuming h is a real kernel as well
+            y = cp.fft.irfftn(
+                fft_h * cp.fft.rfftn(x, shape_, axes=range(len(shape_))),
+                shape_,
+                axes=range(len(shape_)),
+            )
+
+        return y
 
 
 def slice_valid_direct_convolution(ranknd, grid_size, overlap_size):
@@ -232,10 +271,9 @@ class MultiGPU_DFTConvolution(LinearOperator):
         super(MultiGPU_DFTConvolution, self).__init__(image_size, data_size)
         self.grid_size = grid_size
         self.comm = comm
+        self.rank = self.comm.Get_rank()
 
         # * Cartesian communicator and nd rank
-        self.rank = comm.Get_rank()
-        # self.ranknd = get_ranknd(self.rank, grid_size)
         self.cartcomm = self.comm.Create_cart(
             dims=grid_size,
             periods=self.ndims * [False],
@@ -265,9 +303,10 @@ class MultiGPU_DFTConvolution(LinearOperator):
         self.direct_conv_size = tuple(
             self.direct_communicator.cartslicer.facet_size + self.overlap_size
         )
-        self.direct_fft_kernel = np.fft.rfftn(
-            kernel, self.direct_conv_size, axes=range(len(kernel.shape))
-        )
+        with cp.cuda.Device(self.rank):
+            self.direct_fft_kernel = cp.fft.rfftn(
+                kernel, self.direct_conv_size, axes=range(len(kernel.shape))
+            )
         self.slice_valid_direct_convolution = slice_valid_direct_convolution(
             self.ranknd, self.grid_size, self.overlap_size
         )
@@ -310,17 +349,18 @@ class MultiGPU_DFTConvolution(LinearOperator):
         self.adjoint_conv_size = tuple(
             self.adjoint_communicator.cartslicer.facet_size + self.overlap_size
         )
-        self.adjoint_fft_kernel = np.conj(
-            np.fft.rfftn(kernel, self.adjoint_conv_size, axes=range(len(kernel.shape)))
-        )
+        with cp.cuda.Device(self.rank):
+            self.adjoint_fft_kernel = cp.conj(
+                cp.fft.rfftn(
+                    kernel, self.adjoint_conv_size, axes=range(len(kernel.shape))
+                )
+            )
         self.slice_valid_adjoint_convolution = tuple(
             [
                 np.s_[: self.direct_communicator.cartslicer.tile_size[d]]
                 for d in range(self.ndims)
             ]
         )
-
-        self.rank = self.cartcomm.rank
 
         with cp.cuda.Device(self.rank):
             self.forward_buffer = cp.zeros(
@@ -352,12 +392,12 @@ class MultiGPU_DFTConvolution(LinearOperator):
 
         Parameters
         ----------
-        input_image : numpy.ndarray[float]
+        input_image : cupy.ndarray[float]
             Input buffer array (image space), of size ``self.direct_communicator.cartslicer.tile_size``.
 
         Returns
         -------
-        y : numpy.ndarray[float]
+        y : cupy.ndarray[float]
             Result of the direct operator using the information from the local
             image facet.
 
@@ -370,7 +410,10 @@ class MultiGPU_DFTConvolution(LinearOperator):
             self.forward_buffer[self.forward_input_slice] = input_image
             self.direct_communicator.update_borders(self.forward_buffer)
             y = fft_conv(
-                self.forward_buffer, self.direct_fft_kernel, self.direct_conv_size
+                self.forward_buffer,
+                self.direct_fft_kernel,
+                self.direct_conv_size,
+                self.rank,
             )[self.slice_valid_direct_convolution]
             return y
 
@@ -398,6 +441,9 @@ class MultiGPU_DFTConvolution(LinearOperator):
             self.adjoint_buffer[self.adjoint_input_slice] = input_data
             self.adjoint_communicator.update_borders(self.adjoint_buffer)
             x = fft_conv(
-                self.adjoint_buffer, self.adjoint_fft_kernel, self.adjoint_conv_size
+                self.adjoint_buffer,
+                self.adjoint_fft_kernel,
+                self.adjoint_conv_size,
+                self.rank,
             )[self.slice_valid_adjoint_convolution]
             return x

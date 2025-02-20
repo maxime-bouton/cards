@@ -194,7 +194,16 @@ def compute_distributed(
     Z = PSGLA((2, *tile_size), step_size_Z)
 
     model = DistributedGaussianInpaintingModel(
-        img_size, grid_size, observations, mask, X, Z, sigma2, reg_coef, split_coef
+        comm,
+        img_size,
+        grid_size,
+        observations,
+        mask,
+        X,
+        Z,
+        sigma2,
+        reg_coef,
+        split_coef,
     )
 
     sampler = DistributedSampler(
@@ -384,7 +393,16 @@ def resume_distributed_sampler(
     Z = PSGLA((2, *tile_size), step_size_Z)
 
     model = DistributedGaussianInpaintingModel(
-        img_size, grid_size, observations, mask, X, Z, sigma2, reg_coef, split_coef
+        comm,
+        img_size,
+        grid_size,
+        observations,
+        mask,
+        X,
+        Z,
+        sigma2,
+        reg_coef,
+        split_coef,
     )
 
     sampler = DistributedSampler(

@@ -27,6 +27,7 @@ def load_args_analysis_from_json(config_file_path: str) -> dict:
 
     args_analysis = {
         "nb_batches": params["nbCheckpoint"],
+        "batch_size": params["sampleSize"],
         "burnin": params["burnin"],
         "save_path": params["savePath"],
         "data_path": params["dataPath"],
@@ -68,16 +69,28 @@ def load_img_size(path: str) -> np.ndarray:
         return img.shape
 
 
+def apply_gaussian_noise(
+    signal: np.ndarray, snr: float, rng: np.random.Generator
+) -> list[np.ndarray, dict]:  # not a list but a union
+    param = {}
+    sigma2 = np.linalg.norm(signal) ** 2 / signal.size / (10 ** (snr / 10))
+    param["sigma2"] = sigma2
+    return signal + rng.normal(
+        loc=np.zeros_like(signal), scale=np.sqrt(sigma2), size=signal.shape
+    ), param
+
+
 def generate_observations(
     original_path: str,
     operator: LinearOperator,
     snr: float,
+    apply_noise: callable,
     data_seed: int,
     obs_path: str,
     problem_parameters: dict = None,
     maximum: float = 1.0,
 ) -> None:
-    """generate_observations Generates and saves a deteriorated signal from a ground truth given in entry.
+    """generate_observations Generates and saves a deteriorated signal from the one given in entry.
 
     Parameters
     ----------
@@ -103,16 +116,13 @@ def generate_observations(
 
     rng = np.random.default_rng(data_seed)
 
-    sigma2 = np.linalg.norm(img) ** 2 / img.size / (10 ** (snr / 10))
-
     buffer = operator.forward(img)
-    observations = buffer + rng.normal(
-        loc=np.zeros_like(buffer), scale=np.sqrt(sigma2), size=buffer.shape
-    )
+    observations, noise_param = apply_noise(buffer, snr, rng)
+
+    problem_parameters.update(noise_param)
 
     with h5py.File(obs_path, "w") as file:
         file["x"] = img
-        file["sigma2"] = sigma2
         file["data"] = observations
         file["N"] = np.asarray(img.shape, dtype=int)
         file["data_seed"] = np.asarray([data_seed], dtype=int)
@@ -151,10 +161,10 @@ def plot_results(
         Path to the directory where we will save the figures.
     """
 
-    if not (original.shape == observations.shape) and slices == slice(None):
-        raise ValueError(
-            "Image and observations don't have the same dimensions. Indicate which part of observations must be selected."
-        )
+    # if not (original.shape == observations.shape) and slices == slice(None):
+    #     raise ValueError(
+    #         "Image and observations don't have the same dimensions. Indicate which part of observations must be selected."
+    #     )
 
     pixelMin = np.min(original)
     pixelMax = np.max(original)
@@ -177,7 +187,7 @@ def plot_results(
     plt.colorbar()
     if enable_save:
         name = join(save_path, "reconstruction")
-        plt.imsave(name, arr=MMSE, vmin=pixelMin, vmax=pixelMax)
+        plt.imsave(name, arr=MMSE, vmin=pixelMin, vmax=pixelMax, format="pdf")
     plt.show()
 
     plt.figure()
@@ -187,7 +197,11 @@ def plot_results(
     if enable_save:
         name = join(save_path, "error")
         plt.imsave(
-            name, arr=(np.abs(original[slices] - MMSE)), vmin=pixelMin, vmax=pixelMax
+            name,
+            arr=(np.abs(original[slices] - MMSE)),
+            vmin=pixelMin,
+            vmax=pixelMax,
+            format="pdf",
         )
     plt.show()
 
@@ -197,17 +211,20 @@ def plot_results(
     plt.grid()
     if enable_save:
         name = join(save_path, "potential")
-        plt.imsave(name, arr=potential)
+        plt.savefig(name, format="pdf")
     plt.show()
 
 
 def analyze_data(
     nb_batches: int,
+    batch_size: int,
     burnin: int,
     save_path: str,
     data_path: str,
     output_file_name: str,
     slices: slice = slice(None),
+    comm_size: int = 0,
+    save_picture: bool = False,
 ) -> None:
     """analyze_data Read the sample produced by a "compute" function and make some metrics out of it.
 
@@ -215,6 +232,8 @@ def analyze_data(
     ----------
     nb_batches : int
         Number of batches of the sample.
+    batch_size: int
+        Size of the batches.
     burnin : int
         Number of bacth to ignore to take into account the burn-in.
     save_path : str
@@ -225,30 +244,47 @@ def analyze_data(
         Full path to the file on which we will write the metrics.
     slices : slice
         Select which portion of the observation must be compared to the original.
+    comm_size : int
+        Number of process, must be used only in a distributed setting.
     """
 
-    potential = []
-    time = []
+    potential = np.zeros([nb_batches * batch_size])
+    if comm_size == 0:
+        time = np.zeros([nb_batches * batch_size])
+        batch_time = np.zeros([nb_batches])
+    else:
+        time = np.zeros([comm_size, nb_batches * batch_size])
+        batch_time = np.zeros([comm_size, nb_batches])
+
     for i in range(1, nb_batches + 1):
         file_name = join(save_path, "sample" + str(i) + ".h5")
 
         with h5py.File(file_name, "r") as file:
-            potential = np.append(potential, file["potential"][:])
-            time = np.append(time, file["computation_time"][:])
+            potential[(i - 1) * batch_size : i * batch_size] = file["potential"][:]
+            if comm_size != 0:
+                time[:, (i - 1) * batch_size : i * batch_size] = file[
+                    "computation_time"
+                ][:]
+                batch_time[:, i - 1] = file["batch_time"][:]
+            else:
+                time[(i - 1) * batch_size : i * batch_size] = file["computation_time"][
+                    :
+                ]
+                batch_time[i - 1] = file["batch_time"][:]
 
-    # time metrics stored with shape (ncores, nsamples)
-    atime = np.mean(time, axis=-1)
-    total_time = np.sum(time, axis=-1)
-    time_std = np.std(time, axis=-1)
+    # FIXME - time metrics unfit for distributed implementation
+    atime = np.asarray(np.mean(time, axis=-1))
+    total_time = np.asarray(np.sum(batch_time, axis=-1))
+    time_std = np.asarray(np.std(time, axis=-1))
 
     with h5py.File(data_path, "r") as file:
         original = file["x"][:]
         observations = file["data"][:]
 
-    if not (original.shape == observations.shape) and slices == slice(None):
-        raise ValueError(
-            "Image and observations don't have the same dimensions. Indicate which part of observations must be selected."
-        )
+    # if not (original.shape == observations.shape) and slices == slice(None):
+    #     raise ValueError(
+    #         "Image and observations don't have the same dimensions. Indicate which part of observations must be selected."
+    #     )
 
     MMSE = np.zeros(original.shape)
     for i in range(burnin, nb_batches):
@@ -263,7 +299,7 @@ def analyze_data(
     )
 
     snr_recons = 10 * np.log10(
-        np.linalg.norm(original) ** 2 / (np.linalg.norm(original[slices] - MMSE) ** 2)
+        np.linalg.norm(original) ** 2 / (np.linalg.norm(original - MMSE) ** 2)
     )
 
     ssim_obs = ssim(
@@ -272,9 +308,9 @@ def analyze_data(
     ssim_recons = ssim(original, MMSE, data_range=np.max(original) - np.min(original))
 
     results = {
-        "atime": atime,
-        "total_time": total_time,
-        "std_time": time_std,
+        "atime": atime.tolist(),
+        "total_time": total_time.tolist(),
+        "std_time": time_std.tolist(),
         "snr_obs": snr_obs,
         "snr_recons": snr_recons,
         "ssim_obs": ssim_obs,
@@ -286,4 +322,11 @@ def analyze_data(
     with open(results_file, "w") as file:
         file.write(results_json)
 
-    plot_results(observations, original, MMSE, potential)
+    plot_results(
+        observations,
+        original,
+        MMSE,
+        potential,
+        enable_save=save_picture,
+        save_path=save_path,
+    )

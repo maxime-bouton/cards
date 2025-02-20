@@ -141,20 +141,20 @@ def chunk_gradient_2d_adjoint(uh, uv, x, isfirst, islast):
 
 
 class distributed_gradient2d:
-    def __init__(self, global_size: np.ndarray, grid_size: np.ndarray) -> None:
+    def __init__(
+        self,
+        global_size: np.ndarray,
+        grid_size: np.ndarray,
+        comm: MPI.Comm = MPI.COMM_WORLD,
+    ) -> None:
+        self.comm = comm
         overlap = np.asarray([1, 1])
         self.dtype = np.float64
         self.cart_comm = SyncCartesianCommunicator(
-            MPI.COMM_WORLD,
-            grid_size,
-            global_size,
-            overlap,
-            overlap,
-            backward=False,
-            dtype=self.dtype,
+            self.comm, grid_size, global_size, overlap, overlap, backward=False
         )
         self.adj_cart_comm_v = SyncCartesianCommunicator(
-            MPI.COMM_WORLD,
+            self.comm,
             grid_size,
             global_size,
             np.asarray([1, 0], dtype=int),
@@ -163,7 +163,7 @@ class distributed_gradient2d:
             backward=True,
         )
         self.adj_cart_comm_h = SyncCartesianCommunicator(
-            MPI.COMM_WORLD,
+            self.comm,
             grid_size,
             global_size,
             np.asarray([0, 1], dtype=int),
@@ -172,24 +172,26 @@ class distributed_gradient2d:
             backward=True,
         )
 
+        grid_size = self.cart_comm.grid_size
+        self.ranknd = self.cart_comm.ranknd
+        self.is_first = np.asarray([self.ranknd[0] == 0, self.ranknd[1] == 0])
+        self.is_last = np.asarray(
+            [self.ranknd[0] == (grid_size[0] - 1), self.ranknd[1] == (grid_size[1] - 1)]
+        )
+
         self.local_buffer = np.zeros(self.cart_comm.cartslicer.facet_size)
         self.local_buffer_adj_v = np.zeros(self.adj_cart_comm_v.cartslicer.facet_size)
         self.local_buffer_adj_h = np.zeros(self.adj_cart_comm_h.cartslicer.facet_size)
 
-    def compute_grad(self, local_data: np.ndarray) -> np.ndarray:
+    def forward(self, local_data: np.ndarray) -> np.ndarray:
         [m, n] = self.cart_comm.cartslicer.tile_size
         self.local_buffer[:m, :n] = local_data
 
         self.cart_comm.update_borders(self.local_buffer)
 
-        grid_size = self.cart_comm.cartslicer.grid_size
-        ranknd = self.cart_comm.ranknd
-        is_border = np.asarray(
-            [ranknd[0] == (grid_size[0] - 1), ranknd[1] == (grid_size[1] - 1)]
-        )
-        return chunk_gradient_2d(self.local_buffer, is_border)
+        return chunk_gradient_2d(self.local_buffer, self.is_last)
 
-    def compute_adjoint(
+    def adjoint(
         self, res: np.ndarray, local_data_h: np.ndarray, local_data_v: np.ndarray
     ) -> None:
         [m, n] = self.adj_cart_comm_v.cartslicer.tile_size
@@ -199,14 +201,11 @@ class distributed_gradient2d:
         self.adj_cart_comm_v.update_borders(self.local_buffer_adj_v)
         self.adj_cart_comm_h.update_borders(self.local_buffer_adj_h)
 
-        grid_size = self.cart_comm.grid_size
-        ranknd = self.cart_comm.ranknd
-        is_first = np.asarray([ranknd[0] == 0, ranknd[1] == 0])
-        is_last = np.asarray(
-            [ranknd[0] == (grid_size[0] - 1), ranknd[1] == (grid_size[1] - 1)]
-        )
-
         chunk_gradient_2d_adjoint(
-            self.local_buffer_adj_h, self.local_buffer_adj_v, res, is_first, is_last
+            self.local_buffer_adj_h,
+            self.local_buffer_adj_v,
+            res,
+            self.is_first,
+            self.is_last,
         )
         return

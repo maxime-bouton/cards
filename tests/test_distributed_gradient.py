@@ -54,7 +54,7 @@ def test_distributed_gradient(comm, dims):
     local = np.zeros(gradient_handler.cart_comm.cartslicer.tile_size)
     local = X[slice_0, slice_1]
 
-    chunk_grad = gradient_handler.compute_grad(local)
+    chunk_grad = gradient_handler.forward(local)
 
     global_grad = np.zeros(shape=[2, *dims])
     distributed_grad = np.zeros(shape=[2, *dims])

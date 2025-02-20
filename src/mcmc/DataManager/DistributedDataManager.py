@@ -6,6 +6,8 @@ import h5py
 import numpy as np
 
 from mcmc.DataManager.warmstart_rng_mpi import load_rng_np_mpi, save_rng_np_mpi
+from mcmc.DataManager.warmstart_rng import save_rng_offset_torch
+import torch
 
 # ! need a base class setting up the interface, and create subclasses through inheritance (numpy-based, torch-based)
 
@@ -30,7 +32,9 @@ class DistributedDataManager:
         """
         for key in data:
             #! acces mode must be set in parallel so that variables can be created in parallel
-            dset = file.create_dataset(key, global_sizes[key], dtype=data[key].dtype)
+            dset = file.create_dataset(
+                name=key, shape=global_sizes[key], dtype=data[key].dtype
+            )
             dset[slices[key]] = data[key]
 
     def save_array(
@@ -114,6 +118,28 @@ class DistributedDataManager:
         dset[rank, ...] = data
         return
 
+    def save_thread_scalar(
+        self, data: float, rank: int, comm_size: int, name: str, file: h5py.File
+    ) -> None:
+        """save_thread_scalar Simultaneously save a scalar along each thread.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            Local scalar.
+        rank : int
+            Rank of the current thread.
+        comm_size : int
+            Number of thread available int he commuicator.
+        name : str
+            Name of the datafield.
+        file : h5py.File
+            File where to writte the data.
+        """
+        dset = file.create_dataset(name, comm_size, dtype=data.dtype)
+        dset[rank] = data
+        return
+
     def load_h5(self, file: h5py.File, slices: dict) -> dict:
         """load_h5 Read a .5 file and load the local value of the array on each process.
         It expects the given file to be open in paralell mode.
@@ -165,4 +191,24 @@ class DistributedDataManager:
             Rank of the process.
         """
         load_rng_np_mpi(rank, rng, file)
+        return
+
+    def save_rng_torch(self, rng: torch._C.Generator, seed: int, h5file: h5py.File) -> None:
+        r"""Save current state of a pytorch random number generator in a .h5 file
+        using the offset from the initial seed state.
+
+        Parameters
+        ----------
+        rng : torch._C.Generator
+            Pytorch random number generator on the GPU.
+        seed : int
+            Seed used to initialize the generator.
+        h5file : h5py.File
+            Handle to a `.h5` file to save the state of the generator.
+
+        Note
+        ----
+        Requires ``pythorch>=2.5``. Only supported for generators on the GPU.
+        """
+        save_rng_offset_torch(rng, seed, h5file)
         return

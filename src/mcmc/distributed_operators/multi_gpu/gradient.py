@@ -6,7 +6,7 @@ from mpi4py import MPI
 from mcmc.communicator.sync_cartesian_communicator import SyncCartesianCommunicator
 
 
-def chunk_gradient_2d(x, rank, islast):
+def chunk_gradient_2d(x: cp.ndarray, rank: int, islast):
     r"""Chunk of the 2d discrete gradient (with jit support).
 
     Compute a chunk of the 2d discrete gradient operator (using jit
@@ -15,7 +15,7 @@ def chunk_gradient_2d(x, rank, islast):
 
     Parameters
     ----------
-    x : numpy.ndarray[float64 or complex128], 2d
+    x : cupy.ndarray[float64 or complex128], 2d
         Input array including border for forwrd overlap.
     islast : numpy.ndarray, bool, 1d
         Vector indicating whether the chunk is the last one along each
@@ -79,8 +79,11 @@ def chunk_gradient_2d(x, rank, islast):
         return u
 
 
-def chunk_gradient_2d_adjoint(uh, uv, x, isfirst, islast, rank):
-    r"""Chunk of the adjoint 2d discrete gradient (with jit support).
+#! update doc
+def chunk_gradient_2d_adjoint(
+    uh: cp.ndarray, uv: cp.ndarray, shape, isfirst, islast, rank: int
+) -> cp.array:
+    r"""Chunk of the adjoint 2d discrete gradient.
 
     Compute a chunk of the adjoint 2d discrete gradient. Assumes backward border overlap between the arrays handled by consecutive worker.
     Expects the buffer given in entry to be set to 0.
@@ -91,8 +94,8 @@ def chunk_gradient_2d_adjoint(uh, uv, x, isfirst, islast, rank):
         Local chunk of the horizontal difference.
     uv : cupy.ndarray[float64 or complex128], 2d
         Local chunk of the vertical difference.
-    x : cupy.ndarray[float64 or complex128], 2d
-        Output array (updated in-place).
+    shape :
+        Shape of the output array.
     isfirst : cupy.ndarray, bool, 1d
         Vector indicating whether the chunk is the first one along each
         dimension of the Cartesian process grid.
@@ -110,7 +113,9 @@ def chunk_gradient_2d_adjoint(uh, uv, x, isfirst, islast, rank):
 
     with cp.cuda.Device(rank):
         # set buffer to 0
-        x[:] = 0
+        # x[:] = 0
+        # x = cp.zeros_like(x)
+        x = cp.zeros(shape)  #! memory allocation at each call
 
         # vertical: uv = u[1, :, :]
         if isfirst[0]:  # no overlap along axis 0
@@ -142,17 +147,23 @@ def chunk_gradient_2d_adjoint(uh, uv, x, isfirst, islast, rank):
             else:
                 x += uh[:, :-1] - uh[:, 1:]
 
-        return
+        return x
 
 
 class distributed_gradient2d:
-    def __init__(self, global_size: np.ndarray, grid_size: np.ndarray) -> None:
+    def __init__(
+        self,
+        global_size: np.ndarray,
+        grid_size: np.ndarray,
+        comm: MPI.Intracomm = MPI.COMM_WORLD,
+    ) -> None:
+        self.comm = comm
         overlap = np.asarray([1, 1])
         self.cart_comm = SyncCartesianCommunicator(
-            MPI.COMM_WORLD, grid_size, global_size, overlap, overlap, backward=False
+            self.comm, grid_size, global_size, overlap, overlap, backward=False
         )
         self.adj_cart_comm_v = SyncCartesianCommunicator(
-            MPI.COMM_WORLD,
+            self.comm,
             grid_size,
             global_size,
             np.asarray([1, 0]),
@@ -160,7 +171,7 @@ class distributed_gradient2d:
             backward=True,
         )
         self.adj_cart_comm_h = SyncCartesianCommunicator(
-            MPI.COMM_WORLD,
+            self.comm,
             grid_size,
             global_size,
             np.asarray([0, 1]),
@@ -169,6 +180,13 @@ class distributed_gradient2d:
         )
 
         self.rank = self.cart_comm.rank
+        grid_size = self.cart_comm.grid_size
+        self.ranknd = self.cart_comm.ranknd
+        self.is_first = np.asarray([self.ranknd[0] == 0, self.ranknd[1] == 0])
+        self.is_last = np.asarray(
+            [self.ranknd[0] == (grid_size[0] - 1), self.ranknd[1] == (grid_size[1] - 1)]
+        )
+        self.adj_shape = self.cart_comm.cartslicer.tile_size
 
         with cp.cuda.Device(self.rank):
             self.local_buffer = cp.zeros(self.cart_comm.cartslicer.facet_size)
@@ -179,42 +197,31 @@ class distributed_gradient2d:
                 self.adj_cart_comm_h.cartslicer.facet_size
             )
 
-    def forward(self, local_data: np.ndarray) -> np.ndarray:
-        [m, n] = self.cart_comm.cartslicer.tile_size
-        self.local_buffer[:m, :n] = local_data
+    def forward(self, local_data: cp.ndarray) -> cp.ndarray:
+        with cp.cuda.Device(self.rank):
+            [m, n] = self.cart_comm.cartslicer.tile_size
+            self.local_buffer[:m, :n] = local_data
 
-        self.cart_comm.update_borders(self.local_buffer)
+            self.cart_comm.update_borders(self.local_buffer)
 
-        grid_size = self.cart_comm.cartslicer.grid_size
-        ranknd = self.cart_comm.ranknd
-        is_border = np.asarray(
-            [ranknd[0] == (grid_size[0] - 1), ranknd[1] == (grid_size[1] - 1)]
-        )
-        return chunk_gradient_2d(self.local_buffer, self.rank, is_border)
+            return chunk_gradient_2d(self.local_buffer, self.rank, self.is_last)
 
-    def adjoint(
-        self, res: np.ndarray, local_data_h: np.ndarray, local_data_v: np.ndarray
-    ) -> None:
-        [m, n] = self.adj_cart_comm_v.cartslicer.tile_size
-        self.local_buffer_adj_v[-m:, -n:] = local_data_v
-        self.local_buffer_adj_h[-m:, -n:] = local_data_h
+    def adjoint(self, local_data_h: np.ndarray, local_data_v: np.ndarray) -> cp.ndarray:
+        with cp.cuda.Device(self.rank):
+            [m, n] = self.adj_cart_comm_v.cartslicer.tile_size
+            self.local_buffer_adj_v[-m:, -n:] = local_data_v
+            self.local_buffer_adj_h[-m:, -n:] = local_data_h
 
-        self.adj_cart_comm_v.update_borders(self.local_buffer_adj_v)
-        self.adj_cart_comm_h.update_borders(self.local_buffer_adj_h)
+            self.adj_cart_comm_v.update_borders(self.local_buffer_adj_v)
+            self.adj_cart_comm_h.update_borders(self.local_buffer_adj_h)
 
-        grid_size = self.cart_comm.grid_size
-        ranknd = self.cart_comm.ranknd
-        is_first = np.asarray([ranknd[0] == 0, ranknd[1] == 0])
-        is_last = np.asarray(
-            [ranknd[0] == (grid_size[0] - 1), ranknd[1] == (grid_size[1] - 1)]
-        )
-
-        chunk_gradient_2d_adjoint(
-            self.local_buffer_adj_h,
-            self.local_buffer_adj_v,
-            res,
-            is_first,
-            is_last,
-            self.rank,
-        )
-        return
+            adj = chunk_gradient_2d_adjoint(
+                self.local_buffer_adj_h,
+                self.local_buffer_adj_v,
+                # res,
+                self.adj_shape,
+                self.is_first,
+                self.is_last,
+                self.rank,
+            )
+            return adj
