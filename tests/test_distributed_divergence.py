@@ -59,7 +59,7 @@ def test_distributed_divergence(comm, dims):
 
     chunk_adj = np.zeros(gradient_handler.adj_cart_comm_h.cartslicer.tile_size)
 
-    gradient_handler.compute_adjoint(chunk_adj, local_h, local_v)
+    gradient_handler.adjoint(chunk_adj, local_h, local_v)
 
     if rank == 0:
         global_adj = gradient_2d_adjoint(X[0], X[1])

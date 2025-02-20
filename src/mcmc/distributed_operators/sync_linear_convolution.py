@@ -77,83 +77,6 @@ def slice_valid_direct_convolution(ranknd, grid_size, overlap_size):
     return valid_coefficients
 
 
-def slice_input2buffer_forward(ranknd, grid_size, overlap_size):
-    ndims = ranknd.size
-
-    if not (grid_size.size == ndims and overlap_size.size == ndims):
-        raise AssertionError(
-            r"`ranknd`, `grid_size` and `overlap_size` must have the save \
-                shape"
-        )
-
-    R = ndims * [None]
-
-    for d in range(ndims):
-        if grid_size[d] > 1 and overlap_size[d] > 0:
-            if ranknd[d] > 0 and ranknd[d] < grid_size[d] - 1:
-                R[d] = -overlap_size[d]
-            elif ranknd[d] == grid_size[d] - 1:
-                R[d] = None
-            else:
-                R[d] = -overlap_size[d]
-        else:
-            R[d] = None
-
-    valid_coefficients = tuple([np.s_[0 : R[d]] for d in range(ndims)])
-
-    return valid_coefficients
-
-
-def slice_input2buffer_adjoint(ranknd, grid_size, overlap_size):
-    ndims = ranknd.size
-
-    if not (grid_size.size == ndims and overlap_size.size == ndims):
-        raise AssertionError(
-            r"`ranknd`, `grid_size` and `overlap_size` must have the save \
-                shape"
-        )
-
-    L = ndims * [None]
-
-    for d in range(ndims):
-        if grid_size[d] > 1 and overlap_size[d] > 0:
-            if ranknd[d] > 0 and ranknd[d] > grid_size[d] - 1:
-                L[d] = overlap_size[d]
-            elif ranknd[d] == 0:
-                L[d] = None
-            else:
-                L[d] = overlap_size[d]
-        else:
-            L[d] = None
-
-    valid_coefficients = tuple([np.s_[L[d] : None] for d in range(ndims)])
-
-    return valid_coefficients
-
-
-# REVIEW - to be checked
-def get_froward_buffer_local_size(ranknd, grid_size, tile_size, overlap_size):
-    ndims = ranknd.size
-
-    size = tile_size
-    for d in range(ndims):
-        if ranknd[d] < grid_size[d] - 1:
-            size[d] += overlap_size[d]
-
-    return size
-
-
-def get_adjoint_buffer_local_size(ranknd, tile_size, overlap_size):
-    ndims = ranknd.size
-
-    size = tile_size
-    for d in range(ndims):
-        if ranknd[d] > 0:
-            size[d] += overlap_size[d]
-
-    return size
-
-
 class SyncLinearConvolution(LinearOperator):
     r"""Synchronous distributed implementation of a linear convolution operator.
 
@@ -332,27 +255,14 @@ class SyncLinearConvolution(LinearOperator):
             ]
         )
 
-        self.forward_buffer = np.zeros(
-            get_froward_buffer_local_size(
-                self.ranknd,
-                self.grid_size,
-                self.direct_communicator.cartslicer.tile_size,
-                self.overlap_size,
-            )
-        )
-        self.adjoint_buffer = np.zeros(
-            get_adjoint_buffer_local_size(
-                self.ranknd,
-                self.adjoint_communicator.cartslicer.tile_size,
-                self.overlap_size,
-            )
-        )
+        self.forward_buffer = np.zeros(self.direct_communicator.cartslicer.facet_size)
+        self.adjoint_buffer = np.zeros(self.adjoint_communicator.cartslicer.facet_size)
 
-        self.forward_input_slice = slice_input2buffer_forward(
-            self.ranknd, self.grid_size, self.overlap_size
+        self.forward_input_slice = (
+            self.direct_communicator.cartslicer.slice_facet_to_tile
         )
-        self.adjoint_input_slice = slice_input2buffer_adjoint(
-            self.ranknd, self.grid_size, self.overlap_size
+        self.adjoint_input_slice = (
+            self.adjoint_communicator.cartslicer.slice_facet_to_tile
         )
 
     def forward(self, input_image):

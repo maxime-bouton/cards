@@ -4,6 +4,8 @@ from time import perf_counter
 
 import h5py
 import numpy as np
+import cupy as cp
+import torch
 from mpi4py import MPI
 from tqdm import tqdm
 
@@ -11,7 +13,7 @@ from mcmc.DataManager.DistributedDataManager import DistributedDataManager
 from mcmc.models.BaseModel import BaseDistributedModel
 
 
-class DistributedSampler:
+class MultiGpuSampler:
     def __init__(
         self,
         comm: MPI.Comm,
@@ -49,6 +51,7 @@ class DistributedSampler:
 
         self.comm = comm
         self.rank = self.comm.Get_rank()
+        torch.cuda.set_device(self.comm.Get_rank())
 
         # set random number generator on each process
         if self.rank == 0:
@@ -57,8 +60,14 @@ class DistributedSampler:
             child_seed = np.array(ss.spawn(comm.Get_size()))
         else:
             child_seed = None
-        local_seed = comm.scatter(child_seed, root=0)
-        self.rng = np.random.default_rng(local_seed)
+        self.local_seed = comm.scatter(child_seed, root=0)
+
+        with cp.cuda.Device(self.rank):
+            # self.rng = torch.Generator(device="cuda").manual_seed(self.local_seed)
+            self.rng = torch.Generator(device="cuda").manual_seed(
+                seed + self.rank
+            )  #! unsafe seed generation
+        self.seed = seed + self.rank
 
         self.file_name = file_name
         self.save_path = save_path
@@ -69,9 +78,13 @@ class DistributedSampler:
 
         if self.rank == 0:
             self.potential = np.zeros([self.batch_size])
-        self.local_computation_time = np.zeros([self.batch_size])
-        self.local_batch_time = 0.0
         self.global_potential = 0.0
+
+        self.cpu_time = np.zeros([self.batch_size])
+        self.gpu_time = np.zeros([self.batch_size])
+        self.start_gpu = cp.cuda.Event()
+        self.end_gpu = cp.cuda.Event()
+        self.local_batch_time = 0.0
 
         self.data_manager = DistributedDataManager()
 
@@ -82,21 +95,26 @@ class DistributedSampler:
         if self.rank == 0:
             pbar = tqdm(total=self.nb_batches, desc="Sampling", unit="it")
             pbar.update(self.start_batch_num)
-
         for batch_num in range(self.start_batch_num, self.nb_batches + 1):
             batch_start = perf_counter()
-
             self.model.estimator_builder.reset()
 
             for i in range(self.batch_size):
+                #! doubt on gpu mesure
+                self.start_gpu.record()
                 start = perf_counter()
                 self.model.update(self.rng)
                 end = perf_counter()
+                self.end_gpu.record()
+                self.end_gpu.synchronize()
 
-                # self.comm.Barrier()
+                self.comm.Barrier()
 
                 partial_potential = self.model.compute_potential()
-                self.local_computation_time[i] = end - start
+                self.cpu_time[i] = end - start
+                self.gpu_time[i] = (
+                    cp.cuda.get_elapsed_time(self.start_gpu, self.end_gpu) * 1e-3
+                )  #! millisecond to second
 
                 self.global_potential = self.comm.reduce(
                     partial_potential, MPI.SUM, root=0
@@ -118,20 +136,25 @@ class DistributedSampler:
                     self.model.global_sizes,
                     self.model.slices,
                 )
-                self.data_manager.save_rng(
-                    self.rng, file, self.rank, self.comm.Get_size()
-                )
+                #!SECTION
+                self.data_manager.save_rng_torch(self.rng, self.seed, file)
 
                 self.data_manager.save_thread_array(
-                    self.local_computation_time,
+                    self.gpu_time,
                     self.rank,
                     self.comm.Get_size(),
                     "computation_time",
                     file,
                 )
-
+                self.data_manager.save_thread_array(
+                    self.cpu_time,
+                    self.rank,
+                    self.comm.Get_size(),
+                    "cpu_time",
+                    file,
+                )
             batch_end = perf_counter()
-            self.local_batch_time = batch_end - batch_start
+            self.batch_local_time = batch_end - batch_start
             with h5py.File(full_name, "r+", driver="mpio", comm=self.comm) as file:
                 self.data_manager.save_thread_scalar(
                     np.asarray(self.local_batch_time),
@@ -140,7 +163,6 @@ class DistributedSampler:
                     "batch_time",
                     file,
                 )
-
             if self.rank == 0:
                 with h5py.File(full_name, "r+") as file:
                     self.data_manager.save_local_array(
@@ -152,36 +174,7 @@ class DistributedSampler:
                     "Batch {} out of {} computed".format(batch_num, self.nb_batches)
                 )
                 self.logger.info("Potential: {:1.3e}".format(self.potential[-1]))
-                self.logger.info(
-                    "Time: {:1.3e}".format(self.local_computation_time[-1])
-                )
+                self.logger.info("Time: {:1.3e}".format(self.gpu_time[-1]))
 
-    def restart(self, file_name: str, batch_restart: int, new_save_path: str) -> None:
-        """Restart the sampler from a checkpoint file saved to disk.
-
-        Parameters
-        ----------
-        file_name : str
-            Name of the file from which checkpoint data are loaded.
-        batch_restart : int
-            Index of the iteration at which the checkpoint file has been saved.
-        new_save_path : str
-            Save path for the remaining samples.
-        """
-        with h5py.File(file_name, "r", driver="mpio", comm=self.comm) as file:
-            data = self.data_manager.load_h5(file, self.model.slices)
-            self.data_manager.load_rng(self.rng, file, self.rank)
-
-        self.save_path = new_save_path
-        self.start_batch_num = batch_restart + 1
-        self.model.set_states(data)
-
-        partial_potential = self.model.compute_potential()
-        potential = self.comm.reduce(partial_potential, MPI.SUM, root=0)
-
-        if self.rank == 0:
-            self.logger.info(
-                "Potential after restart from batch {}: {:1.3e}".format(
-                    batch_restart, potential
-                )
-            )
+    def restart():
+        return NotImplemented

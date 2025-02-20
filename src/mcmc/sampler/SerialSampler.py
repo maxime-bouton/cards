@@ -55,6 +55,7 @@ class Sampler:
 
         self.potential = np.zeros([self.batch_size])
         self.computation_time = np.zeros([self.batch_size])
+        self.batch_time = 0.0
 
         self.data_manager = DataManager()
 
@@ -64,7 +65,10 @@ class Sampler:
         """
         pbar = tqdm(total=self.nb_batches, desc="Sampling", unit="it")
         pbar.update(self.start_batch_num)
+
         for batch_num in range(self.start_batch_num, self.nb_batches + 1):
+            batch_start = perf_counter()
+
             self.model.estimator_builder.reset()
 
             for i in range(self.batch_size):
@@ -87,6 +91,13 @@ class Sampler:
                 self.data_manager.save_rng(self.rng, file)
                 self.data_manager.save_array(
                     self.computation_time, file, "computation_time"
+                )
+
+            batch_end = perf_counter()
+            self.batch_time = batch_end - batch_start
+            with h5py.File(full_name, "r+") as file:
+                self.data_manager.save_array(
+                    np.asarray([self.batch_time]), file, "batch_time"
                 )
 
             pbar.update()

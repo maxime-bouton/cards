@@ -98,7 +98,8 @@ class GpuConvolution(LinearOperator):
         Setting ``data_size`` to the same value as ``image_size`` results in a
         circular convolution.
         """
-        assert isinstance(data_size, tuple)
+        if not isinstance(data_size, tuple):
+            raise TypeError("Expected tuple for the dimensions of the convolution.")
         if not image_size.size == len(data_size):
             raise ValueError(
                 "image_size and data_size must have the same number of elements"

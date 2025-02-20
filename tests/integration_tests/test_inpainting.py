@@ -6,7 +6,7 @@ from os.path import join
 import h5py
 import numpy as np
 import pytest
-from mcmc.utils.inpainting_sampling_utils import (
+from utils import (
     compute_distributed,
     compute_gpu,
     compute_serial,

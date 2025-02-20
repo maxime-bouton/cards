@@ -4,6 +4,7 @@ from time import perf_counter
 
 import h5py
 import numpy as np
+import cupy as cp
 import torch
 from tqdm import tqdm
 
@@ -55,7 +56,11 @@ class GpuSampler:
         self.logger = logger
 
         self.potential = np.zeros([self.batch_size])
-        self.computation_time = np.zeros([self.batch_size])
+        self.cpu_time = np.zeros([self.batch_size])
+        self.gpu_time = np.zeros([self.batch_size])
+        self.batch_time = 0.0
+        self.start_gpu = cp.cuda.Event()
+        self.end_gpu = cp.cuda.Event()
 
         self.data_manager = DataManager()
 
@@ -66,17 +71,25 @@ class GpuSampler:
         pbar = tqdm(total=self.nb_batches, desc="Sampling", unit="it")
         pbar.update(self.start_batch_num)
         for batch_num in range(self.start_batch_num, self.nb_batches + 1):
+            batch_start = perf_counter()
+
             self.model.estimator_builder.reset()
 
             for i in range(self.batch_size):
+                self.start_gpu.record()
                 start = perf_counter()
                 self.model.update(self.rng)
                 end = perf_counter()
+                self.end_gpu.record()
+                self.end_gpu.synchronize()
 
                 elapsed = end - start
+                self.gpu_time[i] = (
+                    cp.cuda.get_elapsed_time(self.start_gpu, self.end_gpu) * 1e-3
+                )  #! millisecond to second
 
                 self.potential[i] = self.model.compute_potential()
-                self.computation_time[i] = elapsed
+                self.cpu_time[i] = elapsed
                 self.model.aggregate_states()
 
             self.model.estimator_builder.build_estimator(self.batch_size)
@@ -86,17 +99,23 @@ class GpuSampler:
             with h5py.File(full_name, "w") as file:
                 self.data_manager.save_dict(self.model.get_states(), file)
                 self.data_manager.save_array(self.potential, file, "potential")
-                self.data_manager.save_array(
-                    self.computation_time, file, "computation_time"
-                )
+                self.data_manager.save_array(self.gpu_time, file, "computation_time")
+                self.data_manager.save_array(self.cpu_time, file, "cpu_time")
                 self.data_manager.save_rng_torch(self.rng, self.seed, file)
+
+            batch_end = perf_counter()
+            self.batch_time = batch_end - batch_start
+            with h5py.File(full_name, "r+") as file:
+                self.data_manager.save_array(
+                    np.asarray([self.batch_time]), file, "batch_time"
+                )
 
             pbar.update()
             self.logger.info(
                 "Batch {} out of {} computed".format(batch_num, self.nb_batches)
             )
             self.logger.info("Potential: {:1.3e}".format(self.potential[-1]))
-            self.logger.info("Time: {:1.3e}".format(self.computation_time[-1]))
+            self.logger.info("Time: {:1.3e}".format(self.gpu_time[-1]))
 
     def restart(self, file_name: str, batch_restart: int, new_save_path: str):
         r"""restart Resume the sampling at a given state. It may be used to start a second where a first run had been interrupted.

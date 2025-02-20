@@ -53,7 +53,7 @@ def test_multi_gpu_convolution_forward(seed, dims, kernel_dims):
 
     Y = fft_conv(
         X,
-        np.fft.rfftn(kernel, s=tuple(convo_dims), axes=range(len(convo_dims))),
+        np.fft.rfftn(kernel, tuple(convo_dims), axes=range(len(convo_dims))),
         tuple(convo_dims),
     )
 
