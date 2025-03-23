@@ -16,7 +16,7 @@ def prox_nonegativity(x):
     return np.maximum(x, 0)
 
 
-class DistributedGaussainDeconvolutionModel(BaseDistributedModel):
+class DistributedGaussianDeconvolutionModel(BaseDistributedModel):
     def __init__(
         self,
         comm: MPI.Comm,
