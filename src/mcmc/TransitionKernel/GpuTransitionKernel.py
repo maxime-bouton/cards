@@ -44,36 +44,36 @@ class GpuPSGLA(BaseGpuTransitionKernel):
 
 
 class MultiGpuPSGLA(GpuPSGLA):
-    def __init__(self, dims, step_size, rank):
+    def __init__(self, dims, step_size, gpu_id):
         super().__init__(dims, step_size)
-        self.rank = rank
-        with cp.cuda.Device(self.rank):
+        self.gpu_id = gpu_id
+        with cp.cuda.Device(self.gpu_id):
             self.current_state = cp.zeros(dims)
 
-    def device_prox(self, state: cp.ndarray, rank : int) -> cp.ndarray:
-        with cp.cuda.Device(rank):
+    def device_prox(self, state: cp.ndarray, gpu_id: int) -> cp.ndarray:
+        with cp.cuda.Device(gpu_id):
             return self.prox(state)
 
-    def device_grad(self, state: cp.ndarray, rank : int):
-        with cp.cuda.Device(rank):
+    def device_grad(self, state: cp.ndarray, gpu_id: int):
+        with cp.cuda.Device(gpu_id):
             return self.grad(state)
 
-    def grad(self, state: cp.ndarray, rank : int) -> cp.ndarray:
+    def grad(self, state: cp.ndarray) -> cp.ndarray:
         print("Warning : gradient function not defined!")
         return NotImplemented
 
     def mc_step(self, rng):
-        with cp.cuda.Device(self.rank):
+        with cp.cuda.Device(self.gpu_id):
             self.current_state = self.device_prox(
-            self.current_state
-            + np.sqrt(2 * self.step_size)
-            * cp.from_dlpack(
-                torch.normal(
-                    torch.zeros(self.current_state.shape, device="cuda"),
-                    torch.ones(self.current_state.shape, device="cuda"),
-                    generator=rng,
+                self.current_state
+                + ( self.step_size **(0.5) )
+                * cp.from_dlpack(
+                    torch.normal(
+                        torch.zeros(self.current_state.shape, device="cuda"),
+                        torch.ones(self.current_state.shape, device="cuda"),
+                        generator=rng,
+                    )
                 )
+                - self.step_size * self.device_grad(self.current_state, self.gpu_id),
+                self.gpu_id,
             )
-            - self.step_size * self.device_grad(self.current_state, self.rank)
-            , self.rank)
-

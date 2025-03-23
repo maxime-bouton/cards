@@ -30,24 +30,25 @@ class GPUMMSEBuilder(BaseMMSEBuilder):
         """Set the internal state of the estimator to 0."""
         self.estimator = cp.zeros_like(self.estimator)
 
+
 class MultiGpuMMSEBuilder(BaseMMSEBuilder):
-    def __init__(self, shape, rank)->None:
+    def __init__(self, shape, gpu_id) -> None:
         super().__init__()
-        self.rank = rank
-        with cp.cuda.Device(self.rank):
+        self.gpu_id = gpu_id
+        with cp.cuda.Device(self.gpu_id):
             self.estimator = cp.zeros(shape)
-    
-    def device_reset(self,rank):
-        with cp.cuda.Device(self.rank):
+
+    def device_reset(self, gpu_id):
+        with cp.cuda.Device(self.gpu_id):
             self.estimator = cp.zeros_like(self.estimator)
-    
+
     def reset(self):
-        self.device_reset(self.rank)
-    
-    def aggregate_states(self, state : cp.ndarray ):
-        with cp.cuda.Device(self.rank):
+        self.device_reset(self.gpu_id)
+
+    def aggregate_states(self, state: cp.ndarray):
+        with cp.cuda.Device(self.gpu_id):
             self.estimator += state
 
-    def build_estimator(self, N : int):
-        with cp.cuda.Device(self.rank):
+    def build_estimator(self, N: int):
+        with cp.cuda.Device(self.gpu_id):
             self.estimator = self.estimator / N

@@ -10,6 +10,7 @@ from utils_deconvolution import (
     compute_serial,
     compute_gpu,
     compute_distributed,
+    compute_multi_gpu,
     add_deconvolution_param,
     slice_obs_to_original,
     generate_gaussian_deconvolution_observations,
@@ -73,12 +74,37 @@ def main(mode, args, args_analysis, slices, results_file_name):
         compute_distributed(logger, **args)
 
         if MPI.COMM_WORLD.Get_rank() == 0:
-            print(MPI.COMM_WORLD.Get_size())
             analyze_data(
                 **args_analysis,
                 output_file_name=results_file_name,
                 slices=slices,
                 comm_size=MPI.COMM_WORLD.Get_size(),
+            )
+
+    if mode == "multi_gpu":
+        from mpi4py import MPI
+
+        if MPI.COMM_WORLD.Get_rank() == 0:
+            pathlib.Path(params["savePath"]).mkdir(parents=True, exist_ok=True)
+            logger = logging.getLogger(__name__)
+            logging.basicConfig(
+                filename=params["logFilename"],
+                level=logging.INFO,
+                filemode="w",
+                format="%(asctime)s %(levelname)s %(message)s",
+            )
+        else:
+            logger = None
+
+        compute_multi_gpu(logger, **args)
+
+        if MPI.COMM_WORLD.Get_rank() == 0:
+            analyze_data(
+                **args_analysis,
+                output_file_name=results_file_name,
+                slices=slices,
+                comm_size=MPI.COMM_WORLD.Get_size(),
+                save_picture=True,
             )
 
 
@@ -92,7 +118,7 @@ if __name__ == "__main__":
         help="Selest the implementation to use.",
         default="serial",
         type=str,
-        choices={"serial", "gpu", "distributed"},
+        choices={"serial", "gpu", "distributed", "multi_gpu"},
     )
     parser.add_argument(
         "--config",
@@ -122,6 +148,7 @@ if __name__ == "__main__":
 
     if not exists(main_args["data_path"]):
         generate_gaussian_deconvolution_observations(
+            params["originPath"],
             params["kernel_size"],
             params["kernel_std"],
             params["isnr"],
@@ -135,3 +162,4 @@ if __name__ == "__main__":
     # main(mode="distributed", config_file_name="config_cameraman.json")
 
 # mpirun -n 9 python -m mpi4py main.py
+# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py main.py --mode multi_gpu

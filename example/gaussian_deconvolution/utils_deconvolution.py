@@ -9,17 +9,22 @@ import scipy
 from mcmc.models.GaussianDeconvolutionModel import GaussianDeconvolutionModel
 from mcmc.models.GpuGaussianDeconvolutionModel import GpuGaussianDeconvolutionModel
 from mcmc.models.DistributedGaussianDeconvolutionModel import (
-    DistributedGaussainDeconvolutionModel,
+    DistributedGaussianDeconvolutionModel,
+)
+from mcmc.models.MultiGpuGaussianDeconvolutionModel import (
+    MultiGpuGaussianDeconvolutionModel,
 )
 from mcmc.sampler.GpuSampler import GpuSampler
 from mcmc.sampler.SerialSampler import Sampler
 from mcmc.sampler.DistributedSampler import DistributedSampler
-from mcmc.TransitionKernel.GpuTransitionKernel import GpuPSGLA
+from mcmc.sampler.MultiGpuSampler import MultiGpuSampler
+from mcmc.TransitionKernel.GpuTransitionKernel import GpuPSGLA, MultiGpuPSGLA
 from mcmc.TransitionKernel.TransitionKernel import PSGLA
 from mcmc.operators.serial_convolution import SerialConvolution
 from mcmc.slicer.cartesian_comm_slicer import CartesianCommSlicer
 from mcmc.utils.utils import load_img_size, generate_observations, apply_gaussian_noise
 from mcmc.distributed_operators.sync_linear_convolution import SyncLinearConvolution
+from mcmc.distributed_operators.multi_gpu.dft_convolution import MultiGPU_DFTConvolution
 
 
 def slice_obs_to_original(img_dims, kernel_dims):
@@ -200,7 +205,7 @@ def compute_gpu(
 
     kernel, sigma2, observations = load_from_h5(data_path)
 
-    step_size_X, step_size_Z = compute_step_size(split_coef, sigma2, kernel)
+    step_size_X, step_size_Z = compute_step_size(split_coef, sigma2, cp.asnumpy(kernel)) #! giving cp array to numpy function returns cp array
 
     Mm, Nn = observations.shape
     m, n = kernel.shape
@@ -286,7 +291,7 @@ def compute_distributed(
     X = PSGLA(tile_size, step_size_X)
     Z = PSGLA((2, *tile_size), step_size_Z)
 
-    model = DistributedGaussainDeconvolutionModel(
+    model = DistributedGaussianDeconvolutionModel(
         comm,
         img_size,
         grid_size,
@@ -300,6 +305,100 @@ def compute_distributed(
     )
 
     sampler = DistributedSampler(
+        comm, batch_size, nb_batches, seed, "sample", save_path, model, logger
+    )
+
+    sampler.sample()
+
+
+def compute_multi_gpu(
+    logger: logging.Logger,
+    split_coef: float,
+    reg_coef: float,
+    batch_size: int,
+    nb_batches: int,
+    seed: int,
+    save_path: str,
+    data_path: str,
+):
+    r"""compute_multi_gpu Generate a sample with the distributed implementation on gpu.
+
+    Parameters
+    ----------
+    logger: logging.Logger
+        Logger object.
+    split_coef : float
+        Splitting coefficient, parameter of the model.
+    reg_coef : float
+        Regularization coefficient, parameter of the model.
+    batch_size : int
+        Number of iterations for a batch.
+    nb_batches : int
+        Number of batches of the sample.
+    seed : int
+        Seed.
+    save_path : str
+        Path to the directory where we will save the sample.
+    data_path : str
+        Path to the file containing the deteriorated signal.
+    """
+    import numpy as np
+    from mpi4py import MPI
+
+    kernel, sigma2, observations = load_from_h5(data_path)
+    Mm, Nn = observations.shape
+    m, n = kernel.shape
+    M = Mm - m + 1
+    N = Nn - n + 1
+    img_size = np.asarray([M, N])
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    grid_size = np.asarray(MPI.Compute_dims(comm.Get_size(), 2), dtype=int)
+    mpi_cart_comm = comm.Create_cart(grid_size)
+    ranknd = np.asarray(mpi_cart_comm.Get_coords(rank))
+    nb_gpu = cp.cuda.runtime.getDeviceCount()
+    gpu_id = rank % nb_gpu
+
+    slicer = CartesianCommSlicer(
+        ranknd,
+        grid_size,
+        img_size,
+        np.asarray([0, 0]),
+        np.asarray([0, 0]),
+    )
+    tile_size = slicer.tile_size
+
+    convolution = MultiGPU_DFTConvolution(
+        img_size, cp.asarray(kernel), comm, grid_size
+    )  # compute dimensions another way, waste of memory
+
+    with cp.cuda.Device(gpu_id):
+        observations = cp.asarray(
+            observations[
+                convolution.adjoint_communicator.cartslicer.slice_global_buffer_to_tile
+            ]
+        )
+        kernel = cp.asarray(kernel)
+
+    step_size_X, step_size_Z = compute_step_size(split_coef, sigma2, cp.asnumpy(kernel))
+    X = MultiGpuPSGLA(tile_size, step_size_X, gpu_id)
+    Z = MultiGpuPSGLA((2, *tile_size), step_size_Z, gpu_id)
+
+    model = MultiGpuGaussianDeconvolutionModel(
+        comm,
+        img_size,
+        grid_size,
+        observations,
+        kernel,
+        X,
+        Z,
+        sigma2,
+        reg_coef,
+        split_coef,
+    )
+
+    sampler = MultiGpuSampler(
         comm, batch_size, nb_batches, seed, "sample", save_path, model, logger
     )
 
