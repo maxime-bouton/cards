@@ -6,13 +6,16 @@ from os.path import exists
 from socket import gethostname
 
 import numpy as np
-from inpainting_sampling_utils import (compute_distributed, compute_gpu,
-                                       compute_serial)
+from inpainting_sampling_utils import compute_distributed, compute_gpu, compute_serial
 
 from mcmc.operators.inpainting_v2 import SerialInpainting
-from mcmc.utils.utils import (analyze_data, generate_observations,
-                              load_args_analysis_from_json,
-                              load_args_from_json, load_img_size)
+from mcmc.utils.utils import (
+    analyze_data,
+    generate_observations,
+    load_args_analysis_from_json,
+    load_args_from_json,
+    load_img_size,
+)
 
 
 def add_inpainting_params(args: dict, config_file_path: str) -> None:

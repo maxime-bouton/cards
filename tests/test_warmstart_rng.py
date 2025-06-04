@@ -8,7 +8,8 @@ import h5py
 import numpy as np
 import pytest
 import torch
-from mcmc.DataManager.warmstart_rng import (
+
+from mcmc.data_manager.warmstart_rng import (
     load_rng_np,
     load_rng_offset_torch,
     load_rng_torch,

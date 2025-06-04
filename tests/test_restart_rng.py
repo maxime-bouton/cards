@@ -3,15 +3,15 @@ generator in numpy.
 
 NOTE
 ----
-Tests may be broken with later numpy version, as :func:`mcmc.DataManager.warmstart_rng.extract_rng_state` and
-:func:`mcmc.DataManager.warmstart_rng.restore_rng_state` rely on private methods
+Tests may be broken with later numpy version, as :func:`mcmc.data_manager.warmstart_rng.extract_rng_state` and
+:func:`mcmc.data_manager.warmstart_rng.restore_rng_state` rely on private methods
 of :class:`numpy.random.Generator.bit_generator`.
 """
 
 import numpy as np
-from mcmc.DataManager.warmstart_rng import extract_rng_state, restore_rng_state
-
 import pytest
+
+from mcmc.data_manager.warmstart_rng import extract_rng_state, restore_rng_state
 
 pytestmark = pytest.mark.numpy
 

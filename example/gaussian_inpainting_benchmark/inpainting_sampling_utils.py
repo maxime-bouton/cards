@@ -1,24 +1,22 @@
 r"""Define useful function to run a sample on the inpainting problem."""
 
-from os.path import join
-import h5py
-
-import numpy as np
-import cupy as cp
-
-from mpi4py import MPI
-
 import logging
+from os.path import join
+
+import cupy as cp
+import h5py
+import numpy as np
+from mpi4py import MPI
 
 from mcmc.models.DistributedGaussianInpainting import DistributedGaussianInpaintingModel
 from mcmc.models.GaussianInpaintingModel import GaussianInpaintingModel
 from mcmc.models.GpuGaussianInpaintingModel import GpuGaussianInpaintingModel
-from mcmc.sampler.DistributedSampler import DistributedSampler
-from mcmc.sampler.GpuSampler import GpuSampler
-from mcmc.sampler.SerialSampler import Sampler
+from mcmc.sampler.distributed_sampler import DistributedSampler
+from mcmc.sampler.gpu_sampler import GpuSampler
+from mcmc.sampler.serial_sampler import Sampler
 from mcmc.slicer.cartesian_comm_slicer import CartesianCommSlicer
-from mcmc.TransitionKernel.GpuTransitionKernel import GpuPSGLA
-from mcmc.TransitionKernel.TransitionKernel import PSGLA
+from mcmc.transition_kernel.GpuTransitionKernel import GpuPSGLA
+from mcmc.transition_kernel.TransitionKernel import PSGLA
 
 
 def load_from_h5(filename):

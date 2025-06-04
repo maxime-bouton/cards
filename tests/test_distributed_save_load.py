@@ -8,7 +8,7 @@ import pytest
 from mpi4py import MPI
 
 from mcmc.communicator.sync_cartesian_communicator import SyncCartesianCommunicator
-from mcmc.DataManager.DistributedDataManager import DistributedDataManager
+from mcmc.data_manager.data_manager import DataManager
 
 pytestmark = pytest.mark.mpi
 
@@ -51,13 +51,17 @@ def test_distributed_save(tmp_path, dims, seed):
     local_dim = sync_comm.cartslicer.tile_size
     X = rng.standard_normal(size=local_dim, dtype=np.float64)
 
-    data_manager = DistributedDataManager()
+    data_manager = DataManager()
+    filename = ""
 
-    if tmp_path is not None:
-        tmp_path_str = tmp_path.as_posix()
-    else:
-        tmp_path_str = ""
-    filename = join(tmp_path_str, "distributed_save_data.h5")
+    if rank == 0:
+        if tmp_path is not None:
+            tmp_path_str = tmp_path.as_posix()
+        else:
+            tmp_path_str = ""
+        filename = join(tmp_path_str, "distributed_save_data.h5")
+
+    filename = comm.bcast(filename, 0)
 
     data = {"x": X}
     slices = {"x": slice_facet_to_tile}
@@ -81,8 +85,8 @@ def test_distributed_save(tmp_path, dims, seed):
 
 
 if __name__ == "__main__":
-    dims = np.asarray([100, 50], dtype=int)
+    default_dims = np.asarray([100, 50], dtype=int)
     tmp_path = None
-    seed = 1234
+    default_seed = 1234
 
-    test_distributed_save(tmp_path, dims, seed)
+    test_distributed_save(tmp_path, default_dims, default_seed)

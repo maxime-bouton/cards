@@ -34,4 +34,4 @@ class CommSlicer(ABC):
     def _get_slice_global_buffer_to_tile(self):
         """Create slice to insert tile into, or extract tile from, the full
         array."""
-        return NotImplemented
+        pass

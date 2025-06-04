@@ -55,16 +55,12 @@ class LinearOperator(ABC):
         input_image : numpy.ndarray
             Input array (image space).
 
-        Returns
-        -------
-        NotImplemented
-
         Note
         ----
         The method needs to be implemented in any class inheriting from
         BaseCommunicator.
         """
-        return NotImplemented
+        pass
 
     @abstractmethod
     def adjoint(self, input_data):  # pragma: no cover
@@ -76,13 +72,9 @@ class LinearOperator(ABC):
         input_data : numpy.ndarray
             Input array (data space).
 
-        Returns
-        -------
-        NotImplemented
-
         Note
         ----
         The method needs to be implemented in any class inheriting from
         BaseCommunicator.
         """
-        return NotImplemented
+        pass

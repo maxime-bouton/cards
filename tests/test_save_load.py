@@ -6,7 +6,7 @@ import h5py
 import numpy as np
 import pytest
 
-from mcmc.DataManager.DataManager import DataManager
+from mcmc.data_manager.data_manager import DataManager
 
 pytestmark = pytest.mark.numpy
 
