@@ -14,7 +14,9 @@ import h5py
 import numpy as np
 import pytest
 import torch
-from mcmc.DataManager.warmstart_rng_mpi import (
+from mpi4py import MPI
+
+from mcmc.data_manager.warmstart_rng_mpi import (
     load_rng_np_mpi,
     load_rng_offset_torch_mpi,
     load_rng_torch_mpi,
@@ -22,7 +24,6 @@ from mcmc.DataManager.warmstart_rng_mpi import (
     save_rng_offset_torch_mpi,
     save_rng_torch_mpi,
 )
-from mpi4py import MPI
 
 pytestmark = pytest.mark.mpi
 
@@ -64,10 +65,19 @@ def n_samples():
 
 
 @pytest.mark.numpy
-def test_warmstart_rng_np_mpi(comm, seed, new_seed, n_samples):
+def test_warmstart_rng_np_mpi(tmp_path, comm, seed, new_seed, n_samples):
     r"""Test warmstart of a numpy random number generator by restoring its
     state in a distributed setting."""
-    filename = "warmstart_rng_numpy_mpi.h5"
+    rank = comm.Get_rank()
+    filename = ""
+    if rank == 0:
+        if tmp_path is not None:
+            tmp_path_str = tmp_path.as_posix()
+        else:
+            tmp_path_str = ""
+        filename = os.path.join(tmp_path_str, "warmstart_rng_numpy_mpi.h5")
+
+    filename = comm.bcast(filename, 0)
 
     rank = comm.Get_rank()
     size = comm.Get_size()
@@ -116,12 +126,23 @@ def test_warmstart_rng_np_mpi(comm, seed, new_seed, n_samples):
 
 
 @pytest.mark.torch
-def test_warmstart_rng_offset_torch_mpi(comm, seed, new_seed, n_samples, device):
+def test_warmstart_rng_offset_torch_mpi(
+    tmp_path, comm, seed, new_seed, n_samples, device
+):
     r"""Test warmstart of a torch random number generator using the offset from
     an initial seed. Tested in a distributed setting."""
     filename = "warmstart_rng_offset_torch_mpi.h5"
     rank = comm.Get_rank()
     size = comm.Get_size()
+
+    if rank == 0:
+        if tmp_path is not None:
+            tmp_path_str = tmp_path.as_posix()
+        else:
+            tmp_path_str = ""
+        filename = os.path.join(tmp_path_str, "warmstart_rng_offset_torch_mpi.h5")
+
+    filename = comm.bcast(filename, 0)
 
     # ! doubt about the statistical robustness of multi-GPU sampling with
     # ! torch, compared to cupy/numpy, where this feature is explicitly
@@ -159,12 +180,21 @@ def test_warmstart_rng_offset_torch_mpi(comm, seed, new_seed, n_samples, device)
 
 
 @pytest.mark.torch
-def test_warmstart_rng_torch_mpi(comm, seed, new_seed, n_samples, device):
+def test_warmstart_rng_torch_mpi(tmp_path, comm, seed, new_seed, n_samples, device):
     r"""Test warmstart of a torch random number generator by restoring its
     state in a distributed setting."""
     filename = "warmstart_rng_torch_mpi.h5"
     rank = comm.Get_rank()
     size = comm.Get_size()
+
+    if rank == 0:
+        if tmp_path is not None:
+            tmp_path_str = tmp_path.as_posix()
+        else:
+            tmp_path_str = ""
+        filename = os.path.join(tmp_path_str, "warmstart_rng_torch_mpi.h5")
+
+    filename = comm.bcast(filename, 0)
 
     # ! doubt about the statistical robustness of multi-GPU sampling with
     # ! torch, compared to cupy/numpy, where this feature is explicitly
@@ -213,6 +243,6 @@ if __name__ == "__main__":
     )
     torch.cuda.set_device(device)
 
-    test_warmstart_rng_np_mpi(comm, seed, new_seed, n_samples)
-    test_warmstart_rng_offset_torch_mpi(comm, seed, new_seed, n_samples, device)
-    test_warmstart_rng_torch_mpi(comm, seed, new_seed, n_samples, device)
+    test_warmstart_rng_np_mpi(None, comm, seed, new_seed, n_samples)
+    test_warmstart_rng_offset_torch_mpi(None, comm, seed, new_seed, n_samples, device)
+    test_warmstart_rng_torch_mpi(None, comm, seed, new_seed, n_samples, device)

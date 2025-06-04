@@ -273,3 +273,7 @@ $RECYCLE.BIN/
 *.pyc
 .vscode
 *.h5
+
+# pixi environments
+.pixi
+*.egg-info
