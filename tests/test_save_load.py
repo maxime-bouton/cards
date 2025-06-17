@@ -27,6 +27,7 @@ def new_seed():
 
 
 # FIXME: missing docstrings
+@pytest.mark.env("serial-cpu")
 def test_save(tmp_path, dims):
     rng = np.random.default_rng(1234)
     X = rng.standard_normal(dims)

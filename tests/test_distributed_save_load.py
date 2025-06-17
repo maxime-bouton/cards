@@ -26,6 +26,7 @@ def seed():
 
 
 @pytest.mark.numpy
+@pytest.mark.env("mpi-cpu")
 def test_distributed_save(tmp_path, dims, seed):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()

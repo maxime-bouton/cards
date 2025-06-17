@@ -21,6 +21,7 @@ def size():
     return 100000
 
 
+@pytest.mark.env("serial-cpu")
 def test_rng_state(size):
     r"""Test state extraction and reset with a ``numpy`` random number
     generator."""
