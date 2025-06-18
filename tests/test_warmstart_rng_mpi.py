@@ -65,6 +65,7 @@ def n_samples():
 
 
 @pytest.mark.numpy
+@pytest.mark.env("mpi-cpu")
 def test_warmstart_rng_np_mpi(tmp_path, comm, seed, new_seed, n_samples):
     r"""Test warmstart of a numpy random number generator by restoring its
     state in a distributed setting."""
@@ -126,6 +127,7 @@ def test_warmstart_rng_np_mpi(tmp_path, comm, seed, new_seed, n_samples):
 
 
 @pytest.mark.torch
+@pytest.mark.env("mpi-gpu")
 def test_warmstart_rng_offset_torch_mpi(
     tmp_path, comm, seed, new_seed, n_samples, device
 ):
@@ -180,6 +182,7 @@ def test_warmstart_rng_offset_torch_mpi(
 
 
 @pytest.mark.torch
+@pytest.mark.env("mpi-gpu")
 def test_warmstart_rng_torch_mpi(tmp_path, comm, seed, new_seed, n_samples, device):
     r"""Test warmstart of a torch random number generator by restoring its
     state in a distributed setting."""

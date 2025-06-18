@@ -40,6 +40,7 @@ def n_samples():
 
 
 @pytest.mark.numpy
+@pytest.mark.env("serial-cpu")
 def test_warmstart_rng_np(tmp_path, seed, new_seed, n_samples):
     r"""Test warmstart of a numpy random number generator by restoring its
     state."""
@@ -68,6 +69,7 @@ def test_warmstart_rng_np(tmp_path, seed, new_seed, n_samples):
 
 
 @pytest.mark.torch
+@pytest.mark.env("serial-gpu")
 def test_warmstart_rng_offset_torch(tmp_path, seed, new_seed, n_samples, device):
     r"""Test warmstart of a torch random number generator using the offset from
     an initial seed.
@@ -98,6 +100,7 @@ def test_warmstart_rng_offset_torch(tmp_path, seed, new_seed, n_samples, device)
 
 
 @pytest.mark.torch
+@pytest.mark.env("serial-gpu")
 def test_warmstart_rng_torch(tmp_path, seed, new_seed, n_samples, device):
     r"""Test warmstart of a torch random number generator by restoring its
     state."""

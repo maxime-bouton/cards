@@ -28,6 +28,7 @@ def n_trials():
     return 10
 
 
+@pytest.mark.env("serial-gpu")
 def test_restart_gpu_rng(shape, n_trials, device):
     rng = torch.Generator(device=device).manual_seed(1234)
 
