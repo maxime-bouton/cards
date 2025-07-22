@@ -9,10 +9,6 @@ from mcmc.sampler.base_sampler import BaseSampler, SamplerParameters
 
 
 class GpuSampler(BaseSampler):
-    def _make_data_manager(self):
-        # return DataManager()
-        return DataManager()
-
     def _make_generator(self, seed):
         return torch.Generator(device="cuda").manual_seed(seed)
 
@@ -30,8 +26,15 @@ class GpuSampler(BaseSampler):
             cp.cuda.get_elapsed_time(self.start_gpu, self.end_gpu) * 1e-3
         )  # converted from milisecond to second
 
-    def __init__(self, params: SamplerParameters, model, logger):
-        super().__init__(params, model, logger)
+    def __init__(self, params: SamplerParameters, model, logger, save_full_batch=False):
+        super().__init__(params, model, logger, save_full_batch)
+
+        if self._save_full_batch:
+            self.data_manager = DataManager(
+                self.batch_size, self._save_full_batch, self.model.get_batch_sizes()
+            )
+        else:
+            self.data_manager = DataManager()
 
         self.start_gpu = cp.cuda.Event()
         self.end_gpu = cp.cuda.Event()
@@ -48,6 +51,9 @@ class GpuSampler(BaseSampler):
                 self.computation_time, file, "computation_time"
             )
             self.data_manager.save_rng_torch(self.rng, self.seed, file)
+
+            if self._save_full_batch:
+                self.data_manager.save_batch(file, True)
 
     def restart(self, file_name: str, batch_restart: int, new_save_path: str):
         r"""restart Resume the sampling at a given state. It may be used to start a second where a first run had been interrupted.

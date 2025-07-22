@@ -38,16 +38,25 @@ class DistributedSampler(BaseSampler):
         params: SamplerParameters,
         model,
         logger,
+        save_full_batch=False,
     ):
         self.comm = comm
 
-        super().__init__(params, model, logger)
+        super().__init__(params, model, logger, save_full_batch)
+
+        if self._save_full_batch:
+            self.data_manager = DataManager(
+                self.batch_size,
+                save_full_batch,
+                self.model.get_batch_sizes(),
+                self.model.global_sizes,
+                self.model.slices,
+            )
+        else:
+            self.data_manager = DataManager()
 
         self.step_start = perf_counter()
         self.step_end = perf_counter()
-
-    def _make_data_manager(self):
-        return DataManager()
 
     def time_mesure_begin(self):
         self.step_start = perf_counter()
@@ -81,6 +90,10 @@ class DistributedSampler(BaseSampler):
                 "computation_time",
                 file,
             )
+
+            if self.data_manager._save_full_batch:
+                self.data_manager.save_batch(file)
+
         if self.rank == 0:
             with h5py.File(full_name, "r+") as file:
                 self.data_manager.save_local_array(self.potential, "potential", file)
@@ -98,7 +111,9 @@ class DistributedSampler(BaseSampler):
             Save path for the remaining samples.
         """
         with h5py.File(file_name, "r", driver="mpio", comm=self.comm) as file:
-            data = self.data_manager.load_h5(file, self.model.slices)
+            data = self.data_manager.load_h5(
+                file, self.model.local_sizes, self.model.slices
+            )
             self.data_manager.load_rng(self.rng, file, self.rank)
 
         self.save_path = new_save_path

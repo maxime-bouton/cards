@@ -23,10 +23,6 @@ class BaseSampler(ABC):
         pass
 
     @abstractmethod
-    def _make_data_manager(self):
-        pass
-
-    @abstractmethod
     def _initialize_rank(self):
         pass
 
@@ -59,6 +55,7 @@ class BaseSampler(ABC):
         params: SamplerParameters,
         model: base_model,
         logger: logging.Logger | None,
+        save_full_batch: bool = False,
     ) -> None:
         """
         Parameters
@@ -80,6 +77,8 @@ class BaseSampler(ABC):
         logger : logging.Logger
             Logger object.
         """
+        self._save_full_batch = save_full_batch
+
         self.batch_size = params.batch_size
         self.nb_batches = params.nb_batches
         self.start_batch_num = 1
@@ -100,8 +99,6 @@ class BaseSampler(ABC):
             self.potential = np.zeros([self.batch_size])
         self.computation_time = np.zeros([self.batch_size])
         self.batch_time = 0.0
-
-        self.data_manager = self._make_data_manager()
 
     def sample(self) -> None:
         r"""sampler Main method. Call the update method of the model inside a loop and save the current state at regular intarvales.
@@ -126,6 +123,9 @@ class BaseSampler(ABC):
                 self.model.aggregate_states()
 
                 self.computation_time[i] = self.get_elapsed_time()
+
+                if self.data_manager._save_full_batch:
+                    self.data_manager.store_states(self.model.get_states4batch(), i)
 
             self.model.estimator_builder.build_estimator(self.batch_size)
 

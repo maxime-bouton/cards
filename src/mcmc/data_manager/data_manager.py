@@ -15,12 +15,62 @@ from mcmc.data_manager.warmstart_rng import (
     save_rng_np,
 )
 from mcmc.data_manager.warmstart_rng_mpi import load_rng_np_mpi, save_rng_np_mpi
+from mcmc.backend import xp
 
 # ! need a base class setting up the interface, and create subclasses through inheritance (numpy-based, torch-based)
 # ! FIXME: use read_direct / write_direct with h5py to avoid any non-needed copy
 
 
 class DataManager:
+    def __init__(
+        self,
+        batch_size: int = 0,
+        save_full_batch: bool = False,
+        sizes: Optional[dict] = None,
+        global_sizes: Optional[dict] = None,
+        local_slices: Optional[dict] = None,
+    ):
+        self._save_full_batch = save_full_batch
+        if save_full_batch:
+            self.full_batch = {}
+            self.global_sizes = {}
+            self.local_slices = None
+
+            if sizes is not None:
+                for key in sizes:
+                    self.full_batch[key] = xp.zeros((batch_size, *sizes[key]))
+                    self.global_sizes[key] = tuple((batch_size, *sizes[key]))
+            if global_sizes is not None:
+                for key in global_sizes:
+                    self.global_sizes[key] = tuple((batch_size, *global_sizes[key]))
+
+            if local_slices is not None:
+                self.local_slices = {}
+                for key in local_slices:
+                    self.local_slices[key] = np.s_[
+                        slice(None), *local_slices[key]
+                    ]  # add one axis
+
+    def store_states(self, states, num_iter):
+        for key in self.full_batch:
+            self.full_batch[key][num_iter, ...] = states[key]
+
+    def save_batch(self, file: h5py.File, from_gpu: bool = False):
+        for key in self.full_batch:
+            buffer_size = self.global_sizes[key]
+
+            if self.local_slices is None:
+                local_slice = slice(None)
+            else:
+                local_slice = self.local_slices[key]
+            dset = file.create_dataset(
+                name="batch/" + key, shape=buffer_size, dtype=self.full_batch[key].dtype
+            )
+            if not from_gpu:
+                dset.write_direct(self.full_batch[key], dest_sel=local_slice)
+            else:
+                dset.write_direct(self.full_batch[key].get(), dest_sel=local_slice)
+
     def save_dict(
         self,
         data: dict,
@@ -55,7 +105,7 @@ class DataManager:
             dset = file.create_dataset(
                 name=key, shape=buffer_size, dtype=data[key].dtype
             )
-            dset[local_slice] = data[key]
+            dset.write_direct(data[key], dest_sel=local_slice)
 
     def save_array(
         self,
@@ -83,7 +133,7 @@ class DataManager:
         if global_size is None:
             global_size = data.shape
         dset = file.create_dataset(name, global_size, dtype=data.dtype)
-        dset[local_slice] = data
+        dset.write_direct(data, dest_sel=local_slice)
 
     def save_seed(self, seed: int, rank: int, comm_size: int, file: h5py.File) -> None:
         """save_seed Save the seeds used on each process. It expects the given file to be open in paralell mode.
@@ -115,7 +165,8 @@ class DataManager:
             File to be written on.
         """
         dset = file.create_dataset(name, data.shape, dtype=data.dtype)
-        dset[:] = data
+        # dset[:] = data
+        dset.write_direct(data)
         return
 
     def save_thread_array(
@@ -162,7 +213,12 @@ class DataManager:
         dset[rank] = data
         return
 
-    def load_h5(self, file: h5py.File, slices: Optional[dict] = None) -> dict:
+    def load_h5(
+        self,
+        file: h5py.File,
+        local_sizes: Optional[dict] = None,
+        slices: Optional[dict] = None,
+    ) -> dict:
         """load_h5 Read a .5 file and load the local value of the array on each process.
         It expects the given file to be open in paralell mode.
 
@@ -170,6 +226,8 @@ class DataManager:
         ----------
         file : h5py.File
             File to be read.
+        local_sizes : dict
+            Dictionnary containing the size of each local buffers.
         slices : dict
             Dictionnary containing the slices of each variables, different on each thread.
 
@@ -187,7 +245,8 @@ class DataManager:
                     data[key] = file[key][()]
         else:
             for key in slices.keys():
-                data[key] = file[key][slices[key]][:]
+                data[key] = np.zeros(local_sizes[key])
+                file[key].read_direct(data[key], source_sel=slices[key])
         return data
 
     def save_rng(

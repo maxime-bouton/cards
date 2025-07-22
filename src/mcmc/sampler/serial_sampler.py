@@ -13,7 +13,8 @@ class SerialSampler(BaseSampler):
         return np.random.default_rng(seed)
 
     def _make_data_manager(self):
-        return DataManager()
+        #! to be deleted
+        pass
 
     def _initialize_rank(self):
         return 0
@@ -39,9 +40,18 @@ class SerialSampler(BaseSampler):
             self.data_manager.save_array(
                 self.computation_time, file, "computation_time"
             )
+            if self.data_manager._save_full_batch:
+                self.data_manager.save_batch(file)
 
-    def __init__(self, params: SamplerParameters, model, logger):
-        super().__init__(params, model, logger)
+    def __init__(self, params: SamplerParameters, model, logger, save_full_batch=False):
+        super().__init__(params, model, logger, save_full_batch)
+
+        if self._save_full_batch:
+            self.data_manager = DataManager(
+                self.batch_size, self._save_full_batch, self.model.get_batch_sizes()
+            )
+        else:
+            self.data_manager = DataManager()
 
         self.step_start = perf_counter()
         self.step_end = perf_counter()
