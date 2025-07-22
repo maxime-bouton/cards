@@ -9,7 +9,7 @@ from numpy import random
 
 class BaseModel(ABC):
     @abstractmethod
-    def update(self, rng: random.Generator) -> None:
+    def update(self, rng: random.Generator):
         """update Global update of the model. May call the update method of several transition kernels.
 
         Parameters
@@ -30,8 +30,28 @@ class BaseModel(ABC):
         """
         pass
 
+    def get_states4batch(self) -> dict:
+        """get_states4batch Return a dictionnary containing the current state of the variables. It will be used to store and save all the states of those vairiables along the chain.
+
+        Returns
+        -------
+        dict
+            Dictionnary containing the current states of variables.
+        """
+        return {}
+
+    def get_batch_sizes(self) -> dict:
+        """get_batch_sizes Only called when we need to save the full batch. Return a dictionnary containing the dimensions of the variables we want to save.
+
+        Returns
+        -------
+        dict
+            Dictionnary continaing the dimensions of the variables we want to save.
+        """
+        return {}
+
     @abstractmethod
-    def set_states(self, states: dict) -> None:
+    def set_states(self, states: dict):
         """set_states Set the variables of the model the the values given in entry.
 
         Parameters
@@ -53,7 +73,7 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def aggregate_states(self) -> None:
+    def aggregate_states(self):
         pass
 
 
@@ -66,5 +86,9 @@ class BaseDistributedModel(BaseModel):
         pass
 
     @abstractmethod
-    def set_global_sizes(self) -> None:
+    def set_global_sizes(self):
+        pass
+
+    @abstractmethod
+    def set_local_sizes(self) -> dict:
         pass

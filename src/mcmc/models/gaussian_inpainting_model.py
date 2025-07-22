@@ -55,7 +55,17 @@ class BaseInpaintingModel(BaseModel):
 
         self.set_conditionals()
 
-    def set_conditionals(self) -> None:
+    def get_batch_sizes(self):
+        sizes = {}
+        sizes["X"] = self.X.current_state.shape
+        return sizes
+
+    def get_states4batch(self):
+        states = {}
+        states["X"] = self.X.current_state
+        return states
+
+    def set_conditionals(self):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
         with gpu_context(self.gpu_id):
             if (type(self.X) is PSGLA) or (type(self.X) is GpuPSGLA):
@@ -97,7 +107,7 @@ class BaseInpaintingModel(BaseModel):
             states["MMSE"] = self.estimator_builder.estimator
         return states
 
-    def set_states(self, states: dict) -> None:
+    def set_states(self, states: dict):
         """set_states
         Read the dictionnary given in entry and set the variables of the model to the values contained in it.
         The keys used by the dictionnary must be the same as in "get_states"
@@ -112,7 +122,7 @@ class BaseInpaintingModel(BaseModel):
             self.Z.current_state = xp.asarray(states["Z"])
             self.gradX = self.gradient_operator.forward(self.X.current_state)
 
-    def update(self, rng: np.random.Generator) -> None:
+    def update(self, rng: np.random.Generator):
         """update Gobal update of the model. Updates every kernel used by the model and computes annex variables.
 
         Parameters
@@ -156,7 +166,7 @@ class InpaintingModel(BaseInpaintingModel):
 
 
 class DistributedInpaintingModel(BaseInpaintingModel):
-    def set_slices(self) -> dict:
+    def set_slices(self):
         """set_slices Describes which portion of the global buffer the current thread must handle.
 
         Returns
@@ -176,9 +186,8 @@ class DistributedInpaintingModel(BaseInpaintingModel):
             self.gradient_operator.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
         )
         self.slices = slices
-        return
 
-    def set_global_sizes(self) -> dict:
+    def set_global_sizes(self):
         """set_global_sizes Describe the gobla sizes of several global buffers.
 
         Returns
@@ -192,7 +201,14 @@ class DistributedInpaintingModel(BaseInpaintingModel):
         sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
 
         self.global_sizes = sizes
-        return
+
+    def set_local_sizes(self):
+        local_sizes = {}
+        local_sizes["X"] = self.X.current_state.shape
+        local_sizes["Z"] = self.Z.current_state.shape
+        local_sizes["MMSE"] = self.estimator_builder.estimator.shape
+
+        self.local_sizes = local_sizes
 
     def __init__(
         self,
@@ -222,3 +238,5 @@ class DistributedInpaintingModel(BaseInpaintingModel):
         self.set_slices()
         self.global_sizes = {}
         self.set_global_sizes()
+        self.local_sizes = {}
+        self.set_local_sizes()

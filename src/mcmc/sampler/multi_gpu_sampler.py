@@ -31,18 +31,24 @@ class MultiGpuSampler(BaseSampler):
         model,
         logger,
         gpu_id,
+        save_full_batch=False,
     ):
         self.comm = comm
         self.gpu_id = gpu_id
         self.nb_gpu = cp.cuda.runtime.getDeviceCount()
 
-        super().__init__(params, model, logger)
+        super().__init__(params, model, logger, save_full_batch)
+
+        self.data_manager = DataManager(
+            self.batch_size,
+            self._save_full_batch,
+            self.model.get_batch_sizes(),
+            self.model.global_sizes,
+            self.model.slices,
+        )
 
         self.start_gpu = cp.cuda.Event()
         self.end_gpu = cp.cuda.Event()
-
-    def _make_data_manager(self):
-        return DataManager()
 
     def time_mesure_begin(self):
         self.start_gpu.record()
@@ -81,6 +87,10 @@ class MultiGpuSampler(BaseSampler):
                 "computation_time",
                 file,
             )
+
+            if self._save_full_batch:
+                self.data_manager.save_batch(file, True)
+
         if self.rank == 0:
             with h5py.File(full_name, "r+") as file:
                 self.data_manager.save_local_array(self.potential, "potential", file)
@@ -98,7 +108,9 @@ class MultiGpuSampler(BaseSampler):
             Save path for the remaining samples.
         """
         with h5py.File(file_name, "r", driver="mpio", comm=self.comm) as file:
-            data = self.data_manager.load_h5(file, self.model.slices)
+            data = self.data_manager.load_h5(
+                file, self.model.local_sizes, self.model.slices
+            )
             self.data_manager.load_rng_torch(self.rng, file, self.gpu_id)
 
         self.save_path = new_save_path

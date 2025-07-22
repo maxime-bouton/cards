@@ -52,7 +52,7 @@ class BaseGaussianDeconvolutionModel(BaseModel):
 
         self.set_conditionals()
 
-    def set_conditionals(self) -> None:
+    def set_conditionals(self):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
         if (type(self.X) is PSGLA) or (type(self.X) is GpuPSGLA):
             self.X.prox = prox_nonegativity
@@ -93,7 +93,7 @@ class BaseGaussianDeconvolutionModel(BaseModel):
             states["MMSE"] = self.estimator_builder.estimator.get()
         return states
 
-    def set_states(self, states) -> None:
+    def set_states(self, states):
         """set_states
         Read the dictionnary given in entry and set the variables of the model to the values contained in it.
         The keys used by the dictionnary must be the same as in "get_states"
@@ -111,12 +111,11 @@ class BaseGaussianDeconvolutionModel(BaseModel):
         self.convolution_product = self.convolution_operator.forward(
             self.X.current_state
         )
-        return
 
     def aggregate_states(self):
         self.estimator_builder.aggregate_states(self.X.current_state)
 
-    def update(self, rng: np.random.Generator) -> None:
+    def update(self, rng: np.random.Generator):
         """update Gobal update of the model. Updates every kernel used by the model and computes annex variables.
 
         Parameters
@@ -179,7 +178,7 @@ class GaussianDeconvolutionModel(BaseGaussianDeconvolutionModel):
 
 
 class DistributedGaussianDeconvolutionModel(BaseGaussianDeconvolutionModel):
-    def set_slices(self) -> None:
+    def set_slices(self):
         """set_slices Describes which portion of the global buffer the current thread must handle."""
         slices = {}
         slices["X"] = (
@@ -194,7 +193,7 @@ class DistributedGaussianDeconvolutionModel(BaseGaussianDeconvolutionModel):
         )
         self.slices = slices
 
-    def set_global_sizes(self) -> dict:
+    def set_global_sizes(self):
         """set_global_sizes Describe the gobla sizes of several global buffers.
 
         Returns
@@ -208,6 +207,14 @@ class DistributedGaussianDeconvolutionModel(BaseGaussianDeconvolutionModel):
         sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
 
         self.global_sizes = sizes
+
+    def set_local_sizes(self):
+        local_sizes = {}
+        local_sizes["X"] = self.X.current_state.shape
+        local_sizes["Z"] = self.Z.current_state.shape
+        local_sizes["MMSE"] = self.estimator_builder.estimator.shape
+
+        self.local_sizes = local_sizes
 
     def __init__(
         self,
@@ -246,6 +253,9 @@ class DistributedGaussianDeconvolutionModel(BaseGaussianDeconvolutionModel):
 
         self.global_sizes = {}
         self.set_global_sizes()
+
+        self.local_sizes = {}
+        self.set_local_sizes()
 
     def set_states(self, states: dict) -> None:
         """set_states
