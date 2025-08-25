@@ -5,11 +5,42 @@ from mcmc.transition_kernel.base_transition_kernel import BaseTransitionKernel
 
 
 class MYULA(BaseTransitionKernel):
-    def __init__(self, dims, step_size, reg_coeff):
+    def __init__(
+        self,
+        dims,
+        lipschitz_cst: float,
+        reg_factor: float = 1.0,
+        step_factor: float = 0.5,
+    ):
         super(MYULA, self).__init__(dims)
-        self.step_size = step_size
-        self.reg_coeff = reg_coeff
-        # FIXME: add default method to compute step-size from Lipshitz constant?
+
+        assert reg_factor <= 1
+        assert step_factor <= 1
+
+        self.lipschitz_cst = lipschitz_cst
+
+        self.reg_cst = reg_factor / lipschitz_cst
+        self.step_size = step_factor / (lipschitz_cst + 1 / self.reg_cst)
+
+        self.cst_1 = (2 * self.step_size) ** 0.5
+        self.cst_2 = self.step_size / self.reg_cst
+
+    def set_params(self, new_reg_factor: float = 1, new_step_factor: float = 0.5):
+        assert new_reg_factor <= 1
+        assert new_step_factor <= 1
+
+        self.reg_cst = new_reg_factor / self.lipschitz_cst
+        self.step_size = new_step_factor / (self.lipschitz_cst + 1 / self.reg_cst)
+
+        self.cst_1 = (2 * self.step_size) ** 0.5
+        self.cst_2 = self.step_size / self.reg_cst
+
+    def set_lipschitz(
+        self, new_lipschitz: float, reg_factor: float = 1, step_factor: float = 0.5
+    ):
+        self.lipschitz_cst = new_lipschitz
+
+        self.set_params(reg_factor, step_factor)
 
     def prox(self, state: xp.ndarray) -> xp.ndarray:
         raise ValueError("Warning : proximal operator has not be defined !")
@@ -19,12 +50,8 @@ class MYULA(BaseTransitionKernel):
 
     def mc_step(self, rng):
         self.current_state = (
-            self.current_state
-            + (2 * self.step_size) ** 0.5
-            * rng.standard_normal(self.current_state.shape)
-            - self.step_size
-            * (
-                self.grad(self.current_state)
-                + self.prox(self.current_state) / self.reg_coeff
-            )
+            (1 - self.cst_2) * self.current_state
+            - self.step_size * self.grad(self.current_state)
+            + self.cst_2 * self.prox(self.current_state)
+            + self.cst_1 * rng.standard_normal(self.current_state.shape)
         )
