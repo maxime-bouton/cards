@@ -270,6 +270,7 @@ $RECYCLE.BIN/
 
 ### Project-specific folders
 *produced_data/*
+*tutorial/data/*
 *.pyc
 .vscode
 *.h5
