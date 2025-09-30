@@ -1,0 +1,27 @@
+{
+    "obs_path" : "",
+    "checkpoint_size" : 1000,
+    "n_checkpoint" : 5,
+    "split_coef" : 1e-3,
+    "reg_coef" : 1e3,
+    "save_path" : "../../produced_data/gaussian_deconv/house/sample/",
+    "reload" : false,
+    "reloaded_checkpoint": 0,
+    "compute_ci": false,
+    "save_all": false,
+    "save_path_resumed" : "../../produced_data/gaussian_deconv/house/resumed/",
+    "original_img_path" : "../../data/house.h5",
+    "logfile_path": "",
+    "kernel_size" : 3,
+    "kernel_std" : 1,
+    "seed_data" : 1234,
+    "isnr" : 40,
+    "seed" : 5678,
+    "burnin" : 2,
+    "kernel": {
+        "type": "gaussian",
+        "size": 3,
+        "std": 1,
+        "seed": 1234
+    }
+}

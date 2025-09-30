@@ -12,10 +12,6 @@ class SerialSampler(BaseSampler):
     def _make_generator(self, seed: int) -> np.random.Generator:
         return np.random.default_rng(seed)
 
-    def _make_data_manager(self):
-        #! to be deleted
-        pass
-
     def _initialize_rank(self):
         return 0
 

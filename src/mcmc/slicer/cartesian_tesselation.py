@@ -202,7 +202,7 @@ def local_split_range_nd(nchunks, N, index, overlap=None, backward=True):
     id_err_index = nchunks > 1
 
     if np.any(id_err_index):
-        if np.any(nchunks[id_err_index] <= index):
+        if np.any(nchunks[id_err_index] <= index[id_err_index]):
             raise ValueError(
                 r"Index should be taken in [0, ..., nchunks-1], with nchunks={0}".format(
                     nchunks

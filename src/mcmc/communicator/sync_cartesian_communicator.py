@@ -7,7 +7,7 @@ import weakref
 
 import numpy as np
 
-from mcmc.communicator.base_communicator import BaseCartesianCommunicator
+from mcmc.communicator.base_cartesian_communicator import BaseCartesianCommunicator
 from mcmc.communicator.mpi_utils import (
     free_custom_mpi_types,
     mpi_create_subarray_type,

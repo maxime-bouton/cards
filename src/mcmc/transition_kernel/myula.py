@@ -43,9 +43,13 @@ class MYULA(BaseTransitionKernel):
         self.set_params(reg_factor, step_factor)
 
     def prox(self, state: xp.ndarray) -> xp.ndarray:
+        """Compute the proximity operator of the non-smooth term in the
+        negative log-posterior function. Needs to be defined by the user."""
         raise ValueError("Warning : proximal operator has not be defined !")
 
     def grad(self, state: xp.ndarray) -> xp.ndarray:
+        """Compute the gradient of the differentiable term in the negative
+        log-posterior function. Needs to be defined by the user."""
         raise ValueError("Warning : gradient function has not be defined !")
 
     def mc_step(self, rng):

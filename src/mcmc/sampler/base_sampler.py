@@ -1,3 +1,5 @@
+r"""Abstract implementation of an MCMC algorithm."""
+
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -10,14 +12,97 @@ from mcmc.models import base_model
 
 @dataclass
 class SamplerParameters:
+    r"""Dataclass gathering all parameters required to run a MCMC sampler
+    :class:`mcmc.base_sampler.BaseSampler`.
+
+    Attributes
+    ----------
+    batch_size: int
+        Number of samples used to compute batched estimators to be saved in a
+        checkpoint file.
+    nb_batches: int
+        Number of sample batches to generate before stopping the chain.
+    seed: int
+        Seed to initialize the random number generator.
+    file_name: str
+        Root name under which sample checkpoint files will be saved while
+        running the chain. These can be used to restart the chain at an earlier
+        state.
+    save_path: str
+        Path to the location where the checkpoint files are saved.
+    compute_ci : bool, optional
+        Boolean to trigger computation of credibility intervals, by default ``False``.
+    reloaded_checkpoint : int, option
+        Identifier of the checkpoint file to be loaded, by default ``0``.
+    reloaded_path : str, optional
+        Path to the checkpoint file to be loaded, by default ``""``.
+    """
+
     batch_size: int
     nb_batches: int
     seed: int
     file_name: str
     save_path: str
+    save_all: bool = False
+    compute_ci: bool = False
+    reloaded_checkpoint: int = 0
+    reloaded_path: str = ""
+
+
+# TODO: group self.batch_size, self.nb_batches, self.file_name, self.save_path into a SamplerParameters object
 
 
 class BaseSampler(ABC):
+    """Abstract sampler implementation.
+
+    Attributes
+    ----------
+    params : SamplerParameters
+        Application-agnostic algorithm parameters required to run a generic
+        sampler.
+    model : BaseModel
+        Model encoding the specific posterior distribution to be sampled.
+    logger : logging.Logger
+        Logger object recording the progress of the sampler.
+    start_batch_num
+        ...
+    rank
+        ...
+    seed
+        ...
+    rng
+        ...
+    potential
+        ...
+    computation_time
+        ...
+    batch_time
+        ...
+    data_manager
+        ...
+    _save_full_batch
+
+    Methods
+    -------
+
+    _make_generator(int)
+        ...
+    _initialize_rank()
+        ...
+    _get_potential() -> float
+        ...
+    _save_all_data(int) -> None
+        ...
+    restart(str, int, str) -> None
+        ...
+    time_mesure_begin()
+        ...
+    time_mesure_end()
+        ...
+    get_elapsed_time()
+        ...
+    """
+
     @abstractmethod
     def _make_generator(self, seed: int):
         pass
@@ -101,8 +186,12 @@ class BaseSampler(ABC):
         self.batch_time = 0.0
 
     def sample(self) -> None:
-        r"""sampler Main method. Call the update method of the model inside a loop and save the current state at regular intarvales.
-        A partial estimator is built along the iterations.
+        r"""Main iteration loop of the MCMC algorithm
+
+        Main iteration loop in the sampler. At each iteration, calls the update
+        step of the model. The current state of the parameters is regularly
+        saved in checkpoint files, along with quantities required for a batched
+        evaluation of the final estimates.
         """
         if self.rank == 0:
             pbar = tqdm(total=self.nb_batches, desc="Sampling", unit="it")

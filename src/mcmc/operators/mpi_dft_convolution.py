@@ -7,11 +7,11 @@ from mcmc.operators.linear_operator import LinearOperator
 import mcmc.communicator.sync_cartesian_communicator as comms
 
 import numpy as np
+from mpi4py import MPI
+from mcmc.backend import xp
 
-from mcmc.backend import xp, gpu_context
 
-
-def fft_conv(x: xp.ndarray, fft_h: xp.ndarray, shape, gpu_id: int) -> xp.ndarray:
+def fft_conv(x: xp.ndarray, fft_h: xp.ndarray, shape) -> xp.ndarray:
     r"""FFT-based nd convolution.
 
     Convolve the array ``x`` with the kernel of Fourier transform ``fft_h``
@@ -27,8 +27,6 @@ def fft_conv(x: xp.ndarray, fft_h: xp.ndarray, shape, gpu_id: int) -> xp.ndarray
         :math:`\lfloor K/2 \rfloor + 1` if real, :math:`K` otherwise).
     shape : tuple[int]
         Full shape of the convolution (referred to as :math:`K` above).
-    gpu_id : int
-        Identifant of the gpu used.
 
     Returns
     -------
@@ -36,21 +34,20 @@ def fft_conv(x: xp.ndarray, fft_h: xp.ndarray, shape, gpu_id: int) -> xp.ndarray
         Convolution results.
     """
     # turn shape into a list if only given as a scalar
-    with gpu_context(gpu_id):
-        if xp.isscalar(shape):
-            shape_ = [shape]
-        else:
-            shape_ = shape
-        if x.dtype.kind == "c":
-            y = xp.fft.ifftn(fft_h * xp.fft.fftn(x, shape_, axes=range(len(shape_))))
-        else:  # assuming h is a real kernel as well
-            y = xp.fft.irfftn(
-                fft_h * xp.fft.rfftn(x, shape_, axes=range(len(shape_))),
-                shape_,
-                axes=range(len(shape_)),
-            )
+    if xp.isscalar(shape):
+        shape_ = [shape]
+    else:
+        shape_ = shape
+    if x.dtype.kind == "c":
+        y = xp.fft.ifftn(fft_h * xp.fft.fftn(x, shape_, axes=range(len(shape_))))
+    else:  # assuming h is a real kernel as well
+        y = xp.fft.irfftn(
+            fft_h * xp.fft.rfftn(x, shape_, axes=range(len(shape_))),
+            shape_,
+            axes=range(len(shape_)),
+        )
 
-        return y
+    return y
 
 
 def slice_valid_direct_convolution(ranknd, grid_size, overlap_size):
@@ -214,28 +211,35 @@ class MpiDftConvolution(LinearOperator):
         self,
         image_size: np.ndarray,
         kernel: xp.ndarray,
-        comm: comms.BaseCartesianCommunicator,
+        comm: MPI.Comm,
         grid_size: xp.ndarray,
-        gpu_id=0,
         backward=False,
+        dtype: xp.dtype = xp.float64,
+        tile_range: np.ndarray | None = None,
     ):
         r"""Synchronous distributed implementation of a (linear) convolution
         model.
 
         Parameters
         ----------
-        image_size : numpy.ndarray[int], of size ``d``
+        image_size : xp.ndarray[int], of size ``d``
             Full image size.
-        kernel : numpy.ndarray[float] (real)
+        kernel : xp.ndarray[float] (real)
             Input convolution kernel. Only real-valued kernel are supported for
             now.
         comm : mpi4py.MPI.Comm
             Underlying MPI communicator.
-        grid_size : numpy.ndarray[int]
+        grid_size : xp.ndarray[int]
             Number of workers along each of the ``d`` dimensions of the
             communicator grid.
         backward : bool, optional
             Direction of the overlap between facets along all the axis for the direct operator (True for backward overlap, False for forward overlap). By default False.
+        dtype : xp.dtype, optional
+            Type of the buffer over which the communicator is defined (required
+            to define sub-arrays), by default xp.float64. For now, restricted
+            to a ``xp.dtype``.
+        tile_range : xp.ndarray[int] or None, optional
+            Index of the elements from the global array exclusively handled by the current process, defining a subarray. By default None, so that it is directly specified by the object itself, dividing the global array evenly across the different workers.
 
         Raises
         ------
@@ -257,11 +261,10 @@ class MpiDftConvolution(LinearOperator):
         self.grid_size = grid_size
         self.comm = comm
         self.rank = self.comm.Get_rank()
-        self.gpu_id = gpu_id
 
         # * Cartesian communicator and nd rank
         self.cartcomm = self.comm.Create_cart(
-            dims=grid_size,
+            dims=self.grid_size,
             periods=self.ndims * [False],
             reorder=False,
         )
@@ -281,22 +284,18 @@ class MpiDftConvolution(LinearOperator):
             self.image_size,
             self.overlap_size,
             self.overlap_size,
-            dtype=np.float64,
+            dtype=dtype,
             backward=backward,
+            tile_range=tile_range,
         )
         # kernel and slice to extract valid coefficients from the local forward
         # convolution output
         self.direct_conv_size = tuple(
             self.direct_communicator.cartslicer.facet_size + self.overlap_size
         )
-        with gpu_context(self.gpu_id):
-            self.direct_fft_kernel = xp.fft.rfftn(
-                kernel, self.direct_conv_size, axes=range(len(kernel.shape))
-            )
-        with gpu_context(self.gpu_id):
-            self.direct_fft_kernel = xp.fft.rfftn(
-                kernel, self.direct_conv_size, axes=range(len(kernel.shape))
-            )
+        self.direct_fft_kernel = xp.fft.rfftn(
+            kernel, self.direct_conv_size, axes=range(len(kernel.shape))
+        )
         self.slice_valid_direct_convolution = slice_valid_direct_convolution(
             self.ranknd, self.grid_size, self.overlap_size
         )
@@ -329,7 +328,7 @@ class MpiDftConvolution(LinearOperator):
             self.data_size,
             self.overlap_size,
             self.overlap_size,
-            dtype=np.float64,
+            dtype=dtype,
             backward=not backward,
             tile_range=tile_data,
         )
@@ -339,12 +338,9 @@ class MpiDftConvolution(LinearOperator):
         self.adjoint_conv_size = tuple(
             self.adjoint_communicator.cartslicer.facet_size + self.overlap_size
         )
-        with gpu_context(self.gpu_id):
-            self.adjoint_fft_kernel = xp.conj(
-                xp.fft.rfftn(
-                    kernel, self.adjoint_conv_size, axes=range(len(kernel.shape))
-                )
-            )
+        self.adjoint_fft_kernel = xp.conj(
+            xp.fft.rfftn(kernel, self.adjoint_conv_size, axes=range(len(kernel.shape)))
+        )
         self.slice_valid_adjoint_convolution = tuple(
             [
                 np.s_[: self.direct_communicator.cartslicer.tile_size[d]]
@@ -352,13 +348,14 @@ class MpiDftConvolution(LinearOperator):
             ]
         )
 
-        with gpu_context(self.gpu_id):
-            self.forward_buffer = xp.zeros(
-                self.direct_communicator.cartslicer.facet_size
-            )
-            self.adjoint_buffer = xp.zeros(
-                self.adjoint_communicator.cartslicer.facet_size
-            )
+        self.forward_buffer = xp.zeros(
+            self.direct_communicator.cartslicer.facet_size,
+            dtype=dtype,
+        )
+        self.adjoint_buffer = xp.zeros(
+            self.adjoint_communicator.cartslicer.facet_size,
+            dtype=dtype,
+        )
 
         self.forward_input_slice = slice_input2buffer_forward(
             self.ranknd, self.grid_size, self.overlap_size
@@ -387,16 +384,14 @@ class MpiDftConvolution(LinearOperator):
         The input buffer ``input_image`` is copied inside forward_buffer, on GPU. This intern buffer will be used for the communications and the computations.
         """
 
-        with gpu_context(self.gpu_id):
-            self.forward_buffer[self.forward_input_slice] = input_image
-            self.direct_communicator.update_borders(self.forward_buffer)
-            y = fft_conv(
-                self.forward_buffer,
-                self.direct_fft_kernel,
-                self.direct_conv_size,
-                self.gpu_id,
-            )[self.slice_valid_direct_convolution]
-            return y
+        self.forward_buffer[self.forward_input_slice] = input_image
+        self.direct_communicator.update_borders(self.forward_buffer)
+        y = fft_conv(
+            self.forward_buffer,
+            self.direct_fft_kernel,
+            self.direct_conv_size,
+        )[self.slice_valid_direct_convolution]
+        return y
 
     def adjoint(self, input_data):
         r"""Implementation of the adjoint operator to update the input array
@@ -417,14 +412,11 @@ class MpiDftConvolution(LinearOperator):
         ----
         The input is copied inside adjoint_buffer, on GPU. This intern buffer will be used for the communications and the computations.
         """
-
-        with gpu_context(self.gpu_id):
-            self.adjoint_buffer[self.adjoint_input_slice] = input_data
-            self.adjoint_communicator.update_borders(self.adjoint_buffer)
-            x = fft_conv(
-                self.adjoint_buffer,
-                self.adjoint_fft_kernel,
-                self.adjoint_conv_size,
-                self.gpu_id,
-            )[self.slice_valid_adjoint_convolution]
-            return x
+        self.adjoint_buffer[self.adjoint_input_slice] = input_data
+        self.adjoint_communicator.update_borders(self.adjoint_buffer)
+        x = fft_conv(
+            self.adjoint_buffer,
+            self.adjoint_fft_kernel,
+            self.adjoint_conv_size,
+        )[self.slice_valid_adjoint_convolution]
+        return x

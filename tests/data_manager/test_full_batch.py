@@ -3,7 +3,7 @@ import cupy as cp
 from os.path import join
 import pytest
 from mcmc.data_manager.data_manager import DataManager
-from mcmc.backend import set_backend
+from mcmc.backend import bm
 import h5py
 from mpi4py import MPI
 from mcmc.slicer.cartesian_comm_slicer import CartesianCommSlicer
@@ -39,7 +39,7 @@ def test_save_full_batch(dims, cmdopt, tmp_path):
 
     from_gpu = False
     if cmdopt == "serial-gpu":
-        set_backend("cupy")
+        bm.set_backend("cupy")
         from_gpu = True
 
     from mcmc.backend import xp
@@ -70,7 +70,7 @@ def test_mpi_save_full_batch(comm, dims, cmdopt, tmp_path):
 
     from_gpu = False
     if cmdopt == "mpi-gpu":
-        set_backend("cupy")
+        bm.set_backend("cupy")
         from_gpu = True
         gpu_id = rank % cp.cuda.runtime.getDeviceCount()
         cp.cuda.runtime.setDevice(gpu_id)

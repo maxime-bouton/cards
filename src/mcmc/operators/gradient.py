@@ -7,21 +7,21 @@ from mcmc.backend import xp
 
 
 def gradient_2d(x: xp.ndarray):
-    assert len(x.shape) == 2, "gradient_2d: Invalid input, expected len(x.shape)==2"
-    u = xp.zeros((2, *x.shape))
-    u[0, :, :-1] = xp.diff(x, 1, 1)  # horizontal differences
-    u[1, :-1, :] = xp.diff(x, 1, 0)  # vertical differences
+    assert len(x.shape) >= 2, "gradient_2d: Invalid input, expected len(x.shape)>=2"
+    u = xp.zeros((2, *x.shape), dtype=x.dtype)
+    u[0, ..., :, :-1] = xp.diff(x, 1, -1)  # vertical differences
+    u[1, ..., :-1, :] = xp.diff(x, 1, -2)  # horizontal differences
     return u
 
 
-def gradient_2d_adjoint(x: xp.ndarray) -> xp.ndarray:
-    v = xp.zeros_like(x[0, :, :])
-    v[0, :] = -x[1, 0, :]
-    v[1:-1, :] = x[1, :-2, :] - x[1, 1:-1, :]  # -np.diff(uv[:-1,:],1,0)
-    v[-1, :] = x[1, -2, :]
-    v[:, 0] -= x[0, :, 0]
-    v[:, 1:-1] += x[0, :, :-2] - x[0, :, 1:-1]  # -np.diff(uv[:,:-1],1,1)
-    v[:, -1] += x[0, :, -2]
+def gradient_2d_adjoint(u: xp.ndarray) -> xp.ndarray:
+    v = xp.zeros_like(u[0])
+    v[..., 0, :] = -u[1, ..., 0, :]
+    v[..., 1:-1, :] = u[1, ..., :-2, :] - u[1, ..., 1:-1, :]  # -np.diff(uv[:-1,:],1,0)
+    v[..., -1, :] = u[1, ..., -2, :]
+    v[..., :, 0] -= u[0, ..., :, 0]
+    v[..., :, 1:-1] += u[0, ..., :, :-2] - u[0, ..., :, 1:-1]  # -np.diff(uv[:,:-1],1,1)
+    v[..., :, -1] += u[0, ..., :, -2]
     return v
 
 

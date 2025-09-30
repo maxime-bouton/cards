@@ -58,7 +58,7 @@ class DftConvolution(LinearOperator):
     data_size : tuple, of size ``d``
         Full data size.
         - If ``data_size == image_size``: circular convolution;
-        - If ``data_size == image_size + kernel_size - 1``: linear convolution.
+        - If ``data_size == image_size + kernel_size - 1`` for the spatial axes: linear convolution.
     """
 
     def __init__(

@@ -45,6 +45,8 @@ pixi init --format pyproject
 # FIXME: this should be accounted for in the pyproject.toml, see
 # minimal-project = { path = "./minimal-project", editable = true}
 conda develop src
+
+eval "$(pixi shell-hook)"
 ```
 
 - From scratch, this could be done by

@@ -2,14 +2,12 @@ r"""Implementation of an MMSE estimator derived from the abstract class
 :class:`mcmc.estimator.estimatorBuilder.BaseMMSEBuilder`.
 """
 
-import cupy as cp
-
-from mcmc.backend import gpu_context, xp
+from mcmc.backend import xp
 from mcmc.estimator.estimator_builder import BaseMMSEBuilder
 
 
 class mmse_builder(BaseMMSEBuilder):
-    def __init__(self, shape) -> None:
+    def __init__(self, shape):
         super().__init__()
         self.estimator = xp.zeros(shape)
 
@@ -17,7 +15,7 @@ class mmse_builder(BaseMMSEBuilder):
         """Set the estimator to zero."""
         self.estimator.fill(0)
 
-    def aggregate_states(self, state: cp.ndarray):
+    def aggregate_states(self, state: xp.ndarray):
         self.estimator += state
 
     def build_estimator(self, N: int):
@@ -25,21 +23,16 @@ class mmse_builder(BaseMMSEBuilder):
 
 
 class multi_gpu_mmse_builder:
-    def __init__(self, shape, gpu_id=0):
-        self.gpu_id = gpu_id
-        with gpu_context(self.gpu_id):
-            self.estimator = xp.zeros(shape)
+    def __init__(self, shape):
+        self.estimator = xp.zeros(shape)
 
     def reset(self):
-        with gpu_context(self.gpu_id):
-            self.estimator = xp.zeros_like(
-                self.estimator
-            )  #! this line prevent further factorisation, to be solved
+        self.estimator = xp.zeros_like(
+            self.estimator
+        )  #! this line prevent further factorisation, to be solved
 
     def aggregate_states(self, state):
-        with gpu_context(self.gpu_id):
-            self.estimator += state
+        self.estimator += state
 
     def build_estimator(self, N):
-        with gpu_context(self.gpu_id):
-            self.estimator = self.estimator / N
+        self.estimator = self.estimator / N

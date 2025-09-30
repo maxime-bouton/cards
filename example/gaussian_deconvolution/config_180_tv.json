@@ -1,0 +1,26 @@
+{
+    "checkpoint_size": 1000,
+    "n_checkpoint": 5,
+    "burnin": 2,
+    "reloaded_checkpoint": 0,
+    "seed": 42,
+    "compute_ci": false,
+    "save_all": false,
+    "original_img_path": "../../data/deer_180.h5",
+    "seed_data": 1234,
+    "obs_path": "",
+    "save_path": "",
+    "save_path_resumed": "",
+    "logfile_path": "",
+    "split_coef": 0.001,
+    "reg_coef": 100.0,
+    "isnr": 40,
+    "kernel_size": 3,
+    "kernel_std": 1,
+    "kernel": {
+        "type": "gaussian",
+        "size": 3,
+        "std": 1,
+        "seed": 1234
+    }
+}
