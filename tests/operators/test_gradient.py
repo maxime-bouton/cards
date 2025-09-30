@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 from mpi4py import MPI
 
-import mcmc.backend as backend_module
+from mcmc.backend import bm
 
 
 @pytest.fixture
@@ -12,7 +12,7 @@ def seed():
 
 @pytest.fixture
 def dims():
-    return np.array([100, 75], "i")
+    return np.array([2, 5, 121, 75], "i")
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def comm():
 @pytest.mark.env("serial-gpu")
 def test_basic_check(dims, cmdopt):
     if cmdopt == "serial-gpu":
-        backend_module.set_backend("cupy")
+        bm.set_backend("cupy")
     from mcmc.backend import xp
     from mcmc.operators.gradient import Gradient2d
 
@@ -40,7 +40,7 @@ def test_basic_check(dims, cmdopt):
 @pytest.mark.env("serial-gpu")
 def test_adjoint(seed, dims, cmdopt):
     if cmdopt == "serial-gpu":
-        backend_module.set_backend("cupy")
+        bm.set_backend("cupy")
     from mcmc.backend import xp
     from mcmc.operators.gradient import Gradient2d
 
@@ -65,14 +65,18 @@ def test_adjoint(seed, dims, cmdopt):
 @pytest.mark.env("mpi-gpu")
 def test_adjoint_mpi(comm, dims, seed, cmdopt):
     rank = comm.Get_rank()
-    grid_dims = np.asarray(MPI.Compute_dims(comm.Get_size(), 2), dtype=int)
+    comm_size = comm.Get_size()
+    grid_dims = np.asarray(
+        [*np.ones(len(dims) - 2), *MPI.Compute_dims(comm_size, 2)], dtype=int
+    )  # no repartition on channel axis
     cart_comm = comm.Create_cart(dims=grid_dims)
 
+    print(cart_comm.Get_coords(cart_comm.Get_rank()))
+
     if cmdopt == "mpi-gpu":
-        backend_module.set_backend("cupy")
-        backend_module.enable_multi_gpu()
+        bm.set_backend("cupy")
     else:
-        backend_module.set_backend("numpy")
+        bm.set_backend("numpy")
 
     from mcmc.backend import xp
     from mcmc.operators.mpi_gradient import MpiGradient2d

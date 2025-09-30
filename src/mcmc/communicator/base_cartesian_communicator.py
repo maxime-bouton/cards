@@ -51,9 +51,9 @@ class BaseCartesianCommunicator(ABC):
     ----
         The following virtual methods need to be implemented in any daughter class:
 
-        - :meth:`dsgs.experimental.communicators.base_communicator.BaseCartesianCommunicator._setup_communications`
-        - :meth:`dsgs.experimental.communicators.base_communicator.BaseCartesianCommunicator._update_borders`
-        - :meth:`dsgs.experimental.communicators.base_communicator.BaseCartesianCommunicator._remove`
+        - :meth:`dsgs.experimental.communicators.base_cartesian_communicator.BaseCartesianCommunicator._setup_communications`
+        - :meth:`dsgs.experimental.communicators.base_cartesian_communicator.BaseCartesianCommunicator._update_borders`
+        - :meth:`dsgs.experimental.communicators.base_cartesian_communicator.BaseCartesianCommunicator._remove`
     """
 
     def __init__(

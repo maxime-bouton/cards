@@ -1,106 +1,126 @@
-import json
+from pathlib import Path
 
 import h5py
 import numpy as np
-import scipy
 
-from mcmc.utils.utils import apply_gaussian_noise, generate_observations, load_img_size
+from mcmc.operators.dft_convolution import DftConvolution
+from mcmc.utils.path_builder import (
+    deconvolution_str,
+    gaussian_str,
+    obs_dir,
+)
+from mcmc.utils.utils import extract_subset_from_dict
+from mcmc.utils.utils_img import read_dtype, read_img_shape
+from mcmc.utils.utils_observations import (
+    apply_target_gaussian_noise,
+    fit_kernel_shape,
+    generate_and_save_observations,
+    generate_gaussian_kernel,
+    generate_motion_kernel,
+    slice_linear_conv_to_original,
+)
 
-
-def load_sizes_from_h5(filename):
-    with h5py.File(filename, "r") as file:
-        return file["data"].shape, file["kernel"].shape
-
-
-def load_from_h5(filename, local_slice=slice(None)):
-    """load the mask01, sig2 and data entries from the h5 file"""
-    with h5py.File(filename, "r") as data_file:
-        kernel = data_file["kernel"][:]
-        sigma2 = data_file["sigma2"][()]
-        observations = data_file["data"][local_slice]
-    return kernel, sigma2, observations
-
-
-def add_deconvolution_param(config_file_path: str, args: dict) -> None:
-    config_file = open(config_file_path)
-    params = json.load(config_file)
-
-    args["split_coef"] = params["alpha"]
-    args["reg_coef"] = params["regularizationCoefficient"]
-    pass
+from mcmc.backend import xp
 
 
-def slice_obs_to_original(img_dims, kernel_dims):
-    s = tuple(
-        [
-            np.s_[kernel_dims[d] // 2 : img_dims[d] + kernel_dims[d] // 2]
-            for d in range(len(img_dims))
-        ]
-    )
-    return s
-
-
-def generate_gaussian_kernel(kernel_size, kernel_std) -> np.ndarray:
-    r"""Generate a square normalized 2D Gaussian kernel.
+def load_from_h5(
+    filename: str | Path,
+) -> tuple[xp.ndarray, float, tuple[int, ...], tuple[int, ...]]:
+    """Load the kernel, sigma2, and observation shape from an HDF5 file.
 
     Parameters
     ----------
-    kernel_size : int
-        Size of one dimension of the kernel.
-    kernel_std : float
-        Standard deviation of the Gaussian kernel.
-
-    Note
-    ----
-    Equivalent to the ``fspecial('gaussian', ...)`` function in Matlab.
+    filename : str or Path
+        Path to the HDF5 file containing the kernel, sigma2, and observations.
 
     Returns
     -------
-    h : numpy.ndarray
-        Square Gaussian kernel with :math:`\|h\|_1 = 1`.
+    tuple[xp.ndarray, float, tuple[int, ...], tuple[int, ...]]
+        A tuple containing the kernel as a cupy array, the sigma2 value as a float,
+        the shape of the ground truth as a tuple of integers,
+        and the shape of the observations as a tuple of integers.
     """
-    # equivalent to fspecial('gaussian', ...) in Matlab
-    w = scipy.signal.windows.gaussian(kernel_size, kernel_std)
-    h = w[:, np.newaxis] * w[np.newaxis, :]
-    h = h / np.sum(h)
-    return h
+    with h5py.File(filename, "r") as data_file:
+        kernel = xp.asarray(data_file["kernel"])
+        sigma2 = data_file["sigma2"][()]  # type: ignore
+        gt_shape = data_file["x"].shape  # type: ignore
+        obs_shape = data_file["y"].shape  # type: ignore
+    return kernel, sigma2, gt_shape, obs_shape  # type: ignore
+
+
+def gaussian_deconvolution_params(params: dict) -> dict:
+    if "denoiser_params" in params:
+        return extract_subset_from_dict(params, ["reg_coef", "denoiser_params"])
+    else:
+        return extract_subset_from_dict(params, ["reg_coef", "split_coef"])
+
+
+def define_slices(params: dict) -> dict:
+    img_size = read_img_shape(params["original_img_path"])
+    # TODO: find a more elegant way to deal with image of different dimensions
+    kernel_size = np.asarray([1] * (len(img_size) - 2) + [params["kernel"]["size"]] * 2)
+    return {"slices": slice_linear_conv_to_original(img_size, kernel_size)}
 
 
 def generate_gaussian_deconvolution_observations(
-    original_path: str,
-    kernel_dims: np.ndarray,
-    kernel_std: float,
-    snr: float,
+    original_img_path: str,
+    kernel_params: dict,
+    isnr: float,
     data_seed: int,
     obs_path: str,
     maximum: float = 1.0,
 ):
-    #! backend/set_up must be done before the call
-    from mcmc.operators.dft_convolution import (
-        DftConvolution,
-    )
+    gt_size = np.asarray(read_img_shape(original_img_path))
+    dtype = read_dtype(original_img_path)
 
-    # FIXME: inconsistency in the type expected from img_dims and obs_dims, to be fixed (all tuple, or all ndarray)
-    img_dims = load_img_size(original_path)
-    kernel = generate_gaussian_kernel(kernel_dims, kernel_std)
+    rng = np.random.default_rng(data_seed)
 
-    obs_dims = np.asarray(img_dims, dtype=int) + np.asarray(kernel_dims, dtype=int) - 1
-    convolution_handler = DftConvolution(
-        np.asarray(img_dims, dtype=int), kernel, (*obs_dims,)
-    )
+    if kernel_params["type"] == "motion":
+        kernel = generate_motion_kernel(
+            kernel_params["size"],
+            kernel_params["intensity"],
+            dtype,
+            rng,
+        )
+    else:
+        kernel = generate_gaussian_kernel(
+            kernel_params["size"],
+            kernel_params["std"],
+            dtype,
+        )
 
-    pb_params = {}
-    pb_params["kernel"] = kernel
+    params_saved = {"kernel": kernel}
 
-    generate_observations(
-        original_path,
-        convolution_handler,
-        snr,
-        apply_gaussian_noise,
-        data_seed,
+    reshaped_kernel = fit_kernel_shape(kernel, gt_size)
+
+    obs_dims = gt_size.copy()
+    # convolution affects only the last two dimensions (i.e., spatial dimensions)
+    obs_dims[-2:] += np.asarray(kernel.shape, dtype=int) - 1
+
+    convolution_handler = DftConvolution(gt_size, reshaped_kernel, obs_dims)
+
+    generate_and_save_observations(
+        original_img_path,
         obs_path,
-        maximum=1.0,
-        problem_parameters=pb_params,
+        convolution_handler,
+        apply_target_gaussian_noise,
+        data_seed,
+        params_saved,
+        maximum,
+        isnr=isnr,
     )
 
-    pass
+
+def application_params_dir(params: dict) -> str:
+    if "denoiser_params" in params:
+        return "."
+    return f"split{params['split_coef']}".replace(".", "_")
+
+
+def build_obs_and_model_paths(params: dict) -> tuple[str, str]:
+    noise_str = gaussian_str(params)
+    application_str = deconvolution_str(params)
+    obs_f = f"gaussian-deconvolution/{obs_dir(params, application_str, noise_str)}"
+    model_params_f = application_params_dir(params)
+
+    return obs_f, model_params_f

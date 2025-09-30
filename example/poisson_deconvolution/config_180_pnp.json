@@ -1,0 +1,32 @@
+{
+    "checkpoint_size": 1000,
+    "n_checkpoint": 5,
+    "burnin": 2,
+    "reloaded_checkpoint": 0,
+    "seed": 42,
+    "compute_ci": false,
+    "save_all": false,
+    "original_img_path": "../../data/deer_180.h5",
+    "seed_data": 1234,
+    "obs_path": "",
+    "save_path": "",
+    "save_path_resumed": "",
+    "logfile_path": "",
+    "reg_coef": 1.0,
+    "dynamic_range": 250,
+    "split_coef1": 10,
+    "split_coef2": 0.002,
+    "denoiser_params": {
+        "type": "ddfb",
+        "n_layers": 4,
+        "n_features": 64,
+        "denoising_level": 0.03,
+        "L": 3
+    },
+    "kernel": {
+        "type": "gaussian",
+        "size": 7,
+        "std": 1,
+        "seed": 1234
+    }
+}

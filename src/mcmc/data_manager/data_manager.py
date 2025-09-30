@@ -17,8 +17,7 @@ from mcmc.data_manager.warmstart_rng import (
 from mcmc.data_manager.warmstart_rng_mpi import load_rng_np_mpi, save_rng_np_mpi
 from mcmc.backend import xp
 
-# ! need a base class setting up the interface, and create subclasses through inheritance (numpy-based, torch-based)
-# ! FIXME: use read_direct / write_direct with h5py to avoid any non-needed copy
+# NOTE: using h5py.read_direct / h5py.write_direct to avoid any copy of arrays
 
 
 class DataManager:
@@ -165,7 +164,6 @@ class DataManager:
             File to be written on.
         """
         dset = file.create_dataset(name, data.shape, dtype=data.dtype)
-        # dset[:] = data
         dset.write_direct(data)
         return
 

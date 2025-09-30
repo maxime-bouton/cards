@@ -1,141 +1,121 @@
 import json
-from os.path import join, splitext
-from typing import Optional
+from os.path import join
+from typing import Optional, Sequence, Any
 
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
-from skimage.metrics import structural_similarity as ssim
 
-from mcmc.operators.linear_operator import LinearOperator
-from mcmc.sampler.base_sampler import SamplerParameters
+from mcmc.utils.metrics import snr, ssim
 
-
-def load_sampler_params_from_json(config_file_path: str) -> SamplerParameters:
-    config_file = open(config_file_path)
-    params = json.load(config_file)
-
-    sampler_params = SamplerParameters(
-        params["sampleSize"],
-        params["nbCheckpoint"],
-        params["seed"],
-        "sample",
-        params["savePath"],
-    )
-    return sampler_params
+# TODO move torch related functions
+import torch
+from mcmc.backend import xp
 
 
-def load_args_analysis_from_json(config_file_path: str) -> dict:
-    config_file = open(config_file_path)
-    params = json.load(config_file)
-
-    args_analysis = {
-        "nb_batches": params["nbCheckpoint"],
-        "batch_size": params["sampleSize"],
-        "burnin": params["burnin"],
-        "save_path": params["savePath"],
-        "data_path": params["dataPath"],
-    }
-    return args_analysis
-
-
-def normalize_img(img: np.ndarray, maximum: float = 1.0) -> np.ndarray:
-    a = 0.0
-    b = maximum
-    return a + (b - a) * (img - np.min(img)) / (np.max(img) - np.min(img))
-
-
-def load_img(path: str) -> np.ndarray:
-    filename, file_extension = splitext(path)
-
-    if file_extension == ".h5":
-        with h5py.File(path) as file:
-            img = np.asarray(file["x"][:])
-    else:
-        from PIL import Image
-
-        img = np.asarray(Image.open(path, "r")).astype(np.double)
-
-    return img
-
-
-def load_img_size(path: str) -> np.ndarray:
-    filename, file_extension = splitext(path)
-
-    if file_extension == ".h5":
-        with h5py.File(path) as file:
-            return file["x"].shape
-    else:
-        from PIL import Image
-
-        img = np.asarray(Image.open(path, "r")).astype(np.double)
-        return img.shape
-
-
-def apply_gaussian_noise(
-    signal: np.ndarray, snr: float, rng: np.random.Generator
-) -> list[np.ndarray, dict]:  # not a list but a union
-    param = {}
-    sigma2 = np.linalg.norm(signal) ** 2 / signal.size / (10 ** (snr / 10))
-    param["sigma2"] = sigma2
-    return signal + rng.normal(
-        loc=np.zeros_like(signal), scale=np.sqrt(sigma2), size=signal.shape
-    ), param
-
-
-def generate_observations(
-    original_path: str,
-    operator: LinearOperator,
-    snr: float,
-    apply_noise: callable,
-    data_seed: int,
-    obs_path: str,
-    problem_parameters: Optional[dict] = None,
-    maximum: float = 1.0,
-) -> None:
-    """generate_observations Generates and saves a deteriorated signal from the one given in entry.
+def extract_subset_from_dict(d: dict[str, Any], keys: Sequence[str]) -> dict[str, Any]:
+    """Extracts a subset of a dictionary based on the provided keys.
 
     Parameters
     ----------
-    original_path : str
-        Path to the file containing the ground truth.
-    operator : LinearOperator
-        Determinist deterioration operator.
-    snr : float
-        Noise level for the generated data.
-    data_seed : int
-        Seed.
-    obs_path : str
-        Path to the file where to save the generated data.
-    problem_parameters : dict, optional
-        Dictionnary containing problem specific parameters to be saved with the data, by default None
-    maximum : float, optional
-        Maximum value imposed for the ground truth image used to generate synthetic data.
+    d : dict[str, Any]
+        The original dictionary.
+    keys : Sequence[str]
+        The keys to extract.
+
+    Returns
+    -------
+    dict
+        A new dictionary containing only the specified keys and their values.
+    """
+    return {key: d[key] for key in keys}
+
+
+def expand_shape_left(original_shape: tuple[int, ...], ndim: int) -> tuple[int, ...]:
+    """Expand a shape to a specified number of dimensions on the left.
+
+    Parameters
+    ----------
+    original_shape : tuple[int,...]
+        The original shape of the array.
+    ndim : int
+        The desired number of dimensions.
+
+    Returns
+    -------
+    tuple[int,...]
+        The expanded shape with the specified number of dimensions.
+    """
+    if len(original_shape) >= ndim:
+        return original_shape
+    return (1,) * (ndim - len(original_shape)) + original_shape
+
+
+def expanded_left_view(array: xp.ndarray, ndim: int) -> xp.ndarray:
+    """Expand the shape of an array to a specified number of dimensions on the left.
+
+    Parameters
+    ----------
+    array : xp.ndarray
+        The original array.
+    ndim : int
+        The desired number of dimensions.
+
+    Returns
+    -------
+    xp.ndarray
+        The expanded array with the specified number of dimensions.
+
+    Notes
+    -----
+    This function uses broadcasting to expand the shape of the array without copying data.
     """
 
-    img = load_img(original_path)
-    # rescaling image linearly from [min(img), max(img)] to prescribed range [0, maximum]
-    img = normalize_img(img, maximum=maximum)
+    if array.ndim >= ndim:
+        return array
+    return xp.broadcast_to(array, expand_shape_left(array.shape, ndim))
 
-    rng = np.random.default_rng(data_seed)
 
-    buffer = operator.forward(img)
-    observations, noise_param = apply_noise(buffer, snr, rng)
+def xp2torch(x: xp.ndarray, add_batch: bool = True):
+    """
+    Convert a ndarray to a PyTorch tensor.
 
-    problem_parameters.update(noise_param)
-    observations, noise_param = apply_noise(buffer, snr, rng)
+    Parameters
+    ----------
+    x : xp.ndarray
+        ndarray array to be converted.
+    add_batch : bool, optional
+        If True, add a batch dimension to the tensor (default is True).
 
-    problem_parameters.update(noise_param)
+    Returns
+    -------
+    torch.Tensor
+        PyTorch tensor.
+    """
+    return torch.as_tensor(x[None, :] if add_batch else x)
 
-    with h5py.File(obs_path, "w") as file:
-        file["x"] = img
-        file["data"] = observations
-        file["N"] = np.asarray(img.shape, dtype=int)
-        file["data_seed"] = np.asarray([data_seed], dtype=int)
 
-        if problem_parameters is not None:
-            for key in problem_parameters.keys():
-                file[key] = problem_parameters[key]
+def torch2xp(x: torch.Tensor, remove_batch: bool = True):
+    """
+    Convert a PyTorch tensor to a ndarray.
+
+    Parameters
+    ----------
+    x : torch.Tensor
+        PyTorch tensor to be converted.
+    remove_batch : bool, optional
+        If True, remove the batch dimension from the array (default is True).
+
+    Returns
+    -------
+    xp.ndarray
+        Converted ndarray.
+    """
+    return xp.asarray((x.squeeze(0) if remove_batch else x).detach())
+
+
+def array_to_plt_img(arr: np.ndarray):
+    return np.moveaxis(arr, 0, -1)
 
 
 def plot_results(
@@ -143,10 +123,11 @@ def plot_results(
     original: np.ndarray,
     MMSE: np.ndarray,
     potential: np.ndarray,
+    dynamic_range: float = 1.0,
     slices: slice = slice(None),
     enable_save: bool = False,
     save_path: Optional[str] = None,
-) -> None:
+):
     """plot_results Plot the data generated by a "compute" function : the reconstruction, the absolute error and the potential.
 
     Parameters
@@ -167,52 +148,61 @@ def plot_results(
         Path to the directory where we will save the figures.
     """
 
-    # if not (original.shape == observations.shape) and slices == slice(None):
-    #     raise ValueError(
-    #         "Image and observations don't have the same dimensions. Indicate which part of observations must be selected."
-    #     )
-    # if not (original.shape == observations.shape) and slices == slice(None):
-    #     raise ValueError(
-    #         "Image and observations don't have the same dimensions. Indicate which part of observations must be selected."
-    #     )
-
     pixelMin = np.min(original)
     pixelMax = np.max(original)
 
     plt.figure()
-    plt.imshow(original.T, cmap="gray", vmin=pixelMin, vmax=pixelMax)
+    plt.imshow(original.T, vmin=pixelMin, vmax=pixelMax)
     plt.title("Truth")
     plt.colorbar()
     plt.show()
 
     plt.figure()
-    plt.imshow(observations.T, cmap="gray", vmin=pixelMin, vmax=pixelMax)
+    plt.imshow(observations.T / dynamic_range, vmin=pixelMin, vmax=pixelMax)
     plt.title("Observations")
     plt.colorbar()
     plt.show()
 
     plt.figure()
-    plt.imshow(MMSE.T, cmap="gray", vmin=pixelMin, vmax=pixelMax)
+    plt.imshow(MMSE.T, vmin=pixelMin, vmax=pixelMax)
     plt.title("MMSE")
     plt.colorbar()
     if enable_save:
-        name = join(save_path, "reconstruction")
-        plt.imsave(name, arr=MMSE, vmin=pixelMin, vmax=pixelMax, format="pdf")
+        name = join(save_path, "reconstruction.pdf")
+        if len(MMSE.shape) > 2:
+            plt.imsave(
+                name,
+                arr=array_to_plt_img(MMSE),
+                vmin=pixelMin,
+                vmax=pixelMax,
+                format="pdf",
+            )  #! incorrect format 3*M*N -> M*N*3 for plt.imsave
+        else:
+            plt.imsave(name, arr=MMSE, vmin=pixelMin, vmax=pixelMax, format="pdf")
     plt.show()
 
     plt.figure()
-    plt.imshow(np.abs(original[slices].T - MMSE.T), cmap="gray")
+    plt.imshow(np.abs(original[slices].T - MMSE.T))
     plt.title("Absolute error Truth/Estimator")
     plt.colorbar()
     if enable_save:
-        name = join(save_path, "error")
-        plt.imsave(
-            name,
-            arr=(np.abs(original[slices] - MMSE)),
-            vmin=pixelMin,
-            vmax=pixelMax,
-            format="pdf",
-        )
+        name = join(save_path, "error.pdf")
+        if len(MMSE.shape) > 2:
+            plt.imsave(
+                name,
+                arr=array_to_plt_img((np.abs(original[slices] - MMSE))),
+                vmin=pixelMin,
+                vmax=pixelMax,
+                format="pdf",
+            )
+        else:
+            plt.imsave(
+                name,
+                arr=(np.abs(original[slices] - MMSE)),
+                vmin=pixelMin,
+                vmax=pixelMax,
+                format="pdf",
+            )
     plt.show()
 
     plt.figure()
@@ -220,19 +210,19 @@ def plot_results(
     plt.title("Potential")
     plt.grid()
     if enable_save:
-        name = join(save_path, "potential")
-        plt.savefig(name, format="pdf")
+        name = join(save_path, "potential.pdf")
         plt.savefig(name, format="pdf")
     plt.show()
 
 
 def analyze_data(
-    nb_batches: int,
-    batch_size: int,
+    n_checkpoint: int,
+    checkpoint_size: int,
     burnin: int,
     save_path: str,
-    data_path: str,
+    obs_path: str,
     output_file_name: str,
+    dynamic_range: float = 1.0,
     slices: slice = slice(None),
     comm_size: int = 0,
     save_picture: bool = False,
@@ -242,17 +232,17 @@ def analyze_data(
 
     Parameters
     ----------
-    nb_batches : int
+    n_checkpoint : int
         Number of batches of the sample.
-    batch_size: int
-        Size of the batches.
+    checkpoint_size: int
+        Number of steps between two checkpoints.
     batch_size: int
         Size of the batches.
     burnin : int
         Number of bacth to ignore to take into account the burn-in.
     save_path : str
         Path to the directory where the sample has been saved.
-    data_path : str
+    obs_path : str
         Path to the file containing the deteriorated signal.
     output_file_name : str
         Full path to the file on which we will write the metrics.
@@ -264,78 +254,56 @@ def analyze_data(
         Number of process, must be used only in a distributed setting.
     """
 
-    potential = np.zeros([nb_batches * batch_size])
+    potential = np.zeros([n_checkpoint * checkpoint_size])
     if comm_size == 0:
-        time = np.zeros([nb_batches * batch_size])
-        # batch_time = np.zeros([nb_batches])
+        time = np.zeros([n_checkpoint * checkpoint_size])
     else:
-        time = np.zeros([comm_size, nb_batches * batch_size])
-        # batch_time = np.zeros([comm_size, nb_batches])
+        time = np.zeros([comm_size, n_checkpoint * checkpoint_size])
 
-    for i in range(1, nb_batches + 1):
+    for i in range(1, n_checkpoint + 1):
         file_name = join(save_path, "sample" + str(i) + ".h5")
 
         with h5py.File(file_name, "r") as file:
-            potential[(i - 1) * batch_size : i * batch_size] = file["potential"][:]
+            potential[(i - 1) * checkpoint_size : i * checkpoint_size] = file[
+                "potential"
+            ][:]
             if comm_size != 0:
-                time[:, (i - 1) * batch_size : i * batch_size] = file[
+                time[:, (i - 1) * checkpoint_size : i * checkpoint_size] = file[
                     "computation_time"
                 ][:]
-                # batch_time[:, i - 1] = file["batch_time"][:]
             else:
-                time[(i - 1) * batch_size : i * batch_size] = file["computation_time"][
-                    :
-                ]
-                # batch_time[i - 1] = file["batch_time"][:]
+                time[(i - 1) * checkpoint_size : i * checkpoint_size] = file[
+                    "computation_time"
+                ][:]
 
-    # FIXME - time metrics unfit for distributed implementation
     atime = np.asarray(np.mean(time, axis=-1))
-    # total_time = np.asarray(np.sum(batch_time, axis=-1))
     time_std = np.asarray(np.std(time, axis=-1))
 
-    with h5py.File(data_path, "r") as file:
+    with h5py.File(obs_path, "r") as file:
         original = file["x"][:]
-        observations = file["data"][:]
-
-    # if not (original.shape == observations.shape) and slices == slice(None):
-    #     raise ValueError(
-    #         "Image and observations don't have the same dimensions. Indicate which part of observations must be selected."
-    #     )
-    # if not (original.shape == observations.shape) and slices == slice(None):
-    #     raise ValueError(
-    #         "Image and observations don't have the same dimensions. Indicate which part of observations must be selected."
-    #     )
+        observations = file["y"][:]
 
     MMSE = np.zeros(original.shape)
-    for i in range(burnin, nb_batches):
+    for i in range(burnin, n_checkpoint):
         file_name = join(save_path, "sample" + str(i) + ".h5")
         with h5py.File(file_name, "r") as file:
             MMSE += file["MMSE"]
-    MMSE /= nb_batches - burnin
+    MMSE /= n_checkpoint - burnin
 
-    snr_obs = 10 * np.log10(
-        np.linalg.norm(original) ** 2
-        / (np.linalg.norm(original - observations[slices]) ** 2)
-    )
+    snr_obs = snr(original, observations[slices] / dynamic_range)
+    snr_recons = snr(original, MMSE)
 
-    snr_recons = 10 * np.log10(
-        np.linalg.norm(original) ** 2 / (np.linalg.norm(original - MMSE) ** 2)
-    )
-
-    ssim_obs = ssim(
-        original, observations[slices], data_range=np.max(original) - np.min(original)
-    )
-    ssim_recons = ssim(original, MMSE, data_range=np.max(original) - np.min(original))
+    ssim_obs = ssim(original, observations[slices] / dynamic_range)
+    ssim_recons = ssim(original, MMSE)
 
     results = {
         "atime": atime.tolist(),
-        # "total_time": total_time.tolist(),
         "std_time": time_std.tolist(),
-        "snr_obs": snr_obs,
-        "snr_recons": snr_recons,
-        "ssim_obs": ssim_obs,
-        "ssim_recons": ssim_recons,
-    }
+        "snr_obs": float(snr_obs),
+        "snr_recons": float(snr_recons),
+        "ssim_obs": float(ssim_obs),
+        "ssim_recons": float(ssim_recons),
+    }  # float32 -> float64
     results_json = json.dumps(results)
 
     results_file = join(save_path, output_file_name + ".json")
@@ -348,6 +316,7 @@ def analyze_data(
             original,
             MMSE,
             potential,
+            dynamic_range,
             enable_save=save_picture,
             save_path=save_path,
         )
