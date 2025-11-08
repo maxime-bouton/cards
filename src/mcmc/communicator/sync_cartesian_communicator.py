@@ -1,5 +1,5 @@
 """Communicator class for synchronous communications on a Cartesian grid of
-MPI processes."""
+MPI processes in arbitrary dimension."""
 
 # author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
 

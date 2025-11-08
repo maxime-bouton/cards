@@ -82,13 +82,16 @@ class BaseDistributedModel(BaseModel):
     slices = dict
 
     @abstractmethod
-    def set_slices(self) -> dict:
+    def set_slices(self):
+        """set_slices Describes the local selection of local variables in regards to the global variables."""
         pass
 
     @abstractmethod
     def set_global_sizes(self):
+        """set_global_sizes Describes the sizes of global variables."""
         pass
 
     @abstractmethod
-    def set_local_sizes(self) -> dict:
+    def set_local_sizes(self):
+        """set_local_sizes Describes the sizes of the local variables."""
         pass

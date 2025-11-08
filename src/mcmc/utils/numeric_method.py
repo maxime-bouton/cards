@@ -1,3 +1,5 @@
+"""Utility functions.."""
+
 from typing import Callable, Sequence
 
 import cupy as cp

@@ -6,6 +6,7 @@ from mcmc.backend import xp
 from mcmc.transition_kernel.base_transition_kernel import BaseTransitionKernel
 from typing import Optional, Any
 
+# TODO: missing documentation
 # TODO: fuse with gpu_psgla (only differs through one instruction)
 
 

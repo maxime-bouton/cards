@@ -16,6 +16,7 @@ class MpiGradient2d:
         global_size: np.ndarray,
         grid_size: np.ndarray,
         comm: MPI.Comm = MPI.COMM_WORLD,
+        enable_internal_buffer: bool = True,
         dtype: xp.dtype = xp.float64,
     ):
         self.comm = comm
@@ -57,7 +58,10 @@ class MpiGradient2d:
         self.is_last = self.ranknd == grid_size - 1
         self.adj_shape = self.cart_comm.cartslicer.tile_size
 
-        self.local_buffer = xp.zeros(self.cart_comm.cartslicer.facet_size, dtype=dtype)
+        if enable_internal_buffer:
+            self.local_buffer = xp.zeros(
+                self.cart_comm.cartslicer.facet_size, dtype=dtype
+            )
         self.adj_buffer = xp.zeros(self.cart_comm.cartslicer.tile_size, dtype=dtype)
         self.local_buffer_adj_v = xp.zeros(
             self.adj_cart_comm_v.cartslicer.facet_size,
@@ -204,3 +208,12 @@ class MpiGradient2d:
             self.local_buffer_adj_v,
         )
         return self.adj_buffer
+
+    def get_recv_size(self) -> np.ndarray:
+        return self.cart_comm.cartslicer.recv_size
+
+    def get_send_size(self) -> np.ndarray:
+        return self.cart_comm.cartslicer.send_size
+
+    def forward_no_comm(self, X: xp.ndarray):
+        return self.chunk_gradient_2d(X)

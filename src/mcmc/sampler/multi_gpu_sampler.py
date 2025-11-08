@@ -1,3 +1,5 @@
+"""Implementation of a distributed sampler on several GPUs."""
+
 import hashlib
 from os.path import join
 

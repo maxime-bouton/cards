@@ -1,3 +1,5 @@
+"""Utility functions to load/normalize images."""
+
 from pathlib import Path
 
 import h5py

@@ -1,3 +1,5 @@
+"""Useful metrics to check generated data."""
+
 import numpy as np
 from skimage.metrics import structural_similarity
 

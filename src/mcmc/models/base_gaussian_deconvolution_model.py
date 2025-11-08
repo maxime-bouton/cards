@@ -1,3 +1,5 @@
+"""Base class for gaussian deconvolution models."""
+
 from abc import abstractmethod
 from dataclasses import dataclass
 
@@ -39,7 +41,8 @@ class BaseGaussianDeconvolutionModel(BaseModel):
         self.set_conditionals()
 
     @abstractmethod
-    def set_conditionals(self): ...
+    def set_conditionals(self):
+        pass
 
     def aggregate_states(self):
         self.estimator_builder.aggregate_states(self.X.current_state)

@@ -1,0 +1,11 @@
+TODO list
+- test installation .conda
+- voir publication .conda
+- documenter denoiser
+- relire/completer doc
+- réduire redondence doc sphinx
+- getting started (doc sphinx), install, tuto
+- refaire tourner les expériences
+- estimateurs (variance par pixel)
+- utiliser factorisation communication dans les modèles
+- publication -> presentation librairie (JSS/JOSS)

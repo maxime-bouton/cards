@@ -1,3 +1,5 @@
+"""Utility functions to generate/handle artificialy deteriorated data."""
+
 from pathlib import Path
 from typing import Callable, Sequence, Sized
 

@@ -1,3 +1,5 @@
+"""Utility functions to load the weights of a denoiser."""
+
 from pathlib import Path
 
 import torch

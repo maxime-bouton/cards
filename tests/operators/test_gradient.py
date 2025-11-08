@@ -12,7 +12,7 @@ def seed():
 
 @pytest.fixture
 def dims():
-    return np.array([2, 5, 121, 75], "i")
+    return np.array([10, 12, 121, 75], "i")
 
 
 @pytest.fixture
@@ -66,17 +66,21 @@ def test_adjoint(seed, dims, cmdopt):
 def test_adjoint_mpi(comm, dims, seed, cmdopt):
     rank = comm.Get_rank()
     comm_size = comm.Get_size()
-    grid_dims = np.asarray(
-        [*np.ones(len(dims) - 2), *MPI.Compute_dims(comm_size, 2)], dtype=int
-    )  # no repartition on channel axis
+    grid_dims = np.asarray(MPI.Compute_dims(comm_size, len(dims)), dtype=int)
     cart_comm = comm.Create_cart(dims=grid_dims)
 
     print(cart_comm.Get_coords(cart_comm.Get_rank()))
 
     if cmdopt == "mpi-gpu":
         bm.set_backend("cupy")
+        from mcmc.backend import xp
+
+        nb_gpu = xp.cuda.runtime.getDeviceCount()
+        gpu_id = rank % nb_gpu
+        xp.cuda.runtime.setDevice(gpu_id)
     else:
         bm.set_backend("numpy")
+        from mcmc.backend import xp
 
     from mcmc.backend import xp
     from mcmc.operators.mpi_gradient import MpiGradient2d
@@ -130,7 +134,7 @@ def test_adjoint_mpi(comm, dims, seed, cmdopt):
     Hxy = comm.reduce(local_Hxy, MPI.SUM, root=0)
     xHy = comm.reduce(local_xHy, MPI.SUM, root=0)
     if rank == 0:
-        assert np.isclose(Hxy, xHy, atol=1e-10)
+        assert xp.isclose(Hxy, xHy, atol=1e-10)
 
 
 if __name__ == "__main__":

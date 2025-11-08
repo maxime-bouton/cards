@@ -6,6 +6,9 @@ import torch
 from mcmc.transition_kernel.base_transition_kernel import BaseGpuTransitionKernel
 
 
+# TODO: missing documentation
+
+
 class GpuPnpULA(BaseGpuTransitionKernel):
     def __init__(
         self,

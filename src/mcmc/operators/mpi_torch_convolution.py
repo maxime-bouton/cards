@@ -1,7 +1,10 @@
+"""implementation of a linear operator that applies a torch convolution."""
+
 import numpy as np
 import torch
 from mpi4py import MPI
 
+from typing import Any
 import mcmc.communicator.sync_cartesian_communicator as comms
 from mcmc.backend import xp
 from mcmc.operators.linear_operator import LinearOperator
@@ -246,6 +249,29 @@ class MpiTorchConvolution(LinearOperator):
             return torch2xp(conv(xp2torch(self.forward_buffer)))[
                 self.slice_valid_coefficients
             ]
+
+    def forward_no_comm(self, input_array: xp.ndarray, conv: torch.nn.Conv2d) -> Any:
+        """forward_no_comm Apply the convolution whitout using the internal buffer. Should be used with a shared buffer.
+
+        Parameters
+        ----------
+        input_array : xp.ndarray
+            Input array, will not be updated to receive information from other thread. Facet size.
+        conv : torch.nn.Conv2d
+
+        Returns
+        -------
+        Any
+            Result of the convolution
+        """
+        with torch.no_grad():
+            return torch2xp(conv(xp2torch(input_array)))[self.slice_valid_coefficients]
+
+    def get_recv_size(self) -> np.ndarray:
+        return self.direct_communicator.cartslicer.recv_size
+
+    def get_send_size(self) -> np.ndarray:
+        return self.direct_communicator.cartslicer.send_size
 
     def adjoint(self, input_data: xp.ndarray, conv_adj: torch.nn.ConvTranspose2d):
         r"""Implementation of the adjoint operator to update the input array
