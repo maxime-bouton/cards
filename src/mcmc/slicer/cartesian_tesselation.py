@@ -5,6 +5,8 @@ Cartesian domain decomposition."""
 
 import numpy as np
 
+# TODO: simplify implementation of splitting instructions
+
 
 def get_neighbour(ranknd, grid_size, disp):
     """Linear rank of a neighbour of the current MPI process.

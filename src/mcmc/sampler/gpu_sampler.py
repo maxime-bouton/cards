@@ -1,3 +1,5 @@
+"""Implementation of a sampler using buffers on GPU."""
+
 from os.path import join
 
 import cupy as cp

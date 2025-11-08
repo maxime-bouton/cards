@@ -1,3 +1,5 @@
+"""Implementation of a poisson deconvolution model using the plug and pay method."""
+
 import numpy as np
 from mpi4py import MPI
 

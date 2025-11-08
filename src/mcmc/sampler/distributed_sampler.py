@@ -1,3 +1,5 @@
+"""Implementation of a distributed sampler. Should be used with distributed models."""
+
 from os.path import join
 from time import perf_counter
 

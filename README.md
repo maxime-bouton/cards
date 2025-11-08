@@ -47,6 +47,7 @@ pixi init --format pyproject
 conda develop src
 
 eval "$(pixi shell-hook)"
+# pixi shell
 ```
 
 - From scratch, this could be done by

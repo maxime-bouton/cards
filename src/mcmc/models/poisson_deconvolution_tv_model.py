@@ -1,3 +1,5 @@
+"""Implementation of a poisson deconvolution model using a TV prior."""
+
 import numpy as np
 from mpi4py import MPI
 

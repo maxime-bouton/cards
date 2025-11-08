@@ -1,3 +1,5 @@
+"""Utility functions that handles path management for the applications."""
+
 from pathlib import Path
 
 PRODUCED_DATA_PATH = Path("../../produced_data")

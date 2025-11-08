@@ -1,3 +1,5 @@
+"""Abstract base class for denoisers."""
+
 from abc import ABC, abstractmethod
 
 from mcmc.backend import xp

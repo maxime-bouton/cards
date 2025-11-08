@@ -1,3 +1,5 @@
+"""Utility function to build applications."""
+
 import argparse
 import importlib
 import json

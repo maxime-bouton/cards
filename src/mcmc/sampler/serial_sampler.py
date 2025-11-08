@@ -1,3 +1,5 @@
+"""Implementation of a serial sampler."""
+
 from os.path import join
 from time import perf_counter
 

@@ -156,7 +156,7 @@ class BaseCartesianCommunicator(ABC):
         """Setup all auxiliary variables and types to define
         the communications with MPI.
         """
-        return NotImplemented
+        pass
 
     @abstractmethod
     def update_borders(self, local_array):  # pragma: no cover
@@ -169,14 +169,14 @@ class BaseCartesianCommunicator(ABC):
 
         Returns
         -------
-        NotImplemented
+        None
 
         Note
         ----
         The method needs to be implemented in any class inheriting from
         BaseCommunicator.
         """
-        return NotImplemented
+        pass
 
     @abstractmethod
     def remove(self):  # pragma: no cover
@@ -185,6 +185,6 @@ class BaseCartesianCommunicator(ABC):
 
         Returns
         -------
-        NotImplemented
+        None
         """
-        return NotImplemented
+        pass

@@ -91,6 +91,41 @@ class MpiDnCNN(BaseDistributedDenoiser):
 
         return input_image - self.edge_mpi_conv.adjoint(tile_u, self.dncnn.model[-1])
 
+    def forward_no_comm(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
+        """forward_no_comm Apply the denoiser without communication on the first layer. Should be used with a shared buffer.
+
+        Parameters
+        ----------
+        input_image : xp.ndarray
+            Image to denoise. Facet size.
+        sigma : float
+            Standard deviation of the gaussian noise.
+
+        Returns
+        -------
+        xp.ndarray
+            Denoised image.
+        """
+        assert isinstance(sigma, float)  #! fail on np.float or torch.float?
+        tile_u = self.edge_mpi_conv.forward_no_comm(
+            input_image, self.dncnn.model[0]
+        ).clip(min=0)
+        for i in range(len(self.dncnn.model[2:-2:4])):
+            conv_forward = self.dncnn.model[2 + 4 * i]
+            # NOTE: This is not the actual ADJOINT convolution: convenience for communications handling
+            conv_adjoint = self.dncnn.model[2 + 4 * i + 2]
+            tile_u = self._apply_layer(tile_u, conv_forward, conv_adjoint)
+
+        return input_image[
+            self.edge_mpi_conv.direct_communicator.cartslicer.slice_facet_to_tile
+        ] - self.edge_mpi_conv.adjoint(tile_u, self.dncnn.model[-1])
+
+    def get_recv_size(self) -> np.ndarray:
+        return self.edge_mpi_conv.direct_communicator.cartslicer.recv_size
+
+    def get_send_size(self) -> np.ndarray:
+        return self.edge_mpi_conv.direct_communicator.cartslicer.send_size
+
     @property
     def global_to_tile_slice(self):
         return self.edge_mpi_conv.direct_communicator.cartslicer._get_slice_global_buffer_to_tile()

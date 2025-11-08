@@ -3,6 +3,8 @@ r"""Abstract implementation for the Moreau-Yoshida Unajusted Langevin Algorithm 
 from mcmc.backend import xp
 from mcmc.transition_kernel.base_transition_kernel import BaseTransitionKernel
 
+# TODO: missing documentation
+
 
 class MYULA(BaseTransitionKernel):
     def __init__(

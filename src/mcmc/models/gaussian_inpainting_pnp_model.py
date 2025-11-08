@@ -1,3 +1,5 @@
+"""Implementation of an inpainting model using the plug and play method."""
+
 from dataclasses import dataclass
 
 import numpy as np

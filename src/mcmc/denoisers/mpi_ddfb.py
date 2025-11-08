@@ -17,6 +17,7 @@ class MpiDDFB(BaseDistributedDenoiser):
         image_size: np.ndarray,
         n_layers: int,
         n_features: int,
+        use_shared_input_buffer: bool = False,
     ):
         """
         Distributed DDFB.
@@ -75,7 +76,7 @@ class MpiDDFB(BaseDistributedDenoiser):
         Parameters
         ----------
         input_image: xp.ndarray
-            The input x facet
+            The input x tile. Tile size.
         sigma: float
             The regularization parameter
 
@@ -94,6 +95,46 @@ class MpiDDFB(BaseDistributedDenoiser):
             )
         D0_T_u = self.mpi_conv.adjoint(tile_u, self.ddfb.D0_T)
         return (input_image - D0_T_u).clip(0, 1)
+
+    def forward_no_comm(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
+        """forward_no_comm Apply the denoiser without communication on the first layer. Should be used with a shared buffer.
+
+        Parameters
+        ----------
+        input_image : xp.ndarray
+            Image facet to denoise.
+        sigma : float
+            Standard deviation of the gaussian noise.
+
+        Returns
+        -------
+        xp.ndarray
+            Denoised image.
+        """
+        assert isinstance(sigma, float)  #! fail on np.float or torch.float?
+        tile_u = self.mpi_conv.forward_no_comm(input_image.clip(0, 1), self.ddfb.D0)
+        for layer in self.ddfb.layers:
+            tile_u = self._apply_layer(
+                tile_u,
+                input_image[
+                    self.mpi_conv.direct_communicator.cartslicer.slice_facet_to_tile
+                ],
+                sigma,
+                layer,  # type: ignore
+            )
+        D0_T_u = self.mpi_conv.adjoint(tile_u, self.ddfb.D0_T)
+        return (
+            input_image[
+                self.mpi_conv.direct_communicator.cartslicer.slice_facet_to_tile
+            ]
+            - D0_T_u
+        ).clip(0, 1)
+
+    def get_recv_size(self) -> np.ndarray:
+        return self.mpi_conv.direct_communicator.cartslicer.recv_size
+
+    def get_send_size(self) -> np.ndarray:
+        return self.mpi_conv.direct_communicator.cartslicer.send_size
 
     @property
     def global_to_tile_slice(self):

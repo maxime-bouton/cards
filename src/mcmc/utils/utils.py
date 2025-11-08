@@ -1,3 +1,5 @@
+"""Utility functions to analyze generated data."""
+
 import json
 from os.path import join
 from typing import Optional, Sequence, Any

@@ -285,7 +285,7 @@ def compute_tv(
             Z1,
             Z2,
         )
-        
+
         if "cpu" in mode:
             sampler = DistributedSampler(comm, sampler_params, model, logger)
         else:
@@ -294,7 +294,7 @@ def compute_tv(
                 sampler_params,
                 model,
                 logger,
-                gpu_id = comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
+                gpu_id=comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
             )  # default gpu affectation
     else:
         model = PoissonDeconvolutionTvModel(model_params, X, Z1, Z2)

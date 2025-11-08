@@ -10,7 +10,7 @@ dependencies = [ "sphinxcontrib-apa>=1.0.0,<2", "sphinx-copybutton>=0.5.2,<0.6",
 build-backend = "hatchling.build"
 requires = ["hatchling"]
 
-[tool.pixi.project]
+[tool.pixi.workspace]
 channels = ["conda-forge"]
 platforms = ["linux-64"]
 
@@ -42,6 +42,11 @@ sphinx_rtd_theme = ">=3.0.1,<4"
 sphinxcontrib-bibtex = ">=2.6.3,<3"
 sphinx-autoapi = ">=3.5.0,<4"
 sphinx-design = ">=0.6.1,<0.7"
+
+[dependency-groups]
+test = ["pytest"]
+docs = ["sphinx"]
+dev = [{include-group = "test"}, {include-group = "docs"}]
 
 [tool.ruff]
 target-version = "py312"

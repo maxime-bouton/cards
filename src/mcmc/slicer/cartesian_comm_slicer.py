@@ -8,6 +8,8 @@ import numpy as np
 from mcmc.slicer.cartesian_tesselation import local_split_range_nd
 from mcmc.slicer.comm_slicer import CommSlicer
 
+# TODO: simplify implementation of slices
+
 
 def compute_local_buffer_size(
     ranknd, grid_size, tile_size, overlap_size, backward=True

@@ -214,6 +214,7 @@ class MpiDftConvolution(LinearOperator):
         comm: MPI.Comm,
         grid_size: xp.ndarray,
         backward=False,
+        enable_internal_buffer: bool = True,
         dtype: xp.dtype = xp.float64,
         tile_range: np.ndarray | None = None,
     ):
@@ -348,10 +349,11 @@ class MpiDftConvolution(LinearOperator):
             ]
         )
 
-        self.forward_buffer = xp.zeros(
-            self.direct_communicator.cartslicer.facet_size,
-            dtype=dtype,
-        )
+        if enable_internal_buffer:
+            self.forward_buffer = xp.zeros(
+                self.direct_communicator.cartslicer.facet_size,
+                dtype=dtype,
+            )
         self.adjoint_buffer = xp.zeros(
             self.adjoint_communicator.cartslicer.facet_size,
             dtype=dtype,
@@ -420,3 +422,14 @@ class MpiDftConvolution(LinearOperator):
             self.adjoint_conv_size,
         )[self.slice_valid_adjoint_convolution]
         return x
+
+    def get_send_size(self) -> np.ndarray:
+        return self.direct_communicator.cartslicer.send_size
+
+    def get_recv_size(self) -> np.ndarray:
+        return self.direct_communicator.cartslicer.recv_size
+
+    def forward_no_comm(self, X: xp.ndarray):
+        return fft_conv(X, self.direct_fft_kernel, self.direct_conv_size)[
+            self.slice_valid_direct_convolution
+        ]
