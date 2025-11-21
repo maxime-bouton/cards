@@ -1,5 +1,4 @@
 import numpy as np
-import cupy as cp
 from os.path import join
 import pytest
 from mcmc.data_manager.data_manager import DataManager
@@ -7,6 +6,8 @@ from mcmc.backend import bm
 import h5py
 from mpi4py import MPI
 from mcmc.slicer.cartesian_comm_slicer import CartesianCommSlicer
+
+# FIXME: rewrite to avoid dependency on cupy (failing CI for now if so)
 
 
 @pytest.fixture
@@ -59,8 +60,8 @@ def test_save_full_batch(dims, cmdopt, tmp_path):
     assert xp.isclose(data, loaded_data).all()
 
 
-@pytest.mark.env("mpi-cpu")
-@pytest.mark.env("mpi-gpu")
+# @pytest.mark.env("mpi-cpu")
+# @pytest.mark.env("mpi-gpu")
 def test_mpi_save_full_batch(comm, dims, cmdopt, tmp_path):
     batch_size = 100
     rank = comm.Get_rank()
@@ -72,8 +73,8 @@ def test_mpi_save_full_batch(comm, dims, cmdopt, tmp_path):
     if cmdopt == "mpi-gpu":
         bm.set_backend("cupy")
         from_gpu = True
-        gpu_id = rank % cp.cuda.runtime.getDeviceCount()
-        cp.cuda.runtime.setDevice(gpu_id)
+        # gpu_id = rank % cp.cuda.runtime.getDeviceCount()
+        # cp.cuda.runtime.setDevice(gpu_id)
     from mcmc.backend import xp
 
     filename = ""

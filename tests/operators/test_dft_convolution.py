@@ -1,9 +1,9 @@
 import pytest
 import numpy as np
 from mpi4py import MPI
-
-from cupy.cuda import Device
 from mcmc.backend import bm
+
+# FIXME: dirty test writing, to be revised thoroughly
 
 
 @pytest.fixture
@@ -82,7 +82,12 @@ def test_adjoint_mpi(seed, dims, kernel_dims, comm, cmdopt):
 
     if rank == 0:
         rng = xp.random.default_rng(seed)
-        with Device(0):
+        if cmdopt == "mpi-gpu":
+            with xp.cuda.Device(0):
+                X = rng.standard_normal(dims)
+                Y = rng.standard_normal(convo_dims)
+                kernel = rng.standard_normal(kernel_dims)
+        else:
             X = rng.standard_normal(dims)
             Y = rng.standard_normal(convo_dims)
             kernel = rng.standard_normal(kernel_dims)
@@ -91,9 +96,7 @@ def test_adjoint_mpi(seed, dims, kernel_dims, comm, cmdopt):
     comm.Bcast([Y, MPI.DOUBLE], root=0)
     comm.Bcast([kernel, MPI.DOUBLE], root=0)
 
-    convolution_handler = MpiDftConvolution(
-        dims, kernel, comm, grid_dims, gpu_id=gpu_id
-    )
+    convolution_handler = MpiDftConvolution(dims, kernel, comm, grid_dims)
 
     local_X = X[
         convolution_handler.direct_communicator.cartslicer.slice_global_buffer_to_tile

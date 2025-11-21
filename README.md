@@ -53,31 +53,57 @@ eval "$(pixi shell-hook)"
 - From scratch, this could be done by
 
 ```bash
+# FIXME: investigate CPU-only installs (not functional for now, i.e., including mac, win)
 # initalizating pixi env
+pixi self-update
 pixi init . --format pyproject
 
 # update name of environment
 # https://pixi.sh/latest/workspace/multi_environment/#real-world-example-use-cases
 pixi workspace name set mcmc
-pixi workspace list
 
 # adding supported target platforms
-pixi workspace platform add 'linux-64' 'osx-64'
+pixi workspace platform add 'linux-64' # 'win-64' 'osx-64' 'osx-arm64'
+# platforms = ["win-64", "linux-64", "osx-arm64", "osx-64"]
 # or
 # pixi add --platform win-64 posix
 
-# adding conda packages
-pixi add numba numpy openmpi ucx cuda cudatoolkit cupy pytorch torchvision
-pixi add mpi4py openmpi "h5py>=2.9=mpi*" scipy imageio tqdm conda-build matplotlib
+pixi add --feature test pytest coverage
+pixi add --feature test wily --pypi
 
-pixi add scikit-image --pypi
-pixi add pytest isort coverage pre-commit furo sphinx sphinx_rtd_theme sphinxcontrib-bibtex sphinx-autoapi sphinx-design
-pixi add sphinxcontrib-apa sphinx_copybutton docstr-coverage genbadge wily --pypi
+pixi add --feature dev isort pre-commit conda-build
 
-conda develop src
+pixi add --feature doc furo sphinx sphinx_rtd_theme sphinxcontrib-bibtex sphinx-autoapi sphinx-design
+pixi add --feature doc sphinxcontrib-apa sphinx_copybutton docstr-coverage genbadge --pypi
+
+# adding computing packages packages
+pixi add mpi4py openmpi "h5py>=2.9=mpi*" scipy imageio tqdm matplotlib
+pixi add scikit-image
+
+# https://pixi.sh/latest/python/pytorch/#mixing-macos-and-cuda-with-pypi-dependencies
+# pixi add pytorch torchvision
+pixi add numba numpy
+# see if this ensures cuda aware version is installed
+pixi add torch torchvision --pypi
+
+
+pixi add --feature gpu cudatoolkit
+# pixi add cuda
+pixi add --feature gpu cupy ucx # "ucx" does not exist for win-64 apparently
+
+# specifying group features
+# https://pixi.sh/latest/tutorials/multi_environment/
+pixi workspace environment add default --solve-group default --force
+pixi workspace environment add doc --feature doc --solve-group default --no-default-feature
+pixi workspace environment add dev-gpu --feature gpu --feature doc --feature test --solve-group default
+pixi workspace environment add dev-cpu --feature dev --feature doc --feature test --solve-group default
+
+pixi info --environment dev-gpu
+pixi list --environment dev-gpu
+pixi install --all # installing all environments
 
 # open environment and closing
-pixi shell
+pixi shell --environment dev-gpu
 exit
 
 # updating packages versions
@@ -85,7 +111,28 @@ pixi update
 
 # run a command from the environment
 # https://pixi.sh/latest/workspace/environment/#cleaning-up
-pixi run python
+pixi run python --environment dev-gpu
+
+
+# FIXME: clarify all instructions below
+# building the package
+pixi build
+pixi-pack pack --manifest-file pixi.toml --environment dev-gpu --platform linux-64
+
+# testing installation from local .conda file
+# https://tech.quantco.com/blog/pixi-production
+# https://pixi.sh/latest/global_tools/introduction/#install-dependencies-from-source
+cd <PATH_TO_NEW_PROJECT>
+# pixi import <PATH_TO_PACKAGE>.conda --format conda-env
+conda install <PATH_TO_PACKAGE>.conda
+
+
+# testing in a venv (installing dependency from source)
+# python3 -m venv .venv
+# source <DIR>/bin/activate
+# python3 -m pip install --upgrade pip
+# pip install <PATH_TO_PACKAGE>.conda
+# deactivate
 ```
 
 </details>
@@ -173,6 +220,8 @@ pytest -m "not mpi" --ignore-glob=**/floder_to_ignore/* # run all tests not mark
 mpiexec -n 2 python -m mpi4py -m pytest -m mpi  # run all tests marked mpi with 2 cores
 mpiexec -n 2 python -m pytest tests/test_warmstart_rng_mpi.py
 
-python -m pytest -C serial-cpu  # launch all serial-cpu tests, see conftest.py
 pytest --markers  # display available markers
+python -m pytest -C serial-cpu  # launch all serial-cpu tests, see conftest.py
+mpiexec -n 2 python -m pytest -C mpi-cpu
+mpiexec -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m pytest -C mpi-gpu
 ```

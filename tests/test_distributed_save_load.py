@@ -25,6 +25,8 @@ def seed():
     return 1234
 
 
+# FIXME: test currently failing in mpi-cpu mode (shape issue, 2 CPUs)
+# FAILED tests/test_distributed_save_load.py::test_distributed_save - ValueError: operands could not be broadcast together with shapes (50,50) (100,50)
 @pytest.mark.numpy
 @pytest.mark.env("mpi-cpu")
 def test_distributed_save(tmp_path, dims, seed):

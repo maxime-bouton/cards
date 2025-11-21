@@ -25,7 +25,7 @@ install-env:
     - linux
   script:
     - sed -i 's|["'\'']conda-forge["'\'']|"http://nexus.priv.lifl.fr:8081/repository/conda-forge-proxy"|' pyproject.toml
-    - pixi install --frozen
+    - pixi install --environment dev-cpu --frozen
   cache:
     policy: pull-push
 
@@ -38,7 +38,7 @@ test:
     - linux
   script:
     - ls -alh .pixi-cache || echo "Pas de cache Pixi"
-    - pixi run python -m pytest
+    - pixi run --environment dev-cpu python -m pytest -C serial-cpu
     # - pixi run mpirun --allow-run-as-root -np 2 pytest tests/operators/test_gradient.py
   cache:
     policy: pull

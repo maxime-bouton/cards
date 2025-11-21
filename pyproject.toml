@@ -1,18 +1,33 @@
 [project]
-authors = [{name = "Stéphane Despierres", email = "stephane.despierres@centralelille.fr"}, {name = "Pierre-Antoine Thouvenin", email = "pierreantoine.thouvenin@centrale.fr"}]
-description = "Add a short description here"
+authors = [{name = "Stéphane Despierres", email = "stephane.despierres@centralelille.fr"}, {name = "Maxime Bouton", email = "maxime.bouton@centralelille.fr"}, {name = "Pierre-Antoine Thouvenin", email = "pierre-antoine.thouvenin@centralelille.fr"}, {name = "Pierre Chainais", email = "pierre.chainais@centralelille.fr"}]
 name = "mcmc"
-requires-python = ">= 3.11"
+description = "A Python library to ease the development of disributed MCMC algorithms"
+requires-python = ">= 3.12"
 version = "0.1.0"
-dependencies = [ "sphinxcontrib-apa>=1.0.0,<2", "sphinx-copybutton>=0.5.2,<0.6", "docstr-coverage>=2.3.2,<3", "genbadge>=1.1.2,<2", "wily>=1.25.0,<2", "torch>=2.7.0,<3", "torchvision>=0.22.0,<0.23"]
+dependencies = ["torch>=2.9.1,<3", "torchvision>=0.24.1,<0.25"]
 
 [build-system]
 build-backend = "hatchling.build"
 requires = ["hatchling"]
 
+[dependency-groups]
+doc = ["sphinxcontrib-apa", "sphinx-copybutton", "docstr-coverage", "genbadge"]
+test = ["wily"]
+cpu = ["torch", "torchvision"]
+gpu = ["torch", "torchvision"]
+# dev = [{include-group = "test"}, {include-group = "docs"}]
+
 [tool.pixi.workspace]
 channels = ["conda-forge"]
 platforms = ["linux-64"]
+preview = ["pixi-build"]
+
+[tool.pixi.package.build.backend]
+name = "pixi-build-python"
+version = "==0.4.0"
+
+[tool.pixi.package.host-dependencies]
+hatchling = "*"
 
 [tool.pixi.pypi-dependencies]
 mcmc = { path = ".", editable = true }
@@ -20,33 +35,48 @@ mcmc = { path = ".", editable = true }
 [tool.pixi.tasks]
 setup_test = "mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python test.py"
 
-[tool.pixi.dependencies]
-python = "3.13.*"
-cupy = ">=13.4.1,<14"
-mpi4py = ">=4.0.3,<5"
-h5py = { version = ">=3.13.0,<4", build = "mpi*" }
-ruff = ">=0.11.8,<0.12"
-pre-commit = ">=4.2.0,<5"
-pytest = ">=8.3.5,<9"
-mypy = ">=1.15.0,<2"
-ipykernel = ">=6.29.5,<7"
-mpi = { version = ">=1.0,<2", build = "openmpi" }
-scipy = ">=1.15.2,<2"
-tqdm = ">=4.67.1,<5"
-matplotlib = ">=3.10.1,<4"
-scikit-image = ">=0.25.2,<0.26"
-coverage = ">=7.8.0,<8"
-furo = ">=2024.8.6,<2025"
-sphinx = ">=8.2.3,<9"
-sphinx_rtd_theme = ">=3.0.1,<4"
-sphinxcontrib-bibtex = ">=2.6.3,<3"
-sphinx-autoapi = ">=3.5.0,<4"
-sphinx-design = ">=0.6.1,<0.7"
+[tool.pixi.environments]
+default = { solve-group = "default" }
+doc = { features = ["doc"], solve-group = "default" }
+dev-gpu = { features = ["gpu", "dev", "doc", "test"], solve-group = "default" }
+dev-cpu = { features = ["cpu", "dev", "doc", "test"], solve-group = "default" }
 
-[dependency-groups]
-test = ["pytest"]
-docs = ["sphinx"]
-dev = [{include-group = "test"}, {include-group = "docs"}]
+[tool.pixi.feature.doc.dependencies]
+furo = "*"
+sphinx = "*"
+sphinx_rtd_theme = "*"
+sphinxcontrib-bibtex = "*"
+sphinx-autoapi = "*"
+sphinx-design = "*"
+
+[tool.pixi.feature.dev.dependencies]
+isort = "*"
+pre-commit = "*"
+conda-build = "*"
+
+[tool.pixi.feature.test.dependencies]
+pytest = "*"
+coverage = "*"
+
+[tool.pixi.feature.gpu.dependencies]
+cudatoolkit = "*"
+cupy = "*"
+ucx = "*"
+
+[tool.pixi.feature.gpu.system-requirements]
+cuda = "12.8"
+
+[tool.pixi.dependencies]
+mpi4py = ">=4.1.1,<5"
+openmpi = ">=5.0.8,<6"
+h5py = { version = ">=2.9", build = "mpi*" }
+scipy = ">=1.16.3,<2"
+imageio = ">=2.37.0,<3"
+tqdm = ">=4.67.1,<5"
+matplotlib = ">=3.10.8,<4"
+scikit-image = ">=0.25.2,<0.26"
+numba = ">=0.62.1,<0.63"
+numpy = ">=2.3.5,<3"
 
 [tool.ruff]
 target-version = "py312"
