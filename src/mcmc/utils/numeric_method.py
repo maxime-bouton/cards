@@ -1,9 +1,9 @@
 """Utility functions.."""
 
 from typing import Callable, Sequence
-
-import cupy as cp
 import torch
+
+# FIXME: commented cupy variant for now to simplify to avoid explicit cupy import
 
 
 def power_method(
@@ -12,7 +12,7 @@ def power_method(
     shape: Sequence[int],
     tol: float = 1e-4,
     max_iter: int = 300,
-    rng: torch.Generator | cp.random.BitGenerator | None = None,
+    rng: torch.Generator | None = None,  # cp.random.BitGenerator
 ) -> float:
     """
     Computes the largest singular value of an operator using the power method.
@@ -39,17 +39,17 @@ def power_method(
     float
         Estimated largest singular value.
     """
-    if isinstance(H, torch.nn.Module) or getattr(H, "__module__", "").startswith(
-        "torch"
-    ):
-        xp = torch
-        x = torch.rand(*shape, device=next(H.parameters()).device, generator=rng)  # type: ignore
-    else:
-        xp = cp
-        if rng is None:
-            x = cp.random.rand(*shape)
-        else:
-            x = rng.rand(shape)  # type: ignore
+    # if isinstance(H, torch.nn.Module) or getattr(H, "__module__", "").startswith(
+    #     "torch"
+    # ):
+    xp = torch
+    x = torch.rand(*shape, device=next(H.parameters()).device, generator=rng)  # type: ignore
+    # else:
+    #     xp = cp
+    #     if rng is None:
+    #         x = cp.random.rand(*shape)
+    #     else:
+    #         x = rng.rand(shape)  # type: ignore
 
     x /= xp.linalg.norm(x)
     val = 1.0

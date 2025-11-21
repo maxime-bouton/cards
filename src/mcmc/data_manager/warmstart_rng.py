@@ -167,6 +167,8 @@ def load_rng_np(rng: np.random.Generator, h5file: h5py.File) -> None:
     return
 
 
+# FIXME: to change, interface for pytorch rng has changed since 2.7
+# see https://docs.pytorch.org/docs/2.9/generated/torch.Generator.html#torch.Generator
 def save_rng_offset_torch(rng: torch._C.Generator, seed: int, h5file: h5py.File):
     r"""Save current state of a pytorch random number generator in a .h5 file
     using the offset from the initial seed state.
@@ -199,6 +201,8 @@ def save_rng_offset_torch(rng: torch._C.Generator, seed: int, h5file: h5py.File)
     return
 
 
+# FIXME: to change, interface for pytorch rng has changed since 2.7
+# see https://docs.pytorch.org/docs/2.9/generated/torch.Generator.html#torch.Generator
 def load_rng_offset_torch(rng: torch._C.Generator, h5file: h5py.File):
     r"""Load the state of a pytorch random number generator from a .h5 file using the offset from an initial seed state.
 

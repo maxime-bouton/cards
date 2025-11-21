@@ -9,6 +9,7 @@ from mcmc.denoisers.denoiser_loader import load_pretrained_ddfb
 from mcmc.operators.mpi_torch_convolution import MpiTorchConvolution
 
 
+# FIXME: investigate older shared_comm branch (some input not used)
 class MpiDDFB(BaseDistributedDenoiser):
     def __init__(
         self,

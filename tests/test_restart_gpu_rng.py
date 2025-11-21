@@ -1,11 +1,13 @@
 r"""Testing torch interface to restart random number generators."""
 
-import cupy as cp
+from mcmc.backend import bm
 import numpy as np
 import pytest
 import torch
 
 pytestmark = pytest.mark.torch
+
+# FIXME: dirty test writing, to be revised thoroughly
 
 
 @pytest.fixture
@@ -30,10 +32,13 @@ def n_trials():
 
 @pytest.mark.env("serial-gpu")
 def test_restart_gpu_rng(shape, n_trials, device):
+    bm.set_backend("cupy")
+    from mcmc.backend import xp
+
     rng = torch.Generator(device=device).manual_seed(1234)
 
     for i in range(n_trials):
-        A = cp.asarray(
+        A = xp.asarray(
             torch.normal(
                 torch.zeros(shape, device=device),
                 torch.ones(shape, device=device),
@@ -43,20 +48,29 @@ def test_restart_gpu_rng(shape, n_trials, device):
 
     rng2 = torch.Generator(device=device).manual_seed(1234)
 
-    offset = rng.get_offset()
-    rng2.set_offset(offset)
+    # TODO: new interface since torch=2.9: .set_state()/.get_state() on CPU, .graphsafe_get_state()/graphsafe_set_state() on GPU
+    # see: https://docs.pytorch.org/docs/2.9/generated/torch.Generator.html#torch.Generator
+    # if device.type == "cpu":
+    #     state = rng.get_state()
+    #     rng2.set_state(state)
+    # else:  # 'cuda'
+    #     state = rng.graphsafe_get_state()
+    #     rng2.graphsafe_set_state(state)
+
+    state = rng.get_offset()
+    rng2.set_offset(state)
 
     check = np.zeros(n_trials)
 
     for i in range(n_trials):
-        A = cp.asarray(
+        A = xp.asarray(
             torch.normal(
                 torch.zeros(shape, device=device),
                 torch.ones(shape, device=device),
                 generator=rng,
             )
         )
-        B = cp.asarray(
+        B = xp.asarray(
             torch.normal(
                 torch.zeros(shape, device=device),
                 torch.ones(shape, device=device),
@@ -64,7 +78,7 @@ def test_restart_gpu_rng(shape, n_trials, device):
             )
         )
 
-        check[i] = cp.allclose(A, B)
+        check[i] = xp.allclose(A, B)
 
     assert np.all(check)
 

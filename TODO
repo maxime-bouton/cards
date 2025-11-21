@@ -1,6 +1,29 @@
-- [ ] Secure the code (raise error)
-- [ ] Factorise (reduce redondences)
-- [ ] Write .yml file (incompatible packages)
-- [ ] Reorganize master branch.
-- [ ] Write clean unit tests.
+- [x] Factorise (reduce redondances)
 - [x] Investigate project packaging with `pixi` or `u`
+- [x] Fix `pixi` building issues (producing `.conda` package)
+- [ ] Create env configuration to fix CI (ensure no GPU dependency)
+- [ ] Fixing issue with tests in `mpi-cpu` configuration (tolerance issue, size issue)
+    ```python
+    FAILED tests/operators/test_torch_convolution.py::test_mpi_convolution - AssertionError: assert False
+    FAILED tests/test_distributed_save_load.py::test_distributed_save - ValueError: operands could not be broadcast together with shapes (50,50) (100,50)
+    ```
+- [ ] Fixing issues with tests in `mpi-gpu` configuration
+    ```python
+        tests/operators/test_mpi_denoisers.py::test_mpi_dncnn FAILED
+        tests/operators/test_mpi_denoisers.py::test_ddfb_no_comm FAILED
+    ```
+- [ ] Check `mpi-gpu` tests can be run with a single GPU (to processes aceesing the same accelerator)
+- [ ] Double check all code base with Maxime
+- [ ] Write clean unit tests.
+- [ ] Restructure README, separting base user installation from dev instructions
+- [ ] test installation .conda
+- [ ] voir publication .conda
+- [ ] Secure the code (raise error)
+- [ ] documenter denoiser
+- [ ] relire/completer doc
+- [ ] réduire redondence doc sphinx
+- [ ] getting started (doc sphinx), install, tuto
+- [ ] refaire tourner les expériences
+- [ ] estimateurs (variance par pixel)
+- [ ] utiliser factorisation communication dans les modèles
+- [ ] publication -> presentation librairie (JSS/JOSS)
