@@ -6,11 +6,8 @@ from mcmc.backend import xp
 def prox_nonegativity(x):
     return xp.maximum(x, 0)
 
-    return xp.maximum(x, 0)
-
 
 def l21_norm(x, axis=0):
-    return xp.sum(xp.sqrt(xp.sum(x**2, axis=axis)))
     return xp.sum(xp.sqrt(xp.sum(x**2, axis=axis)))
 
 

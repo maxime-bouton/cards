@@ -483,7 +483,6 @@ class CartesianCommSlicer(CommSlicer):
                 r"All entries in tile_size should be greater than send_size."
             )
 
-        # ! see if issue here due to redefinition of recv_size
         # number of elements handled (i.e., locally owned + received)
         self.facet_size = compute_local_buffer_size(
             self.ranknd,

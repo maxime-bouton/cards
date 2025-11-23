@@ -4,17 +4,15 @@ declared here will be called within the sampler.
 
 from abc import ABC, abstractmethod
 
-from numpy import random
-
 
 class BaseModel(ABC):
     @abstractmethod
-    def update(self, rng: random.Generator):
+    def update(self, rng):
         """update Global update of the model. May call the update method of several transition kernels.
 
         Parameters
         ----------
-        rng : random.Generator
+        rng : numpy.random.Generator
             Random number generator given by the sampler.
         """
         pass

@@ -43,7 +43,7 @@ class BaseCartesianCommunicator(ABC):
         Linear rank of the process.
     ranknd : numpy.ndarray[int]
         nD rank of the process.
-    cartslicer : dsgs.experimental.slicer.cartesian_comm_slicer.CartesianCommSlicer
+    cartslicer : mcmc.slicer.cartesian_comm_slicer.CartesianCommSlicer
         Slicer used to define and extract messages received to / sent from the
         current worker.
 
@@ -51,9 +51,9 @@ class BaseCartesianCommunicator(ABC):
     ----
         The following virtual methods need to be implemented in any daughter class:
 
-        - :meth:`dsgs.experimental.communicators.base_cartesian_communicator.BaseCartesianCommunicator._setup_communications`
-        - :meth:`dsgs.experimental.communicators.base_cartesian_communicator.BaseCartesianCommunicator._update_borders`
-        - :meth:`dsgs.experimental.communicators.base_cartesian_communicator.BaseCartesianCommunicator._remove`
+        - :meth:`mcmc.communicators.base_cartesian_communicator.BaseCartesianCommunicator._setup_communications`
+        - :meth:`mcmc.communicators.base_cartesian_communicator.BaseCartesianCommunicator._update_borders`
+        - :meth:`mcmc.communicators.base_cartesian_communicator.BaseCartesianCommunicator._remove`
     """
 
     def __init__(
@@ -120,11 +120,8 @@ class BaseCartesianCommunicator(ABC):
         self.send_size = send_size
         self.recv_size = recv_size
 
-        # secondary attributes
         self.ndims = grid_size.size
         self.rank = self.comm.Get_rank()
-
-        # ! only for Cartesian communicator, not needed for now
         # self.circular_boundaries = False
         # self.cartcomm = comm.Create_cart(
         #     dims=self.grid_size,
