@@ -1,7 +1,7 @@
 - [x] Factorise (reduce redondances)
 - [x] Investigate project packaging with `pixi` or `u`
 - [x] Fix `pixi` building issues (producing `.conda` package)
-- [ ] Create env configuration to fix CI (ensure no GPU dependency)
+- [x] Create env configuration to fix CI (ensure no GPU dependency)
 - [ ] Fixing issue with tests in `mpi-cpu` configuration (tolerance issue, size issue)
     ```python
     FAILED tests/operators/test_torch_convolution.py::test_mpi_convolution - AssertionError: assert False
@@ -15,13 +15,14 @@
 - [ ] Check `mpi-gpu` tests can be run with a single GPU (to processes aceesing the same accelerator)
 - [ ] Double check all code base with Maxime
 - [ ] Write clean unit tests.
-- [ ] Restructure README, separting base user installation from dev instructions
+- [ ] Restructure README, separating base user installation from dev instructions
 - [ ] test installation .conda
-- [ ] voir publication .conda
+- [ ] See how to publish .conda on a conda channel, or as a `pip` package
+
 - [ ] Secure the code (raise error)
 - [ ] documenter denoiser
 - [ ] relire/completer doc
-- [ ] réduire redondence doc sphinx
+- [ ] réduire redondances doc sphinx
 - [ ] getting started (doc sphinx), install, tuto
 - [ ] refaire tourner les expériences
 - [ ] estimateurs (variance par pixel)

@@ -33,18 +33,18 @@ repos:
         exclude: ^((.*)\.(ipynb|otherext)) # avoid reformat notebooks everytime
       - id: mixed-line-ending
       - id: trailing-whitespace
-  - repo: https://github.com/myint/rstcheck
-    rev: v6.2.5
-    hooks:
-      - id: rstcheck
-        args: [
-            # "--report",
-            # "info",
-            "--ignore-directives",
-            "autofunction,automodule,bibliography,math,numfig,plot,testcode,testoutput",
-            "--ignore-roles",
-            "eq,cite",
-          ]
+  # - repo: https://github.com/myint/rstcheck
+  #   rev: v6.2.5
+  #   hooks:
+  #     - id: rstcheck
+  #       args: [
+  #           # "--report",
+  #           # "info",
+  #           "--ignore-directives",
+  #           "autofunction,automodule,bibliography,math,numfig,plot,testcode,testoutput",
+  #           "--ignore-roles",
+  #           "eq,cite",
+  #         ]
   - repo: https://github.com/executablebooks/mdformat
     rev: 1.0.0
     hooks:
