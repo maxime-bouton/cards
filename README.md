@@ -28,14 +28,14 @@
 
 ## Description
 
-This Python library provides elementary operators, MPI communicators and samplers to facilitate the design of custom distributed Plug-and-Play (PnP) MCMC algorithms for high-dimensional Bayesian inference.
-Detailed examples provided focus on the resolution of high-dimensional inverse problems typical in signal and image processing applications.
+This Python library provides elementary operators, MPI communicators and samplers to facilitate the design of custom distributed Plug-and-Play (PnP) Markov chain Monte Carlo (MCMC) algorithms for high-dimensional Bayesian inference.
+Detailed examples provided in this repository focus on the resolution of high-dimensional inverse problems in image and signal processing.
 
 :warning: **WARNING** This project is under active development, and the API may evolve significantly until version `1.0`.
 
 ## Installation
 
-- The package can be installed on `ubuntu` with `cuda` GPU support within an existing `conda`-like Python environment (e.g., `pixi`, `mamba` or `conda`). Example installation commands can be found below.
+- The Python package can be installed on `ubuntu` with `cuda` GPU support within an existing `conda`-like environment (e.g., using either `pixi`, `mamba` or `conda`). Example installation commands can be found below.
 
   ```bash
   # within a mamba environment
@@ -47,7 +47,7 @@ Detailed examples provided focus on the resolution of high-dimensional inverse p
   pixi add cards
   ```
 
-- A distributed implementation is provided for a the `DRUNet`, `DnCNN` and `DDFB` deep denoisers.
+- A distributed implementation is provided for the `DRUNet`, `DnCNN` and `DDFB` deep denoisers.
   Pre-trained weights are not embedded into the `cards` `conda`-package.
   The weights need to be retrieved separately, using for instance the commands detailed below.
 
@@ -81,8 +81,8 @@ Detailed examples provided focus on the resolution of high-dimensional inverse p
 
 ## Contributing
 
-Short guidelines on how to set-up, test and document the library project are detailed below.
-See the [online documentation](https://maxime-bouton.github.io/cards/) for futher details.
+Short guidelines on conventions adopted to set-up, test and document the library are detailed below.
+See the [online documentation](https://maxime-bouton.github.io/cards/) for further details.
 
 <details>
 
@@ -92,7 +92,7 @@ See the [online documentation](https://maxime-bouton.github.io/cards/) for futhe
 
 - Only pull-requests compatible with the [`pixi`](https://pixi.sh/latest/) Python package manager will be considered.
 
-- Clone the project and create a development environment using the command below.
+- Clone the project and create a development environment using the commands below.
 
 ```bash
 pixi self-update
@@ -111,7 +111,7 @@ pixi shell --environment full
 
 ### Testing
 
-Before any commit to the master branch or pull request, verify all tests pass under the different configuration considered (see [`tests/conftest.py`](tests/conftestpy) for further details).
+Before any commit or pull request to the master branch, verify all tests pass under the different configuration considered (see [`tests/conftest.py`](tests/conftestpy) for further details).
 
 ```bash
 pixi shell -e full

@@ -1,10 +1,10 @@
 cards documentation
 ===================
 
-This Python library provides elementary operators, MPI communicators and samplers to facilitate the design of custom distributed Plug-and-Play (PnP) MCMC algorithms for high-dimensional Bayesian inference.
-Distributed implementation is primarily oriented towards SMPD algorithms running on multiple CPUs or GPUs.
+This Python library provides elementary operators, MPI communicators and samplers to facilitate the design of custom distributed Plug-and-Play (PnP) Markov chain Monte Carlo (MCMC) algorithms for high-dimensional Bayesian inference.
+The distributed functionalitites proposed in this library are primarily oriented towards SMPD algorithms running on multiple CPUs or GPUs.
 
-The library contains codes to reproduce the experiments reported in :cite:p:`Bouton2025`.
+The library also contains codes to reproduce the image processing experiments reported in :cite:p:`Bouton2025`.
 
 
 .. warning::

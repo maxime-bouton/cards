@@ -25,7 +25,7 @@ Testing
 Running tests
 ^^^^^^^^^^^^^
 
-Before any commit to the master branch or pull request, verify all tests pass under the different configuration considered.
+Before any commit or pull request to the master branch, verify all tests pass under the different configuration considered.
 
 .. tab-set::
     .. tab-item:: Running all tests
@@ -101,7 +101,7 @@ Packaging
 Building the documentation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Most functionalities are fully documented using the ``numpy`` docstring style.
+Documentation follows the ``numpy`` docstring style.
 Starting from scratch, the documentation can be built using `sphinx-autoapi <https://sphinx-autoapi.readthedocs.io/en/latest/tutorials.html>`_.
 
 .. code-block:: bash
@@ -110,7 +110,7 @@ Starting from scratch, the documentation can be built using `sphinx-autoapi <htt
     # sphinx-build [OPTIONS] SOURCEDIR OUTPUTDIR [FILENAMES...]
     sphinx-build -b html . _build
 
-To move to manual documentation, update the field in ``doc/conf.py`` `as follows <https://sphinx-autoapi.readthedocs.io/en/latest/how_to.html#how-to-transition-to-manual-documentation>`_.
+To deactivate automatic API update and generation, update the field in ``doc/conf.py`` `as follows <https://sphinx-autoapi.readthedocs.io/en/latest/how_to.html#how-to-transition-to-manual-documentation>`_.
 
 .. code-block:: python
 
@@ -128,7 +128,7 @@ Building and publishing the conda package
         pixi shell -e full
         pixi build
 
-- To locally verify the build step is successful, one may create a new test ``pixi`` workspace (``pixi init . --format pyproject```), and modify the associated ``pyproject.toml`` as follows
+- To locally verify the build step is successful, one may create a new test workspace with ``pixi`` (``pixi init . --format pyproject```), and modify the associated ``pyproject.toml`` as follows
 
     .. code-block:: toml
 

@@ -1,21 +1,3 @@
-- [x] Factorise (reduce redondances)
-- [x] Investigate project packaging with `pixi` or `u`
-- [x] Fix `pixi` building issues (producing `.conda` package)
-- [x] Create env configuration to fix CI (ensure no GPU dependency)
-- [x] Fixing issue with tests in `mpi-cpu` configuration (tolerance issue, size issue)
-    ```python
-    FAILED tests/operators/test_torch_convolution.py::test_mpi_convolution - AssertionError: assert False
-    FAILED tests/test_distributed_save_load.py::test_distributed_save - ValueError: operands could not be broadcast together with shapes (50,50) (100,50)
-    ```
-- [x] Fixing issues with tests in `mpi-gpu` configuration
-    ```python
-        tests/operators/test_mpi_denoisers.py::test_mpi_dncnn FAILED
-        tests/operators/test_mpi_denoisers.py::test_ddfb_no_comm FAILED
-    ```
-- [x] Check `mpi-gpu` tests can be run with a single GPU (allow multiple workers to access the same GPU)
-- [ ] Write clean unit tests
-
-- [x] See how to publish .conda on a conda channel, or as a `pip` package
 - [x] indentify installation instructions from local `.conda` package file
   -  `conda install <PATH_TO_PACKAGE>.conda` ([reference](https://www.anaconda.com/docs/getting-started/working-with-conda/packages/install-packages))
   -  in pixi, see [reference](https://pixi.sh/latest/reference/cli/pixi/global/install/)
@@ -36,23 +18,21 @@
     - https://www.anaconda.com/docs/tools/anaconda-org/maintainer-guide/hosted-packages
 - [x] testing build instruction in a simplified configuration
   - [specific build documentation](https://prefix-dev.github.io/pixi-build-backends/)
-- [x] test package currently built is functional
 
-- fix path to denoiser weights (examples, tests, ...), see `load_pretrained_denoiser`
-    - [x] impose / expose path to weights for all denoisers
-    - [x] upload DDFB weights on the git
 - [ ] Double check all code base with Maxime
 - [ ] Restructure README, separating base user installation from dev instructions
-- [ ] Add testing built package functionality to ci
+- [ ] Add testing CI instruction to build the package under different configurations?
 
 -  documentation
-   - [ ] README (setup infomation, dev imformation to sphinx / auxiliary panel "contributing")
+   - [ ] README (setup infomation, dev information to sphinx / auxiliary panel "contributing")
    - [x] add note to disable ci `[skip ci]` in commit message, or `git push -o ci.skip`
    - [x] MYULA
    - [ ] PSGLA
-   - [ ] MML
+   - [ ] estimators
    - [ ] slicers
    - [ ] samplers
+   - [ ] denoisers
+   - [ ] MML
 
 - v1.0 (Januray 2026 and later)
   - fix all mpi gpu codes: multiple workers should be able to work on the same GPU, seeds to be revised accordingly
@@ -70,12 +50,8 @@
   - [ ] generate changelogs with [`towncrier`](https://towncrier.readthedocs.io/en/stable/index.html)
   - [ ] revise writing for the tutorial + display in the sphinx documentation
 
-- [ ] Secure the code (raise error)
-- [ ] documenter denoiser
-- [ ] relire/completer doc
 - [ ] réduire redondances doc sphinx
 - [ ] getting started (doc sphinx), install, tuto
 - [ ] refaire tourner les expériences
 - [ ] estimateurs (variance par pixel)
 - [ ] utiliser factorisation communication dans les modèles
-- [ ] publication -> presentation librairie (JSS/JOSS)
