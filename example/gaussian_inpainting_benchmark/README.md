@@ -18,8 +18,8 @@ mamba init
 
 ```bash
 # https://stackoverflow.com/questions/62359175/pytorch-says-that-cuda-is-not-available-on-ubuntu
-mamba create --name mcmc numba numpy openmpi ucx cuda cudatoolkit cupy pytorch torchvision -c pytorch -c conda-forge -c nvidia
-mamba activate mcmc
+mamba create --name cards numba numpy openmpi ucx cuda cudatoolkit cupy pytorch torchvision -c pytorch -c conda-forge -c nvidia
+mamba activate cards
 
 # mamba install -c conda-forge cuda-nvcc cuda-nvrtc "cuda-version>=12.0"
 # mamba install cuda-cudart cuda-version=12
@@ -45,8 +45,8 @@ mamba env export > zeus_linux_`uname -m`_environment.yml
 <!-- - Manual installation based on `mpich`, tested on `epeautre`
 
 ```bash
-mamba create --name mcmc python=3.12 -y  # (3.12 required for cupy as of 15/12/2024)
-mamba activate mcmc
+mamba create --name cards python=3.12 -y  # (3.12 required for cupy as of 15/12/2024)
+mamba activate cards
 
 # GPU packages
 mamba install mpich ucx -y # openmpi ucx
@@ -83,7 +83,7 @@ mamba env export > zeus_linux_`uname -m`_environment.yml
 
 ```bash
 cd examples/benchmark
-mamba env create --name mcmc -f zeus_linux_`uname -m`_environment.yml
+mamba env create --name cards -f zeus_linux_`uname -m`_environment.yml
 cd ../../
 conda develop src
 ```
@@ -129,7 +129,7 @@ mpirun -x OMPI_MCA_pml=ucx \
 To test the code/docstring coverage locally, run the following commands
 
 ```bash
-mamba activate mcmc
+mamba activate cards
 python -m pytest --collect-only
 export NUMBA_DISABLE_JIT=1 # need to disable jit compilation to check test coverage
 coverage run -m pytest # check all tests
@@ -143,7 +143,7 @@ docstr-coverage . # check docstring coverage and generate the associated badge
 To launch a single test, run a command of the form
 
 ```bash
-mamba activate mcmc
+mamba activate cards
 python -m pytest tests/operators/test_crop.py
 pytest --markers  # check full list of markers availables
 pytest -m "not mpi" --ignore-glob=**/archive_unittest/* # run all tests not marked as mpi + ignore files in any directory "archive_unittest"
@@ -153,7 +153,7 @@ mpiexec -n 2 python -m mpi4py -m pytest -m mpi  # run all tests marked mpi with 
 To measure code quality with `wily`
 
 ```bash
-wily report mcmc -f HTML -o docs/build/wily_report.html
+wily report cards -f HTML -o docs/build/wily_report.html
 ```
 
 ## Compiling and publishing the documentation

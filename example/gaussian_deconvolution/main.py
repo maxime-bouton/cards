@@ -1,10 +1,11 @@
-from mcmc.utils.main_helper import run_main
 from utils_data import (
-    gaussian_deconvolution_params,
-    define_slices,
     build_obs_and_model_paths,
+    define_slices,
+    gaussian_deconvolution_params,
     generate_gaussian_deconvolution_observations,
 )
+
+from cards.utils.main_helper import run_main
 
 if __name__ == "__main__":
     run_main(

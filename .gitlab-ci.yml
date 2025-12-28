@@ -1,7 +1,7 @@
 image: ghcr.io/prefix-dev/pixi:latest
 
 variables:
-  PIXI_CACHE_DIR: ".pixi-cache"
+  PIXI_CACHE_DIR: "$CI_PROJECT_DIR/.pixi-cache"
   FF_USE_FASTZIP: "true"
   CACHE_COMPRESSION_LEVEL: "fastest"
 
@@ -25,7 +25,7 @@ install-env:
     - linux
   script:
     - sed -i 's|["'\'']conda-forge["'\'']|"http://nexus.priv.lifl.fr:8081/repository/conda-forge-proxy"|' pyproject.toml
-    - pixi install --environment dev-cpu --frozen
+    - pixi install --environment test --frozen
   cache:
     policy: pull-push
 
@@ -38,7 +38,6 @@ test:
     - linux
   script:
     - ls -alh .pixi-cache || echo "Pas de cache Pixi"
-    - pixi run --environment dev-cpu python -m pytest -C serial-cpu
-    # - pixi run mpirun --allow-run-as-root -np 2 pytest tests/operators/test_gradient.py
+    - pixi run --environment test pytest
   cache:
     policy: pull

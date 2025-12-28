@@ -1,147 +1,98 @@
-import pytest
 import numpy as np
+import pytest
 from mpi4py import MPI
 
-from mcmc.backend import bm
+from cards.backend import xp
+from cards.operators.gradient import Gradient2d
+from cards.operators.mpi_gradient import MpiGradient2d
 
 
 @pytest.fixture
-def seed():
-    return 1234
+def input_size(input_shape):
+    return np.array(input_shape)
 
 
-@pytest.fixture
-def dims():
-    return np.array([10, 12, 121, 75], "i")
-
-
-@pytest.fixture
-def comm():
-    return MPI.COMM_WORLD
-
-
-@pytest.mark.env("serial-cpu")
-@pytest.mark.env("serial-gpu")
-def test_basic_check(dims, cmdopt):
-    if cmdopt == "serial-gpu":
-        bm.set_backend("cupy")
-    from mcmc.backend import xp
-    from mcmc.operators.gradient import Gradient2d
-
-    X = xp.ones(dims)
-    gradient_operator = Gradient2d(dims)
+@pytest.mark.serial
+def test_basic_check(input_size):
+    """
+    Test that the gradient of a constant array is zero.
+    """
+    X = xp.ones(input_size)
+    gradient_operator = Gradient2d(input_size)
 
     grad = gradient_operator.forward(X)
 
     assert xp.amax(np.abs(grad)) == 0
 
 
-@pytest.mark.env("serial-cpu")
-@pytest.mark.env("serial-gpu")
-def test_adjoint(seed, dims, cmdopt):
-    if cmdopt == "serial-gpu":
-        bm.set_backend("cupy")
-    from mcmc.backend import xp
-    from mcmc.operators.gradient import Gradient2d
-
+@pytest.mark.serial
+def test_adjoint(seed, input_size):
+    """
+    Test the adjoint property of the gradient operator in serial setting.
+    """
     rng = xp.random.default_rng(seed)
-    X = rng.standard_normal(dims)
-    Y = rng.standard_normal(np.asarray((2, *dims)))
+    X = rng.standard_normal(input_size)
+    Y = rng.standard_normal(np.asarray((2, *input_size)))
 
-    gradient_operator = Gradient2d(dims)
-
-    Hx = gradient_operator.forward(X)
-    Hy = gradient_operator.adjoint(Y)
+    grad_op = Gradient2d(input_size)
+    Hx = grad_op.forward(X)
+    Hy = grad_op.adjoint(Y)
 
     xHy = xp.sum(X * Hy)
     Hxy = xp.sum(Hx * Y)
 
-    assert isinstance(Hx, xp.ndarray)
-    assert isinstance(Hy, xp.ndarray)
-    assert xp.isclose(Hxy, xHy, atol=1e-15)
+    xp.testing.assert_allclose(Hxy, xHy)
 
 
-@pytest.mark.env("mpi-cpu")
-@pytest.mark.env("mpi-gpu")
-def test_adjoint_mpi(comm, dims, seed, cmdopt):
+@pytest.mark.mpi
+def test_adjoint_mpi(comm, input_size, seed):
+    """
+    Test the adjoint property of the gradient operator in MPI setting.
+    """
     rank = comm.Get_rank()
     comm_size = comm.Get_size()
-    grid_dims = np.asarray(MPI.Compute_dims(comm_size, len(dims)), dtype=int)
+    grid_dims = np.array([1, *MPI.Compute_dims(comm_size, 2)])
     cart_comm = comm.Create_cart(dims=grid_dims)
 
-    print(cart_comm.Get_coords(cart_comm.Get_rank()))
-
-    if cmdopt == "mpi-gpu":
-        bm.set_backend("cupy")
-        from mcmc.backend import xp
-
-        nb_gpu = xp.cuda.runtime.getDeviceCount()
-        gpu_id = rank % nb_gpu
-        xp.cuda.runtime.setDevice(gpu_id)
-    else:
-        bm.set_backend("numpy")
-        from mcmc.backend import xp
-
-    from mcmc.backend import xp
-    from mcmc.operators.mpi_gradient import MpiGradient2d
-
-    gradient_handler = MpiGradient2d(dims, grid_dims, comm)
+    grad_op = MpiGradient2d(input_size, grid_dims, comm)
 
     rng = xp.random.default_rng(seed)
 
-    X = xp.zeros(dims)
-    Y = xp.zeros((2, *dims))
+    X = xp.zeros(input_size)
+    Y = xp.zeros((2, *input_size))
 
     if rank == 0:
-        X = rng.standard_normal(dims)
-        Y = rng.standard_normal((2, *dims))
-
+        X = rng.standard_normal(input_size)
+        Y = rng.standard_normal((2, *input_size))
     cart_comm.Bcast([X, MPI.DOUBLE], root=0)
     cart_comm.Bcast([Y, MPI.DOUBLE], root=0)
 
-    local_slice = (
-        gradient_handler.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
-    )
+    local_slice = grad_op.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
 
     local_X = X[local_slice]
-    local_Y = xp.zeros((2, *gradient_handler.adj_cart_comm_h.cartslicer.tile_size))
-    local_adj = xp.zeros(gradient_handler.adj_cart_comm_h.cartslicer.tile_size)
+    local_Y = xp.zeros((2, *grad_op.adj_cart_comm_h.cartslicer.tile_size))
+    local_adj = xp.zeros(grad_op.adj_cart_comm_h.cartslicer.tile_size)
     local_slice_h = (
-        gradient_handler.adj_cart_comm_h.cartslicer._get_slice_global_buffer_to_tile()
+        grad_op.adj_cart_comm_h.cartslicer._get_slice_global_buffer_to_tile()
     )
     local_slice_v = (
-        gradient_handler.adj_cart_comm_v.cartslicer._get_slice_global_buffer_to_tile()
+        grad_op.adj_cart_comm_v.cartslicer._get_slice_global_buffer_to_tile()
     )
 
     slice_h = np.s_[0, *local_slice_h]
     slice_v = np.s_[1, *local_slice_v]
-    local_Y[0, ...] = Y[slice_h]
-    local_Y[1, ...] = Y[slice_v]
+    local_Y[0] = Y[slice_h]
+    local_Y[1] = Y[slice_v]
 
-    local_grad = gradient_handler.forward(local_X)
-    local_adj = gradient_handler.adjoint(local_Y)
+    local_grad = grad_op.forward(local_X)
+    local_adj = grad_op.adjoint(local_Y)
 
-    assert isinstance(local_adj, xp.ndarray)
-    assert isinstance(local_grad, xp.ndarray)
-
-    local_Hxy = xp.sum(
-        local_grad[0] * local_Y[0, ...] + local_grad[1] * local_Y[1, ...]
-    )
+    local_Hxy = xp.sum(local_grad[0] * local_Y[0] + local_grad[1] * local_Y[1])
     local_xHy = xp.sum(X[local_slice] * local_adj)
 
     Hxy = 0
     xHy = 0
-    Hxy = comm.reduce(local_Hxy, MPI.SUM, root=0)
-    xHy = comm.reduce(local_xHy, MPI.SUM, root=0)
-    if rank == 0:
-        assert xp.isclose(Hxy, xHy, atol=1e-10)
+    Hxy = comm.allreduce(local_Hxy, MPI.SUM)
+    xHy = comm.allreduce(local_xHy, MPI.SUM)
 
-
-if __name__ == "__main__":
-    default_seed = 1234
-    default_dims = np.asarray([100, 75])
-
-    test_basic_check(default_dims)
-    test_adjoint(default_seed, default_dims)
-
-# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py -m pytest test_gradient.py -C mpi-gpu
+    xp.testing.assert_allclose(Hxy, xHy)

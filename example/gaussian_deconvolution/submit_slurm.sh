@@ -25,7 +25,7 @@ ncores=1
 
 # path to conda environment to conda and name of conda environment to be used
 conda_path=/home/pierreantoine.thouvenin/miniforge3/bin/activate
-env_name=mcmc
+env_name=cards
 
 # deactivate JIT compilation for fair comparison with C++
 # export NUMBA_NUM_THREADS=1

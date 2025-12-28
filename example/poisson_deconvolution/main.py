@@ -1,4 +1,4 @@
-from mcmc.utils.main_helper import run_main
+from cards.utils.main_helper import run_main
 
 from utils_poisson_deconvolution import (
     poisson_deconvolution_params,

@@ -1,102 +1,79 @@
-import pytest
 import numpy as np
+import pytest
 from mpi4py import MPI
-from mcmc.backend import bm
 
-# FIXME: dirty test writing, to be revised thoroughly
-
-
-@pytest.fixture
-def seed():
-    return 1234
+from cards.backend import xp
+from cards.operators.dft_convolution import DftConvolution
+from cards.operators.mpi_dft_convolution import MpiDftConvolution
+from cards.utils.utils import expand_shape_left
 
 
 @pytest.fixture
-def dims():
-    return np.array([100, 75], "i")
+def kernel_size(input_shape) -> np.ndarray:
+    return np.array(expand_shape_left((5, 3), ndim=len(input_shape)))
 
 
 @pytest.fixture
-def kernel_dims():
-    return np.array([4, 3], "i")
+def input_size(input_shape) -> np.ndarray:
+    return np.array(input_shape)
+
+
+@pytest.fixture(params=[1, 2])
+def grid_ndim(request: pytest.FixtureRequest) -> int:
+    return request.param
 
 
 @pytest.fixture
-def comm():
-    return MPI.COMM_WORLD
+def grid_shape(
+    comm: MPI.Comm,
+    grid_ndim: int,
+    input_shape: tuple[int, ...],
+) -> tuple[int, ...]:
+    return expand_shape_left(
+        MPI.Compute_dims(comm.Get_size(), grid_ndim),
+        ndim=len(input_shape),
+    )
 
 
-@pytest.mark.env("serial-cpu")
-@pytest.mark.env("serial-gpu")
-def test_adjoint(seed, dims, kernel_dims, cmdopt):
-    if cmdopt == "serial-gpu":
-        bm.set_backend("cupy")
-
-    from mcmc.backend import xp
-    from mcmc.operators.dft_convolution import DftConvolution  # noqa: E402
-
+@pytest.mark.serial
+def test_adjoint(seed, input_size, kernel_size):
+    """
+    Test the adjoint property of the DFT convolution operator in serial setting.
+    """
     rng = xp.random.default_rng(seed)
-    X = rng.standard_normal(dims)
-    Y = rng.standard_normal(dims + kernel_dims - 1)
-    kernel = rng.standard_normal(kernel_dims)
+    X = rng.random(input_size)
+    Y = rng.random(input_size + kernel_size - 1)
+    kernel = rng.random(kernel_size)
 
-    convolution_handler = DftConvolution(dims, kernel, tuple(dims + kernel_dims - 1))
+    conv = DftConvolution(input_size, kernel, input_size + kernel_size - 1)
 
-    Hx = convolution_handler.forward(X)
-    Hy = convolution_handler.adjoint(Y)
+    Hx = conv.forward(X)
+    Hy = conv.adjoint(Y)
 
     Hxy = xp.sum(Hx * Y)
     xHy = xp.sum(X * Hy)
 
-    assert isinstance(Hx, xp.ndarray)
-    assert np.isclose(Hxy, xHy, atol=1e-10)
+    xp.testing.assert_allclose(Hxy, xHy, atol=1e-10)
 
 
-@pytest.mark.env("mpi-cpu")
-@pytest.mark.env("mpi-gpu")
-def test_adjoint_mpi(seed, dims, kernel_dims, comm, cmdopt):
-    rank = comm.Get_rank()
-    comm_size = comm.Get_size()
+@pytest.mark.mpi
+def test_adjoint_mpi(seed, input_size, kernel_size, comm, rank, grid_shape):
+    """
+    Test the adjoint property of the DFT convolution operator in distributed settings.
+    """
+    output_size = input_size + kernel_size - 1
 
-    if cmdopt == "mpi-gpu":
-        bm.set_backend("cupy")
+    rng = xp.random.default_rng(seed)
+    X = rng.random(input_size)
+    Y = rng.random(output_size)
+    kernel = rng.random(kernel_size)
 
-    from mcmc.backend import xp
-    from mcmc.operators.mpi_dft_convolution import MpiDftConvolution
-
-    nb_gpu = 0
-    gpu_id = 0
-    if cmdopt == "mpi-gpu":
-        nb_gpu = xp.cuda.runtime.getDeviceCount()
-        gpu_id = rank % nb_gpu
-
-        xp.cuda.runtime.setDevice(gpu_id)
-
-    grid_dims = np.asarray(MPI.Compute_dims(comm_size, 2))
-
-    convo_dims = dims + kernel_dims - np.ones_like(dims)
-
-    X = xp.zeros(dims)
-    kernel = xp.zeros(kernel_dims)
-    Y = xp.zeros(convo_dims)
-
-    if rank == 0:
-        rng = xp.random.default_rng(seed)
-        if cmdopt == "mpi-gpu":
-            with xp.cuda.Device(0):
-                X = rng.standard_normal(dims)
-                Y = rng.standard_normal(convo_dims)
-                kernel = rng.standard_normal(kernel_dims)
-        else:
-            X = rng.standard_normal(dims)
-            Y = rng.standard_normal(convo_dims)
-            kernel = rng.standard_normal(kernel_dims)
-
-    comm.Bcast([X, MPI.DOUBLE], root=0)
-    comm.Bcast([Y, MPI.DOUBLE], root=0)
-    comm.Bcast([kernel, MPI.DOUBLE], root=0)
-
-    convolution_handler = MpiDftConvolution(dims, kernel, comm, grid_dims)
+    convolution_handler = MpiDftConvolution(
+        input_size,
+        kernel,
+        comm,
+        np.array(grid_shape),
+    )
 
     local_X = X[
         convolution_handler.direct_communicator.cartslicer.slice_global_buffer_to_tile
@@ -108,28 +85,13 @@ def test_adjoint_mpi(seed, dims, kernel_dims, comm, cmdopt):
     local_Hx = convolution_handler.forward(local_X)
     local_Hy = convolution_handler.adjoint(local_Y)
 
-    assert isinstance(local_Hx, xp.ndarray)
-    assert isinstance(local_Hy, xp.ndarray)
-
-    local_Hxy = np.sum(local_Hx * local_Y)
-    local_xHy = np.sum(local_X * local_Hy)
+    local_Hxy = xp.sum(local_Hx * local_Y)
+    local_xHy = xp.sum(local_X * local_Hy)
 
     Hxy = 0
     xHy = 0
 
-    Hxy = comm.reduce(local_Hxy, MPI.SUM, root=0)
-    xHy = comm.reduce(local_xHy, MPI.SUM, root=0)
+    Hxy = comm.allreduce(local_Hxy, MPI.SUM)
+    xHy = comm.allreduce(local_xHy, MPI.SUM)
 
-    if rank == 0:
-        assert xp.isclose(Hxy, xHy, atol=1e-10)
-
-
-if __name__ == "__main__":
-    default = "serial-cpu"
-    default_seed = 1234
-    default_dims = np.asarray([100, 75])
-    default_kernel_dims = np.asarray([4, 3])
-
-    test_adjoint(default_seed, default_dims, default_kernel_dims, default)
-
-# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py -m pytest test_dft_convolution.py -C mpi-gpu
+    xp.testing.assert_allclose(Hxy, xHy)

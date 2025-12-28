@@ -4,10 +4,10 @@
     "nbCheckpoint" : 10,
     "alpha" : 9.0,
     "regularizationCoefficient" : 0.2,
-    "savePath" : "/data2/pthouvenin/python/benchmark/pymcmc/inpainting/cameraman/sample/",
+    "savePath" : "/data2/pthouvenin/python/benchmark/cards/inpainting/cameraman/sample/",
     "reload" : false,
     "numLoadedBatch" : -1,
-    "reloadSavePath" : "/data2/pthouvenin/python/benchmark/pymcmc/inpainting/cameraman/resumed/",
+    "reloadSavePath" : "/data2/pthouvenin/python/benchmark/cards/inpainting/cameraman/resumed/",
     "originPath" : "../../data/cameraman.h5",
     "mask_loss" : 0.4,
     "data_seed" : 1234,
@@ -15,5 +15,5 @@
     "maximum" : 255.0,
     "seed" : 1234,
     "burnin" : 5,
-    "logFilename": "/data2/pthouvenin/python/benchmark/pymcmc/inpainting/cameraman/gaussian_inpainting_cameraman.log"
+    "logFilename": "/data2/pthouvenin/python/benchmark/cards/inpainting/cameraman/gaussian_inpainting_cameraman.log"
 }

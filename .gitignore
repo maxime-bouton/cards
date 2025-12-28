@@ -274,11 +274,14 @@ $RECYCLE.BIN/
 *.pyc
 .vscode
 *.h5
+data/weights/drunet/*.pth
+data/weights/dncnn/dncnn*.pth
+doc/autoapi/*
+doc/_build/*
 
 # pixi environments
 .pixi
 *.egg-info
-# pixi environments
 .pixi/*
 !.pixi/config.toml
 *.conda
