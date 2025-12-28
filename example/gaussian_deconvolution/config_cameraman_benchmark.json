@@ -4,10 +4,10 @@
     "nbCheckpoint" : 10,
     "alpha" : 1e-3,
     "regularizationCoefficient" : 1e2,
-    "savePath" : "/data2/pthouvenin/python/benchmark/mcmc/deconvolution/cameraman/sample/",
+    "savePath" : "/data2/pthouvenin/python/benchmark/cards/deconvolution/cameraman/sample/",
     "reload" : false,
     "numLoadedBatch" : -1,
-    "reloadSavePath" : "/data2/pthouvenin/python/benchmark/mcmc/deconvolution/cameraman/resumed/",
+    "reloadSavePath" : "/data2/pthouvenin/python/benchmark/cards/deconvolution/cameraman/resumed/",
     "originPath" : "../../data/cameraman.h5",
     "kernel_size" : 5,
     "kernel_std" : 1,
@@ -16,5 +16,5 @@
     "maximum" : 1.0,
     "seed" : 1234,
     "burnin" : 5,
-    "logFilename": "/data2/pthouvenin/python/benchmark/mcmc/deconvolution/cameraman/gaussian_deconvolution_cameraman.log"
+    "logFilename": "/data2/pthouvenin/python/benchmark/cards/deconvolution/cameraman/gaussian_deconvolution_cameraman.log"
 }

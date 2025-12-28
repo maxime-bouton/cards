@@ -8,8 +8,8 @@ from socket import gethostname
 import numpy as np
 from inpainting_sampling_utils import compute_distributed, compute_gpu, compute_serial
 
-from mcmc.operators.inpainting_v2 import SerialInpainting
-from mcmc.utils.utils import (
+from cards.operators.inpainting_v2 import SerialInpainting
+from cards.utils.utils import (
     analyze_data,
     generate_observations,
     load_args_analysis_from_json,

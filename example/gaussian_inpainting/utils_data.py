@@ -2,12 +2,12 @@ import h5py
 import numpy as np
 from scipy import interpolate
 
-from mcmc.backend import xp
-from mcmc.operators.masking import Masking
-from mcmc.utils.path_builder import gaussian_str, inpainting_str, obs_dir
-from mcmc.utils.utils import extract_subset_from_dict
-from mcmc.utils.utils_img import load_img, read_img_shape
-from mcmc.utils.utils_observations import (
+from cards.backend import xp
+from cards.operators.masking import Masking
+from cards.utils.path_builder import gaussian_str, inpainting_str, obs_dir
+from cards.utils.utils import extract_subset_from_dict
+from cards.utils.utils_img import load_img, read_img_shape
+from cards.utils.utils_observations import (
     apply_target_gaussian_noise,
     fit_mask_shape,
     generate_and_save_observations,

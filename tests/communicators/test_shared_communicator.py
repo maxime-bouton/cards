@@ -1,72 +1,84 @@
-from mpi4py import MPI
+"""Tests for `SharedCommunicator` class."""
 
 import numpy as np
-
-from mcmc.communicator.shared_communicator import Shared_Communicator
-from mcmc.operators.mpi_gradient import MpiGradient2d
-from mcmc.operators.mpi_dft_convolution import MpiDftConvolution
-
 import pytest
+from mpi4py import MPI
 
-# TODO np->xp
-
-
-@pytest.fixture
-def seed():
-    return 1234
-
-
-@pytest.fixture
-def dims():
-    return np.array([6, 124, 75], "i")
+from cards.backend import xp
+from cards.communicator.shared_communicator import SharedCommunicator
+from cards.operators.mpi_dft_convolution import MpiDftConvolution
+from cards.operators.mpi_gradient import MpiGradient2d
+from cards.utils.utils import expand_shape_left
 
 
 @pytest.fixture
-def comm():
-    return MPI.COMM_WORLD
+def kernel_shape() -> tuple[int, ...]:
+    return (5, 3)
+
+
+@pytest.fixture(params=[1, 2])
+def grid_ndim(request: pytest.FixtureRequest) -> int:
+    return request.param
 
 
 @pytest.fixture
-def kernel_dims():
-    return np.array([2, 4, 3], "i")
-
-
-def test_shared_comm(seed, dims, kernel_dims, comm):
-    comm_size = comm.Get_size()
-    rank = comm.Get_rank()
-    grid_dims = np.asarray(MPI.Compute_dims(comm_size, len(dims)))
-    cart_comm = comm.Create_cart(dims=grid_dims)
-
-    rng = np.random.default_rng(seed)
-
-    X = np.zeros(dims)
-    kernel = np.zeros(kernel_dims)
-
-    if rank == 0:
-        X = rng.standard_normal(dims)
-        kernel = rng.standard_normal(kernel_dims)
-
-    cart_comm.Bcast([X, MPI.DOUBLE], root=0)
-    cart_comm.Bcast([kernel, MPI.DOUBLE], root=0)
-
-    grad_op = MpiGradient2d(dims, grid_dims, comm)
-    convolution_op = MpiDftConvolution(dims, kernel, comm, grid_dims)
-
-    shared_comm = Shared_Communicator(
-        comm, grid_dims, dims, {"grad": grad_op, "conv": convolution_op}
+def grid_shape(
+    comm: MPI.Comm,
+    grid_ndim: int,
+    input_shape: tuple[int, ...],
+) -> tuple[int, ...]:
+    return expand_shape_left(
+        MPI.Compute_dims(comm.Get_size(), grid_ndim),
+        ndim=len(input_shape),
     )
 
-    local_X = X[shared_comm.shared_comm.cartslicer._get_slice_global_buffer_to_tile()]
 
-    gradient = grad_op.forward(local_X)
-    convolution_product = convolution_op.forward(local_X)
+@pytest.mark.mpi
+def test_shared_comm(
+    comm: MPI.Comm,
+    grid_shape: tuple[int, ...],
+    input_shape: tuple[int, ...],
+    kernel_shape: tuple[int, ...],
+    seed: int,
+) -> None:
+    """
+    Verify `SharedCommunicator` yields results identical to individual communicators.
 
+    Check consistency across discrete Total Variation (TV) and
+    DFT convolution operators.
+    """
+    input_size = np.asarray(input_shape)
+    grid_size = np.asarray(grid_shape)
+
+    # ensures kernel and input have same number of dimensions
+    kernel_size = np.asarray(expand_shape_left(kernel_shape, ndim=len(input_shape)))
+
+    rng = xp.random.default_rng(seed)
+    full_x = rng.random(input_shape, dtype=xp.float32)
+
+    kernel = rng.random(kernel_size, dtype=xp.float32)
+
+    grad_op = MpiGradient2d(input_size, grid_size, comm)
+    conv_op = MpiDftConvolution(input_size, kernel, comm, grid_size)
+
+    shared_comm = SharedCommunicator(
+        comm,
+        grid_size,
+        input_size,
+        {"grad": grad_op, "conv": conv_op},
+    )
+
+    local_slice = shared_comm.shared_comm.cartslicer._get_slice_global_buffer_to_tile()
+    local_X = full_x[local_slice]
+
+    # apply operators with dedicated communicators
+    expected_grad = grad_op.forward(local_X)
+    expected_conv = conv_op.forward(local_X)
+
+    # apply operators with shared communicator
     shared_comm.update_buffer(local_X)
+    actual_grad = shared_comm.apply_operator("grad")
+    actual_conv = shared_comm.apply_operator("conv")
 
-    gradX = shared_comm.apply_operator("grad")
-    convX = shared_comm.apply_operator("conv")
-
-    check_grad = np.isclose(gradX, gradient).all
-    check_conv = np.isclose(convX, convolution_product).all
-
-    assert check_grad and check_conv
+    xp.testing.assert_allclose(actual_grad, expected_grad, err_msg="Gradient mismatch")
+    xp.testing.assert_allclose(actual_conv, expected_conv, err_msg="Conv mismatch")

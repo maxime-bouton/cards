@@ -1,92 +1,113 @@
 [project]
-authors = [{name = "Stéphane Despierres", email = "stephane.despierres@centralelille.fr"}, {name = "Maxime Bouton", email = "maxime.bouton@centralelille.fr"}, {name = "Pierre-Antoine Thouvenin", email = "pierre-antoine.thouvenin@centralelille.fr"}, {name = "Pierre Chainais", email = "pierre.chainais@centralelille.fr"}]
-name = "mcmc"
-description = "A Python library to ease the development of disributed MCMC algorithms"
-requires-python = ">= 3.12"
+name = "cards"
 version = "0.1.0"
-dependencies = ["torch>=2.9.1,<3", "torchvision>=0.24.1,<0.25"]
-
-[build-system]
-build-backend = "hatchling.build"
-requires = ["hatchling"]
-
-[dependency-groups]
-doc = ["sphinxcontrib-apa", "sphinx-copybutton", "docstr-coverage", "genbadge"]
-test = ["wily"]
-cpu = ["torch", "torchvision"]
-gpu = ["torch", "torchvision"]
-# dev = [{include-group = "test"}, {include-group = "docs"}]
+description = "CARDS (Composable Algorithms for Reproducible Distributed Sampling) is a Python library to ease the development of disributed MCMC algorithms, with a focus on the resolution of high-dimensional inverse problems."
+authors = [
+    { name = "Maxime Bouton", email = "maxime.bouton@centralelille.fr" },
+    { name = "Stéphane Despierres", email = "stephane.despierres@centralelille.fr" },
+    { name = "Pierre-Antoine Thouvenin", email = "pierre-antoine.thouvenin@centralelille.fr" },
+    { name = "Pierre Chainais", email = "pierre.chainais@centralelille.fr" },
+]
+# license = { file = "LICENSE" }
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
 platforms = ["linux-64"]
 preview = ["pixi-build"]
 
-[tool.pixi.package.build.backend]
-name = "pixi-build-python"
-version = "==0.4.0"
-
-[tool.pixi.package.host-dependencies]
-hatchling = "*"
-
-[tool.pixi.pypi-dependencies]
-mcmc = { path = ".", editable = true }
-
-[tool.pixi.tasks]
-setup_test = "mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python test.py"
-
-[tool.pixi.environments]
-default = { solve-group = "default" }
-doc = { features = ["doc"], solve-group = "default" }
-dev-gpu = { features = ["gpu", "dev", "doc", "test"], solve-group = "default" }
-dev-cpu = { features = ["cpu", "dev", "doc", "test"], solve-group = "default" }
-
-[tool.pixi.feature.doc.dependencies]
-furo = "*"
-sphinx = "*"
-sphinx_rtd_theme = "*"
-sphinxcontrib-bibtex = "*"
-sphinx-autoapi = "*"
-sphinx-design = "*"
-
-[tool.pixi.feature.dev.dependencies]
-isort = "*"
-pre-commit = "*"
-conda-build = "*"
-
-[tool.pixi.feature.test.dependencies]
-pytest = "*"
-coverage = "*"
-
-[tool.pixi.feature.gpu.dependencies]
-cudatoolkit = "*"
-cupy = "*"
-ucx = "*"
-
-[tool.pixi.feature.gpu.system-requirements]
-cuda = "12.8"
-
 [tool.pixi.dependencies]
 mpi4py = ">=4.1.1,<5"
-openmpi = ">=5.0.8,<6"
-h5py = { version = ">=2.9", build = "mpi*" }
+h5py = { version = ">=3.15.1,<4", build = "*openmpi*" }
 scipy = ">=1.16.3,<2"
 imageio = ">=2.37.0,<3"
 tqdm = ">=4.67.1,<5"
 matplotlib = ">=3.10.8,<4"
 scikit-image = ">=0.25.2,<0.26"
-numba = ">=0.62.1,<0.63"
+numba = ">=0.63.1,<0.64"
 numpy = ">=2.3.5,<3"
+pytorch = ">=2.9.1,<3"
+torchvision = ">=0.24.1,<0.25"
+jupyter = ">=1.1.1,<2"
 
+
+[tool.pixi.pypi-dependencies]
+cards = { path = ".", editable = true }
+
+[tool.pixi.environments]
+test = { features = ["test"], solve-group = "default" }
+doc = { features = ["doc"], solve-group = "default" }
+gpu = { features = ["gpu"], solve-group = "gpu" }
+full = { features = ["gpu", "dev", "doc", "test"], solve-group = "gpu" }
+
+# https://pixi.sh/latest/reference/pixi_manifest/#the-feature-table
+[tool.pixi.feature.gpu]
+system-requirements = { cuda = "12" }
+
+[tool.pixi.feature.gpu.dependencies]
+cupy = ">=13.6.0,<14"
+ucx = ">=1.19.1,<2"
+
+[tool.pixi.feature.test.dependencies]
+pytest = ">=9.0.2,<10"
+coverage = ">=7.13.0,<8"
+
+[tool.pixi.feature.doc.dependencies]
+furo = ">=2024.8.6,<2025"
+sphinx = ">=8.2.3,<9"
+sphinx_rtd_theme = ">=3.0.2,<4"
+sphinxcontrib-bibtex = ">=2.6.5,<3"
+sphinx-autoapi = ">=3.6.1,<4"
+sphinx-design = ">=0.6.1,<0.7"
+
+[tool.pixi.feature.doc.pypi-dependencies]
+sphinxcontrib-apa = ">=1.0.0, <2"
+sphinx-copybutton = ">=0.5.2, <0.6"
+docstr-coverage = ">=2.3.2, <3"
+genbadge = ">=1.1.3, <2"
+wily = ">=1.25.0, <2"
+
+[tool.pixi.feature.dev.dependencies]
+isort = ">=7.0.0,<8"
+pre-commit = ">=4.5.1,<5"
+conda-build = ">=25.11.1,<26"
+anaconda-client = ">=1.13.1,<2"
+ruff = ">=0.14.10,<0.15"
+
+
+[tool.pixi.package]
+name = { workspace = true }
+version = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pixi.package.build]
+backend = { name = "pixi-build-python", version = "==0.4.0" }
+
+[tool.pixi.package.host-dependencies]
+hatchling = "*"
+
+[tool.pixi.package.run-dependencies]
+mpi4py = ">=4.1.1,<5"
+h5py = { version = ">=3.15.1,<4", build = "*openmpi*" }
+scipy = ">=1.16.3,<2"
+imageio = ">=2.37.0,<3"
+tqdm = ">=4.67.1,<5"
+matplotlib = ">=3.10.8,<4"
+scikit-image = ">=0.25.2,<0.26"
+numba = ">=0.63.1,<0.64"
+numpy = ">=2.3.5,<3"
+pytorch = ">=2.9.1,<3"
+torchvision = ">=0.24.1,<0.25"
+ucx = ">=1.19.1,<2"
+cupy = ">=13.6.0,<14"
+
+# * additional tools
 [tool.ruff]
 target-version = "py312"
 
 [tool.pytest.ini_options]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "mpi: parallel tests requiring mpi",
-    "numpy: tests relying on torch as a computing backend",
-    "torch: tests relying on numpy as a computing backend",
-]
 addopts = "-ra -q -vv"
-testpaths = "tests"
+strict = true
+testpaths = ["tests"]

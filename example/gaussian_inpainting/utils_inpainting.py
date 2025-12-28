@@ -3,36 +3,36 @@ import logging
 import h5py
 import numpy as np
 
-from mcmc.backend import xp
-from mcmc.models.gaussian_inpainting_pnp_model import (
+from cards.backend import xp
+from cards.models.gaussian_inpainting_pnp_model import (
     DistributedGaussianInpaintingPnpModel,
     GaussianInpaintingPnpModel,
     GaussianInpaintingPnpParameters,
 )
-from mcmc.models.gaussian_inpainting_tv_model import (
+from cards.models.gaussian_inpainting_tv_model import (
     DistributedGaussianInpaintingTvModel,
     GaussianInpaintingTvModel,
     GaussianInpaintingTvParameters,
 )
-from mcmc.sampler.base_sampler import SamplerParameters
-from mcmc.sampler.distributed_sampler import DistributedSampler
-from mcmc.sampler.gpu_sampler import GpuSampler
-from mcmc.sampler.multi_gpu_sampler import MultiGpuSampler
-from mcmc.sampler.serial_sampler import SerialSampler
-from mcmc.slicer.cartesian_comm_slicer import CartesianCommSlicer
-from mcmc.transition_kernel.gpu_pnp_ula import GpuPnpULA
-from mcmc.transition_kernel.gpu_psgla import GpuPSGLA
-from mcmc.transition_kernel.psgla import PSGLA
-from mcmc.utils.utils_img import read_dtype
-from mcmc.utils.utils_observations import fit_mask_shape
-from mcmc.utils.utils import extract_subset_from_dict
-from mcmc.utils.utils_img import load_img, read_img_shape
-from mcmc.utils.path_builder import gaussian_str, inpainting_str, obs_dir
-from mcmc.utils.utils_observations import (
+from cards.sampler.base_sampler import SamplerParameters
+from cards.sampler.distributed_sampler import DistributedSampler
+from cards.sampler.gpu_sampler import GpuSampler
+from cards.sampler.multi_gpu_sampler import MultiGpuSampler
+from cards.sampler.serial_sampler import SerialSampler
+from cards.slicer.cartesian_comm_slicer import CartesianCommSlicer
+from cards.transition_kernel.gpu_pnp_ula import GpuPnpULA
+from cards.transition_kernel.gpu_psgla import GpuPSGLA
+from cards.transition_kernel.psgla import PSGLA
+from cards.utils.utils_img import read_dtype
+from cards.utils.utils_observations import fit_mask_shape
+from cards.utils.utils import extract_subset_from_dict
+from cards.utils.utils_img import load_img, read_img_shape
+from cards.utils.path_builder import gaussian_str, inpainting_str, obs_dir
+from cards.utils.utils_observations import (
     apply_target_gaussian_noise,
     generate_and_save_observations,
 )
-from mcmc.operators.masking import Masking
+from cards.operators.masking import Masking
 
 from scipy import interpolate
 
@@ -355,7 +355,7 @@ def compute_pnp(
     if "mpi" in mode:
         match denoiser_params["type"]:
             case "ddfb":
-                from mcmc.denoisers.mpi_ddfb import MpiDDFB
+                from cards.denoisers.mpi_ddfb import MpiDDFB
 
                 denoiser = MpiDDFB(
                     comm,
@@ -365,7 +365,7 @@ def compute_pnp(
                     n_features=denoiser_params["n_features"],
                 )
             case "dncnn":
-                from mcmc.denoisers.mpi_dncnn import MpiDnCNN
+                from cards.denoisers.mpi_dncnn import MpiDnCNN
 
                 denoiser = MpiDnCNN(comm, grid_size, image_size=np.asarray(gt_shape))
             case _:
@@ -390,7 +390,7 @@ def compute_pnp(
     else:
         match denoiser_params["type"]:
             case "ddfb":
-                from mcmc.denoisers.serial_ddfb import SerialDDFB
+                from cards.denoisers.serial_ddfb import SerialDDFB
 
                 denoiser = SerialDDFB(
                     image_size=np.asarray(gt_shape),
@@ -398,11 +398,11 @@ def compute_pnp(
                     n_features=denoiser_params["n_features"],
                 )
             case "dncnn":
-                from mcmc.denoisers.serial_dncnn import SerialDnCNN
+                from cards.denoisers.serial_dncnn import SerialDnCNN
 
                 denoiser = SerialDnCNN(image_size=np.asarray(gt_shape))
             case "drunet":
-                from mcmc.denoisers.serial_drunet import SerialDRUNet
+                from cards.denoisers.serial_drunet import SerialDRUNet
 
                 denoiser = SerialDRUNet(image_size=np.asarray(gt_shape))
             case _:

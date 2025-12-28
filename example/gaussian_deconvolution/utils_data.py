@@ -3,15 +3,15 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from mcmc.operators.dft_convolution import DftConvolution
-from mcmc.utils.path_builder import (
+from cards.operators.dft_convolution import DftConvolution
+from cards.utils.path_builder import (
     deconvolution_str,
     gaussian_str,
     obs_dir,
 )
-from mcmc.utils.utils import extract_subset_from_dict
-from mcmc.utils.utils_img import read_dtype, read_img_shape
-from mcmc.utils.utils_observations import (
+from cards.utils.utils import extract_subset_from_dict
+from cards.utils.utils_img import read_dtype, read_img_shape
+from cards.utils.utils_observations import (
     apply_target_gaussian_noise,
     fit_kernel_shape,
     generate_and_save_observations,
@@ -20,7 +20,7 @@ from mcmc.utils.utils_observations import (
     slice_linear_conv_to_original,
 )
 
-from mcmc.backend import xp
+from cards.backend import xp
 
 
 def load_from_h5(

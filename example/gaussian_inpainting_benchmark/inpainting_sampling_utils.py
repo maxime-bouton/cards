@@ -8,15 +8,17 @@ import h5py
 import numpy as np
 from mpi4py import MPI
 
-from mcmc.models.DistributedGaussianInpainting import DistributedGaussianInpaintingModel
-from mcmc.models.GaussianInpaintingModel import GaussianInpaintingModel
-from mcmc.models.GpuGaussianInpaintingModel import GpuGaussianInpaintingModel
-from mcmc.sampler.distributed_sampler import DistributedSampler
-from mcmc.sampler.gpu_sampler import GpuSampler
-from mcmc.sampler.serial_sampler import Sampler
-from mcmc.slicer.cartesian_comm_slicer import CartesianCommSlicer
-from mcmc.transition_kernel.GpuTransitionKernel import GpuPSGLA
-from mcmc.transition_kernel.TransitionKernel import PSGLA
+from cards.models.DistributedGaussianInpainting import (
+    DistributedGaussianInpaintingModel,
+)
+from cards.models.GaussianInpaintingModel import GaussianInpaintingModel
+from cards.models.GpuGaussianInpaintingModel import GpuGaussianInpaintingModel
+from cards.sampler.distributed_sampler import DistributedSampler
+from cards.sampler.gpu_sampler import GpuSampler
+from cards.sampler.serial_sampler import Sampler
+from cards.slicer.cartesian_comm_slicer import CartesianCommSlicer
+from cards.transition_kernel.GpuTransitionKernel import GpuPSGLA
+from cards.transition_kernel.TransitionKernel import PSGLA
 
 
 def load_from_h5(filename):
