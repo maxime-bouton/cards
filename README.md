@@ -28,21 +28,21 @@
 
 ## Description
 
-This Python library provides elementary operators, MPI communicators and samplers to facilitate the design of custom distributed Plug-and-Play (PnP) Markov chain Monte Carlo (MCMC) algorithms for high-dimensional Bayesian inference.
+This Python library provides elementary operators, MPI communicators and Markov transition kernels to facilitate the design of custom distributed Plug-and-Play (PnP) Markov chain Monte Carlo (MCMC) algorithms for high-dimensional Bayesian inference.
 Detailed examples provided in this repository focus on the resolution of high-dimensional inverse problems in image and signal processing.
 
 :warning: **WARNING** This project is under active development, and the API may evolve significantly until version `1.0`.
 
 ## Installation
 
-- The Python package can be installed on `ubuntu` with `cuda` GPU support within an existing `conda`-like environment (e.g., using either `pixi`, `mamba` or `conda`). Example installation commands can be found below.
+- The `cards` Python package can be installed on `ubuntu` with `cuda` GPU support within an existing `conda`-compatible environment (e.g., using either `pixi`, `mamba` or `conda`). Example installation commands can be found below.
 
   ```bash
-  # within a mamba environment
+  # installation within a mamba environment
   mamba env create -n my_samplers
   mamba install cards -c pthouvenin
 
-  # within a pixi environment
+  # installation within a pixi environment
   pixi workspace channel add pthouvenin
   pixi add cards
   ```
@@ -58,17 +58,17 @@ Detailed examples provided in this repository focus on the resolution of high-di
   mkdir ddfb && cd ddfb
   wget https://github.com/maxime-bouton/cards/blob/main/data/weights/ddfb/ddfb_nch3_nla20_nfe64.pth
 
-  # from https://github.com/cszn/KAIR
-  # https://drive.google.com/drive/folders/13kfr3qny7S2xwG9h7v95F5mkWs0OmU0D
-  # https://github.com/cszn/DPIR/tree/master/model_zoo
+  # * retrieving weights for DRUNet and DnCNN from https://github.com/cszn/KAIR
+  # (see https://drive.google.com/drive/folders/13kfr3qny7S2xwG9h7v95F5mkWs0OmU0D
+  # and https://github.com/cszn/DPIR/tree/master/model_zoo)
   #
-  # * DRUNet (gray and color images)
+  # DRUNet (gray and color images)
   cd ../ && mkdir drunet && cd drunet
   wget https://github.com/cszn/KAIR/releases/download/v1.0/drunet_gray.pth && mv drunet_gray.pth drunet_nch1.pth
 
   wget https://github.com/cszn/KAIR/releases/download/v1.0/drunet_color.pth && mv drunet_color.pth drunet_nch3.pth
 
-  # * DnCNN (gray and color images)
+  # DnCNN (gray and color images)
   cd ../ && mkdir dncnn && cd dncnn
   wget https://github.com/cszn/KAIR/releases/download/v1.0/dncnn_gray_blind.pth && mv dncnn_gray_blind.pth dncnn_nch1.pth
 
@@ -111,7 +111,7 @@ pixi shell --environment full
 
 ### Testing
 
-Before any commit or pull request to the master branch, verify all tests pass under the different configuration considered (see [`tests/conftest.py`](tests/conftestpy) for further details).
+Before any commit or pull request to the master branch, verify all tests pass under the different configuration considered (serial and distirbuted mode, running on CPU or GPU). See [`tests/conftest.py`](tests/conftestpy) for further details.
 
 ```bash
 pixi shell -e full
