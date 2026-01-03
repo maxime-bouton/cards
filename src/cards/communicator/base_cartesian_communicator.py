@@ -1,7 +1,9 @@
 """Abstract communicator class to exchange sub-arrays within a Cartesian grid
-of processes."""
+of processes with an arbitrary number of axes."""
 
 # author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
+
+# TODO: keep Tuple[int, ...] for all shapes, convert to numpy arrays only internally (and temporarily)
 
 from abc import ABC, abstractmethod
 
@@ -20,12 +22,12 @@ class BaseCartesianCommunicator(ABC):
     comm : mpi4py.MPI.Comm
             Underlying MPI communicator.
     grid_size : numpy.ndarray[int]
-        Size of the communication grid along each axis of the problem, as
+        Shape of the communication grid along each axis of the problem, as
         returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
     buffer_size : numpy.ndarray[int], of size ``d``
-        Number of elements along each of the ``d`` dimensions of the buffer
-        handled by the current process (including data received by neigbor
-        workers).
+        Shape of the ``d``-dimensional buffer decomposed over the Cartesian grid of workers considered. The number of elements handled by the
+        current process is computed by an instance of the
+        :class:`cards.slicer.cartesian_comm_slicer.CartesianCommSlicer` class.
     send_size : numpy.ndarray[int], of size ``d``
         Size of the buffer to be sent to a neighbor worker.
     recv_size : numpy.ndarray[int], of size ``d``
@@ -74,12 +76,13 @@ class BaseCartesianCommunicator(ABC):
         comm : mpi4py.MPI.Comm
             Underlying MPI communicator.
         grid_size : numpy.ndarray[int]
-            Size of the communication grid along each axis of the problem, as
+            Shape of the communication grid along each axis of the problem, as
             returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
         buffer_size : numpy.ndarray[int], of size ``d``
-            Number of elements along each of the ``d`` dimensions of the buffer
-            handled by the current process (including data received by neigbor
-            workers).
+            Shape of the ``d``-dimensional buffer decomposed over the Cartesian grid of workers considered. The number of elements handled by the
+            current process is computed by an instance of the
+            :class:`cards.slicer.cartesian_comm_slicer.CartesianCommSlicer`
+            class.
         send_size : numpy.ndarray[int], of size ``d``
             Size of the buffer to be sent to a neighbor worker.
         recv_size : numpy.ndarray[int], of size ``d``
@@ -106,7 +109,6 @@ class BaseCartesianCommunicator(ABC):
         self.dtype = dtype
         self.backward = backward
 
-        # * size of buffer (including overlap)
         if not self.grid_size.size == buffer_size.size:
             raise ValueError(
                 "`grid_size` and `buffer_size` must contain the same number of element (same number of dimensions)."

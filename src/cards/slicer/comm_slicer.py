@@ -14,7 +14,7 @@ class CommSlicer(ABC):
     grid_size : int
         Number of MPI processes underlying the communicator.
     global_buffer_size : np.array[int]
-        Size of the global array slpit across processes.
+        Shape of the global array slpit across processes.
     slice_global_buffer_to_tile : slice | list[slice]
         Slice to extract data tile from global array of size
         ``global_buffer_size``.

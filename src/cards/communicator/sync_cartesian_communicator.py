@@ -66,7 +66,7 @@ def send_rank(ranknd, grid_size, backward=True, circular=False):
             )
             nbr_ranknd[axis] = ranknd[axis]
     else:
-        # return MPI.PROC_NULL index for invalid communications
+        # NOTE: returning the MPI.PROC_NULL index for any invalid communication axis
         for axis in range(ndims):
             nbr_ranknd[axis] += increment
 
@@ -125,12 +125,13 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
         comm : mpi4py.MPI.Comm
             Underlying MPI communicator.
         grid_size : numpy.ndarray[int]
-            Size of the communication grid along each axis of the problem, as
+            Shape of the communication grid along each axis of the problem, as
             returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
         buffer_size : numpy.ndarray[int], of size ``d``
-            Number of elements along each of the ``d`` dimensions of the buffer
-            handled by the current process (including data received by neigbor
-            workers).
+            Size of the ``d`` dimensional buffer decomposed over the Cartesian grid of workers considered. The number of elements handled by the
+            current process is computed by an instance of the
+            :class:`cards.slicer.cartesian_comm_slicer.CartesianCommSlicer`
+            class.
         send_size : numpy.ndarray[int], of size ``d``
             Size of the buffer to be sent to a neighbor worker.
         recv_size : numpy.ndarray[int], of size ``d``

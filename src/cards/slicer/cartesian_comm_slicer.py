@@ -333,7 +333,7 @@ class CartesianCommSlicer(CommSlicer):
         Number of processes along each axis of the Cartesian MPI process
         grid considered.
     global_buffer_size : numpy.ndarray[int]
-        Size of the global array split across the Cartesian grid of MPI
+        Shape of the global array split across the Cartesian grid of MPI
         processes considered.
     send_size : numpy.ndarray[int]
         Dimensions of the subarray to be sent across each axis of the
@@ -418,7 +418,7 @@ class CartesianCommSlicer(CommSlicer):
             Number of processes along each axis of the Cartesian MPI process
             grid considered.
         global_buffer_size : numpy.ndarray[int]
-            Size of the global array split across the Cartesian grid of MPI
+            Shape of the global array split across the Cartesian grid of MPI
             processes considered.
         send_size : numpy.ndarray[int]
             Dimensions of the subarray to be sent across each axis of the
