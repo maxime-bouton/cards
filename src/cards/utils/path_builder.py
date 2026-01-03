@@ -1,6 +1,12 @@
 """Utility functions that handles path management for the applications."""
 
-# TODO: documentation
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+
+# TODO: documentation, avoid global variable PRODUCED_DATA_PATH if possible
 
 from pathlib import Path
 
@@ -8,7 +14,7 @@ PRODUCED_DATA_PATH = Path("../../produced_data")
 
 
 def clean(func):
-    """
+    r"""
     Decorator to clean the string returned by the function.
     It replaces dots with underscores to avoid issues with file paths.
     """

@@ -1,4 +1,10 @@
-"""Utility functions to load/normalize images."""
+"""Utility functions to load and normalize images."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 from pathlib import Path
 

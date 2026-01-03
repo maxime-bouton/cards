@@ -1,6 +1,13 @@
 """Utility functions to analyze generated data."""
 
-# TODO move torch related functions
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+
+# TODO: move torch related functions
+# TODO: revise implementation of display functions, move to an auxiliary module besides torch-related utilities
 
 import json
 from os.path import join

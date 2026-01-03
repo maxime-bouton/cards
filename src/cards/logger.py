@@ -1,8 +1,16 @@
+"""Utility functions to create and format looger outputs."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+
+# TODO: documentation
+
 import logging
 import sys
 from pathlib import Path
-
-# TODO: documentation
 
 
 class ColoredFormatter(logging.Formatter):

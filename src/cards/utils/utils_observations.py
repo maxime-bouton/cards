@@ -1,7 +1,13 @@
 """Utility functions to generate/handle artificialy deteriorated data."""
 
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+
 # TODO: `rng` should be compatible with both numpy and cupy
-# create rng abstraction layer that can handle both numpy and cupy/torch generators ?
+# create rng abstraction layer that can handle both numpy and cupy/torch generators?
 
 from pathlib import Path
 from typing import Callable, Sequence, Sized
@@ -38,7 +44,7 @@ def generate_gaussian_kernel(
     Returns
     -------
     xp.ndarray
-        Square Gaussian kernel with :math:`\|h\|_1 = 1`.
+        Square Gaussian kernel, normalized so that :math:`\|h\|_1 = 1`.
     """
     if xp.__name__ == "numpy":
         from scipy.signal.windows import gaussian

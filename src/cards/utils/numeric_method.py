@@ -1,9 +1,16 @@
-"""Utility functions.."""
+r"""Short implementation of the power method to evaluate the Lipshotz contsant of operators."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 from typing import Callable, Sequence
+
 import torch
 
-# FIXME: commented cupy variant for now to simplify to avoid explicit cupy import
+# FIXME: commented cupy variant for now to avoid explicit cupy import
 
 
 def power_method(

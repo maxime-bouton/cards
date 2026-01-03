@@ -114,7 +114,7 @@ class MotionBlurKernel:
 
     def save(self, filepath):
         """
-        Save the kernel as a PNG image.
+        Save the kernel to an HDF5 file.
 
         Parameters
         ----------

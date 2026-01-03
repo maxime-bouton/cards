@@ -1,5 +1,11 @@
 r"""Helper class to select computing backend (``numpy`` or ``cupy``)."""
 
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+
 # TODO: documentation
 
 import importlib
