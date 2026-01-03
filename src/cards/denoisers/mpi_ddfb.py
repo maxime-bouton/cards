@@ -27,7 +27,7 @@ class MpiDDFB(BaseDistributedDenoiser):
         weights_path=Path(__file__).parents[3] / "data/weights/ddfb",
         # use_shared_input_buffer: bool = False,
     ):
-        """
+        r"""
         Distributed DDFB.
 
         Parameters
@@ -37,7 +37,7 @@ class MpiDDFB(BaseDistributedDenoiser):
         n_layers: int
             The number of DFBLayers
         n_features: int
-            The number of channels in the dual space (i.e. number of channels for `u`)
+            The number of channels in the dual space of the convolution operators.
         comm: BaseCartesianCommunicator
             The Cartesian communicator
         timer: TimerRegistry, optional
@@ -109,19 +109,23 @@ class MpiDDFB(BaseDistributedDenoiser):
         return (input_image - D0_T_u).clip(0, 1)
 
     def forward_no_comm(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
-        """forward_no_comm Apply the denoiser without communication on the first layer. Should be used with a shared buffer.
+        """Apply the DDFB denoiser without communication on the first layer.
+
+        This method can be used to avoid memory duplication when the input
+        buffer is common to different operators, thereby reducing the overall
+        memory footprint.
 
         Parameters
         ----------
         input_image : xp.ndarray
-            Image facet to denoise.
+            Image facet (i.e., including ghost-cell) to denoise.
         sigma : float
-            Standard deviation of the gaussian noise.
+            Standard deviation of the Gaussian noise.
 
         Returns
         -------
         xp.ndarray
-            Denoised image.
+            Denoised image facet.
         """
         assert isinstance(sigma, float)  #! fail on np.float or torch.float?
         tile_u = self.mpi_conv.forward_no_comm(input_image.clip(0, 1), self.ddfb.D0)
@@ -142,9 +146,11 @@ class MpiDDFB(BaseDistributedDenoiser):
             - D0_T_u
         ).clip(0, 1)
 
+    @property
     def get_recv_size(self) -> np.ndarray:
         return self.mpi_conv.direct_communicator.cartslicer.recv_size
 
+    @property
     def get_send_size(self) -> np.ndarray:
         return self.mpi_conv.direct_communicator.cartslicer.send_size
 

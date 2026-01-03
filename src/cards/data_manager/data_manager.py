@@ -1,8 +1,15 @@
-"""
-Object that handles any reading/writing on disk with parallel memory access.
-"""
+r"""Object that handles any reading/writing on disk with parallel memory access."""
 
-import sys
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+
+# TODO: revise usefullness of all the methods included, possibly simplify implementation
+# TODO: add more h5py save options in the interface (rdcc_nbytes, compression, compression_opts, chunk sizes, ...)
+# NOTE: using h5py.read_direct / h5py.write_direct to avoid any copy of arrays
+
 from typing import Optional
 
 import h5py
@@ -11,25 +18,62 @@ import torch
 
 from cards.backend import xp
 from cards.data_manager.warmstart_rng import (
+    array_to_int,
+    int_to_array,
     load_rng_np,
     load_rng_offset_torch,
     save_rng_np,
 )
 from cards.data_manager.warmstart_rng_mpi import load_rng_np_mpi, save_rng_np_mpi
 
-# NOTE: using h5py.read_direct / h5py.write_direct to avoid any copy of arrays
-# TODO: add comments and documentation
-
 
 class DataManager:
+    """Utility class to handle I/O writing to disk in HDF5 files, either in serial of distributed mode.
+
+    Attributes
+    ----------
+    _save_full_batch : bool
+        Save mode whereby a batch of several consecutive samples shoud be
+        saved to disk, by default False.
+    full_batch :
+        Dictionary contaning, for each variable of interest, the batch of
+        samples to be saved to disk.
+    global_sizes : dict, optional
+            In distributed mode, dictionary containing the shape of the global variables collectively saved to disk. By default None.
+    local_slices : dict, optional
+        In distributed mode, dictionary of slicer objects to extract, for eahc variable of interest, the local tile to be saved to disk from
+        the local facet avaiable (i.e., buffer representing an array tile
+        with the associated ghost-cell). By default None.
+    """
+
     def __init__(
         self,
-        batch_size: int = 0,
+        batch_size: int = 1,
         save_full_batch: bool = False,
         sizes: Optional[dict] = None,
         global_sizes: Optional[dict] = None,
         local_slices: Optional[dict] = None,
     ) -> None:
+        """DataManager constructor.
+
+        Parameters
+        ----------
+        batch_size : int, optional
+            Number of samples to collect before flushing results to disk, by
+            default 1.
+        save_full_batch : bool, optional
+            Save mode whereby a batch of several consecutive samples shoud be
+            saved to disk, by default False.
+        sizes : Optional[dict], optional
+            In distributed mode, encodes the shape of the local tiles to be
+            saved to disk, by default None.
+        global_sizes : Optional[dict], optional
+            In distributed mode, dictionary containing the shape of the global variables collectively saved to disk. By default None.
+        local_slices : Optional[dict], optional
+            In distributed mode, dictionary of slicer objects to extract, for eahc variable of interest, the local tile to be saved to disk from
+            the local facet avaiable (i.e., buffer representing an array tile
+            with the associated ghost-cell). By default None.
+        """
         self._save_full_batch = save_full_batch
         if save_full_batch:
             self.full_batch = {}
@@ -51,20 +95,26 @@ class DataManager:
                     self.local_slices[key] = np.s_[slice(None), *local_slices[key]]
 
     def store_states(self, states, num_iter):
+        """Store a new state to the batch of samples for all the variables to
+        be saved to disk."""
         for key in self.full_batch:
             self.full_batch[key][num_iter, ...] = states[key]
 
     def save_batch(self, file: h5py.File, from_gpu: bool = False):
+        """Save batch of samples to disk."""
         for key in self.full_batch:
             buffer_size = self.global_sizes[key]
 
+            # TODO: see if this "if"-statement can be simplified or removed
             if self.local_slices is None:
                 local_slice = slice(None)
             else:
                 local_slice = self.local_slices[key]
+
             dset = file.create_dataset(
                 name="batch/" + key, shape=buffer_size, dtype=self.full_batch[key].dtype
             )
+
             if not from_gpu:
                 dset.write_direct(self.full_batch[key], dest_sel=local_slice)
             else:
@@ -77,8 +127,7 @@ class DataManager:
         global_sizes: Optional[dict] = None,
         slices: Optional[dict] = None,
     ) -> None:
-        """Save the dictionary given in entry in the .h5 file given in entry.
-        Expect the given file to be open in parallel mode.
+        """Save the content of an input dictionary in an .h5 file.
 
         Parameters
         ----------
@@ -90,6 +139,12 @@ class DataManager:
             Dictionary containing the global dimensions of the buffers.
         slices: dict
             Dictionary containing the indexes of the vertices delimiting the position of the local buffer in the global buffer.
+
+        Caution
+        -------
+        In distributed settings, the ``h5py.File`` object passed as input is
+        expected to correspond to a file opened in parallel mode (i.e., with
+        the ``h5py`` flag ``driver="mpio"``).
         """
         for key in data:
             if global_sizes is None:
@@ -114,20 +169,22 @@ class DataManager:
         global_size: Optional[np.ndarray] = None,
         local_slice: Optional[slice] = slice(None),
     ) -> None:
-        """Saves the array given in entry in the .h5 file given in entry.
+        """Save an input array to a specific ``.h5`` file.
 
         Parameters
         ----------
         data : np.ndarray
-            Array of data to write on file.
-        global_size:
-            Golbal dimensions of the buffers.
-        slices: slice
-            Indexes of the vertices delimiting the position of the local buffer in the global buffer.
+            Input array to write on file.
         file : h5py.File
-            File on wich we write the data.
+            File on which the data will be written.
         name : str
-            Name of the datafield in the file.
+            Name of the data-field in the file.
+        global_size:
+            In distribuyted mode, global shape of the buffer in which the local
+            input array will be stored. By default None.
+        local_slice: slice
+            Slicer object delimiting the position of the local array tile
+            within the global array field in the ``.h5`` file.
         """
         if global_size is None:
             global_size = data.shape
@@ -135,7 +192,7 @@ class DataManager:
         dset.write_direct(data, dest_sel=local_slice)
 
     def save_seed(self, seed: int, rank: int, comm_size: int, file: h5py.File) -> None:
-        """Saves the seeds used on each process. It expects the given file to be open in paralell mode.
+        """In distributed mode, save the random generator seed used on each process.
 
         Parameters
         ----------
@@ -147,12 +204,18 @@ class DataManager:
             Number of process.
         file : h5py.File
             File to be written on.
+
+        Caution
+        -------
+        In distributed settings, the ``h5py.File`` object passed as input is
+        expected to correspond to a file opened in parallel mode (i.e., with
+        the ``h5py`` flag ``driver="mpio"``).
         """
         dset = file.create_dataset("seed", (comm_size,), dtype=int)
         dset[rank] = seed
 
     def save_local_array(self, data: np.ndarray, name: str, file: h5py.File) -> None:
-        """Save an array on a .h5 file. It expects the given file to be open in serial mode.
+        """Save an array on an .h5 file.
 
         Parameters
         ----------
@@ -162,6 +225,11 @@ class DataManager:
             Name of the variable.
         file : h5py.File
             File to be written on.
+
+        Caution
+        -------
+        The ``h5py.File`` object passed as input is expected to correspond to a
+        file opened in serial mode.
         """
         dset = file.create_dataset(name, data.shape, dtype=data.dtype)
         dset.write_direct(data)
@@ -232,7 +300,7 @@ class DataManager:
         Returns
         -------
         dict
-            Dictonnary containing the local value of each variable.
+            Dictonary containing the local value of each variable.
         """
         data = {}
         if slices is None:
@@ -254,7 +322,8 @@ class DataManager:
         rank: int = 0,
         comm_size: int = 0,
     ) -> None:
-        """Save the internal state of all the generator used along all the processes.
+        """Save the internal state of all the random number generators used
+        on each MPI process.
 
         Parameters
         ----------
@@ -361,52 +430,3 @@ class DataManager:
             offset = array_to_int(h5file["offset"][gpu_id, ...])
             rng.set_offset(offset)
         return
-
-
-def int_to_array(n: int) -> np.ndarray[np.uint8]:
-    r"""Convert a built-on Python ``int`` to an array which can be saved in
-    hdf5.
-
-    Parameters
-    ----------
-    n : int
-        Input `int`` value.
-
-    Returns
-    -------
-    n_array
-        Output array conversion.
-
-    Note
-    ----
-    Built-in Python ``int``s, as those used to describe the state of a numpy
-    random number generator, can be very large. They need to be converted to
-    hexadecimal format, and from that into an array of ``np.uint8``, in order
-    to be saved into an .h5 file.
-    """
-    # Reference:
-    # https://docs.python.org/3/library/stdtypes.html#int.to_bytes
-    # ! need 32 bytes in length: otherwise, the inverse operation
-    # ! int.from_bytes(state_array,sys.byteorder) does not coincide with the
-    # ! original int value
-    # ! entries in the resulting array are of type np.uint8
-    int_array = np.array(bytearray(n.to_bytes(32, sys.byteorder)))
-    return int_array
-
-
-def array_to_int(n_array: np.ndarray[np.uint8]) -> int:
-    r"""Convert a numpy array of ``np.uint8`` back to a built-in Python ``int``.
-
-    Inverse operation of :func:`cards.data_manager.warmstart_rng.int_to_array`.
-
-    Parameters
-    ----------
-    n_array : np.ndarray[np.uint8]
-        Input array.
-
-    Returns
-    -------
-    int
-        Output `int`` value.
-    """
-    return int.from_bytes(n_array, sys.byteorder)

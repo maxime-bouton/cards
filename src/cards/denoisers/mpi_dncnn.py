@@ -136,9 +136,11 @@ class MpiDnCNN(BaseDistributedDenoiser):
             self.edge_mpi_conv.direct_communicator.cartslicer.slice_facet_to_tile
         ] - self.edge_mpi_conv.adjoint(tile_u, self.dncnn.model[-1])
 
+    @property
     def get_recv_size(self) -> np.ndarray:
         return self.edge_mpi_conv.direct_communicator.cartslicer.recv_size
 
+    @property
     def get_send_size(self) -> np.ndarray:
         return self.edge_mpi_conv.direct_communicator.cartslicer.send_size
 
