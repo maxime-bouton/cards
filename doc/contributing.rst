@@ -37,13 +37,13 @@ Before any commit or pull request to the master branch, verify all tests pass un
             # display available markers
             pytest --markers
 
-            # check all tests available
+            # list all tests available
             python -m pytest --collect-only
 
-            # running all serial test on CPU
+            # running all serial tests on CPU
             python -m pytest --mode serial --device cpu
 
-            # running all serial test on GPU
+            # running all serial tests on GPU
             python -m pytest --mode serial --device gpu
 
             # running all MPI tests on CPU

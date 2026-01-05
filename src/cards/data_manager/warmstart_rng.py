@@ -81,11 +81,11 @@ def extract_rng_state(
 
     Note
     ----
-    - Requires ``numpy>=2.0``.
-    - The ``state`` and ``inc`` fields of a ``numpy.random.Generator`` object
-    are very large integers, and thus need to be converted to the
-    hexadecimal format (and later to an array of ``int``) to be saved into
-    a ``.h5`` file.
+        - Requires ``numpy>=2.0``.
+        - The ``state`` and ``inc`` fields of a ``numpy.random.Generator`` object
+        are very large integers, and thus need to be converted to the
+        hexadecimal format (and later to an array of ``int``) to be saved into
+        a ``.h5`` file.
     """
     # * state and inc are very large integers, and thus need to be
     # converted to hex format (later to an array of ints) to be saved in an

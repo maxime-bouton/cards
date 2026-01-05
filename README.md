@@ -119,10 +119,13 @@ pixi shell -e full
 # display available markers
 pytest --markers
 
-# check all tests available
+# list all tests available
 python -m pytest --collect-only
 
-# running all serail test on GPU
+# running all serial tests on CPU
+python -m pytest --mode serial --device gpu
+
+# running all serial tests on GPU
 python -m pytest --mode serial --device gpu
 
 # running all MPI tests on CPU

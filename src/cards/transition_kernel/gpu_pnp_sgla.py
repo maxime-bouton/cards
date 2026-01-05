@@ -1,5 +1,5 @@
 r"""Generic implementation of the Plug-and-Playp proximal stochastic gradient
-Langevin algorithm (PnP-PSGLA) :cite:`:Renaud2025`"""
+Langevin algorithm (PnP-PSGLA) :cite:p:`Renaud2025`"""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
 #
@@ -21,7 +21,7 @@ from cards.transition_kernel.base_transition_kernel import BaseGpuTransitionKern
 class GpuPnpSGLA(BaseGpuTransitionKernel):
     r"""PnP-PSGLA transition kernel.
 
-    PnP-PSGLA transition kernel :cite:p:`Renuad2025`, whose negative
+    PnP-PSGLA transition kernel :cite:p:`Renaud2025`, whose negative
     log-likelihood is assumed to be an :math:`L_f`-smooth function.
 
     Attributes
