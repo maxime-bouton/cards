@@ -36,16 +36,31 @@ class MpiDRUNet(BaseDistributedDenoiser):
             If unspecified, no logging will be displayed (default is None).
         weights_path : str, optional
             The path to the pre-trained weights folder.
+
+        Warning
+        -------
+        The current distributed implementation only works for images whose
+        spatial dimensions are a multiple of 8. More precisely, the spatial
+        shape of the local tiles handled by each worker needs to be a
+        multiple of 8 to avoid additional communications for the up- and
+        down-sampling operators.
         """
         super(BaseDistributedDenoiser, self).__init__(weights_path)
+        if image_size.size < 3:
+            # NOTE: accommodate gray scale images (implicitly, number of channes is 1)
+            n_channels = 1
+            size_in = xp.concatenate((xp.ones(1, dtype=image_size.dtype), image_size))
+        else:
+            n_channels = image_size[-3]
+            size_in = image_size.copy()
 
         self.drunet = load_pretrained_drunet(
-            image_size[-3],
+            n_channels,
             weights_path=self.weights_path,
         )
 
         # full size concatenated with noise map channel
-        size_in = image_size.copy()
+        # size_in = image_size.copy()
         size_in[-3] += 1
 
         # full size in dual space

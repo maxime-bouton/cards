@@ -34,9 +34,14 @@ class SerialDDFB(BaseDenoiser):
             The path to the pre-trained weights folder.
         """
         super(SerialDDFB, self).__init__(weights_path)
+        if image_size.size < 3:
+            # NOTE: accommodate gray scale images (implicitly, number of channes is 1)
+            n_channels = 1
+        else:
+            n_channels = image_size[-3]
 
         self.ddfb = load_pretrained_ddfb(
-            image_size[-3],
+            C=n_channels,
             n_layers=n_layers,
             n_features=n_features,
             weights_path=self.weights_path,
@@ -46,5 +51,6 @@ class SerialDDFB(BaseDenoiser):
         self.ddfb.update_lip(tuple(image_size[-3:]), rng=rng)
 
     def __call__(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
+        # TODO: add error or warning when the number of channels in the input does not fit that of the denoiser
         with torch.no_grad():
             return torch2xp(self.ddfb(xp2torch(input_image), sigma))

@@ -48,21 +48,28 @@ class MpiDDFB(BaseDistributedDenoiser):
             The path to the pre-trained weights folder.
         """
         super(BaseDistributedDenoiser, self).__init__(weights_path)
+        if image_size.size < 3:
+            # NOTE: accommodate gray scale images (implicitly, number of channes is 1)
+            n_channels = 1
+            im_size = xp.concatenate((xp.ones(1, dtype=image_size.dtype), image_size))
+        else:
+            n_channels = image_size[-3]
+            im_size = image_size.copy()
         self.n_features = n_features
         self.n_layers = n_layers
 
         self.ddfb = load_pretrained_ddfb(
-            image_size[-3],
+            n_channels,
             n_layers=n_layers,
             n_features=n_features,
             weights_path=self.weights_path,
         )
 
         rng = torch.Generator(next(self.ddfb.parameters()).device).manual_seed(42)
-        self.ddfb.update_lip(tuple(image_size[-3:]), rng=rng)
+        self.ddfb.update_lip(tuple(im_size[-3:]), rng=rng)
 
         self.mpi_conv = MpiTorchConvolution(
-            image_size,
+            im_size,
             self.ddfb.D0.kernel_size,
             self.ddfb.D0.padding,  # type: ignore
             comm,

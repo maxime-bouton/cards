@@ -1,4 +1,8 @@
-- [x] indentify installation instructions from local `.conda` package file
+# TODO list
+
+## Towards v0
+
+- [x] identify installation instructions from local `.conda` package file
   -  `conda install <PATH_TO_PACKAGE>.conda` ([reference](https://www.anaconda.com/docs/getting-started/working-with-conda/packages/install-packages))
   -  in pixi, see [reference](https://pixi.sh/latest/reference/cli/pixi/global/install/)
   `pixi global install --path xxxx.conda`
@@ -21,11 +25,10 @@
 
 - [x] Restructure README, separating base user installation from dev instructions
 - Double check all code base with Maxime
-    - [ ] checking sampling examples (adpat to refactored interface proposed by Maxime)
-      - rerun all experiments (even if only a few samples)
-    - [ ] checking integration examples (based on revision of main application scripts)
-    - [ ]
-    - [ ] revision: convert all shapes in slicers and commnicators from `np.array`s to `Tuple[int, ...]`
+    - [ ] checking sampling examples, rerun representative experiments
+    - [ ] checking integration examples (based on revised application scripts)
+    - [ ] convert all shapes in slicers and communicators from `np.array`s to `Tuple[int, ...]`
+    - [ ] solve runtime issues for PnP samplers (size issue gray images, see where gray denoiser is selected)
 - [ ] Add testing CI instruction to build the package under different configurations?
 
 -  documentation
@@ -39,20 +42,29 @@
    - [ ] samplers
    - [ ] denoisers
 
-- v1.0 (Januray 2026 and later)
+## Towards v1.0 (Januray 2026 and later)
+
+- Existing core: improvements
   - [ ] use estimator including pixel-variance by default in the examples
-  - [ ] fix all mpi gpu codes: multiple workers should be able to work on the same GPU, seeds to be revised accordingly
+  - [ ] allow multiple GPU workers to work on the same GPU, seeds to be revised accordingly
+  - [ ] full interface for post-processing scripts (more flexibility to create estimates when changing only burn-in, ...)
+  - [ ] independent post-process scripts, as currently available on the older `pnp` branch
+
+- New core features
+    - [ ] MML (marginal maximum likelihood features, based on older codes already available internally)
+
+- Documentation
   - [ ] getting started (doc sphinx), install, tuto
   - setup / versioning
-  - [ ] MML (marginal maximum likelihood features, if included)
   - [ ] documentation deployment with [Github pages](https://www.sphinx-doc.org/en/master/tutorial/deploying.html)
   - [ ] badges: generate custom badges, see [https://pypi.org/project/badges-gitlab/](https://pypi.org/project/badges-gitlab/) or [https://github.com/sgaunet/gobadger](https://github.com/sgaunet/gobadger)
-  - [ ] find a way to support 'win-64' 'osx-64' 'osx-arm64' for the dependencies considered (per-platform requirements in `pyproject.toml`)
-  - [ ] full interface for post-processing scripts (more flexibility to create estimates when changing only burn-in, ...)
   - [ ] revise writing for the tutorial + display in the sphinx documentation
   - enhance documentation: https://realpython.com/documenting-python-code/#docstring-formats
   - [ ] proper typing, possibly with [`mypy`](https://mypy.readthedocs.io/en/stable/existing_code.html) or `pyright`, or [ty](https://github.com/astral-sh/ty), more recent
-    Example setup: https://mypy.readthedocs.io/en/stable/config_file.html#config-file
+   Example setup: https://mypy.readthedocs.io/en/stable/config_file.html#config-file
   - [ ] complete pipeline for versioninin with [`bumpver`](https://github.com/mbarkhau/bumpver), see also https://realpython.com/pypi-publish-python-package/
   - [ ] generate changelogs with [`towncrier`](https://towncrier.readthedocs.io/en/stable/index.html)
+
+- Management and build
+  - [ ] build support for 'win-64' 'osx-64' 'osx-arm64' for the dependencies considered (per-platform requirements in `pyproject.toml`)
   - [ ] adding new backend for Apple plateforms : [MLX](https://ml-explore.github.io/mlx/build/html/index.html), see example here

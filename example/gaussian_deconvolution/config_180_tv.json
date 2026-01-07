@@ -15,8 +15,6 @@
     "split_coef": 0.001,
     "reg_coef": 100.0,
     "isnr": 40,
-    "kernel_size": 3,
-    "kernel_std": 1,
     "kernel": {
         "type": "gaussian",
         "size": 3,

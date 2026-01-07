@@ -9,6 +9,8 @@ from cards.denoisers.serial_ddfb import SerialDDFB
 from cards.denoisers.serial_dncnn import SerialDnCNN
 from cards.denoisers.serial_drunet import SerialDRUNet
 
+# TODO: add test with gray images (n_channels = 1 explicitly in the input image shape, or just 2 dimensions)
+
 
 # NOTE: only first spatial axis is partitioned because way too slow when both axes are.
 @pytest.fixture

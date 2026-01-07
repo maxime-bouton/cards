@@ -48,16 +48,16 @@ class GpuPSGLA(BaseGpuTransitionKernel):
 
     def __init__(
         self,
-        dims: tuple[int, ...],
+        state_shape: tuple[int, ...],
         step_size: float,
-        dtype: Optional[xp.dtype],
+        dtype: Optional[xp.dtype] = None,
         initial_value: Optional[xp.ndarray] = None,
     ) -> None:
         r"""Constructor of the PSGLA class.
 
         Parameters
         ----------
-        dims : tuple[int, ...]
+        state_shape : tuple[int, ...]
             Shape of the parameter handled by the transition kernel.
         step_size : float
             Step-size value used in the transition.
@@ -66,11 +66,11 @@ class GpuPSGLA(BaseGpuTransitionKernel):
         initial_value : cards.backend.xp.ndarray | None, optional
             Initial value for the chain (optional).
         """
-        super().__init__(dims, initial_value, dtype=dtype)
+        super().__init__(state_shape, initial_value, dtype=dtype)
         self.step_size = step_size
 
     # NOTE: The methods prox and grad should return at this stage, and be
-    # defined by the user in any script where this class is actually usedd
+    # defined by the user in any script where this class is actually used
     # https://stackoverflow.com/questions/10374527/dynamically-assigning-function-implementation-in-python
 
     def grad(self, state: xp.ndarray) -> xp.ndarray:
@@ -93,6 +93,9 @@ class GpuPSGLA(BaseGpuTransitionKernel):
                     torch.ones(self.current_state.shape, device="cuda"),
                     generator=rng,
                 )
+                # TODO: proper dtype handling in the torch.normal call
+                # https://docs.pytorch.org/docs/stable/generated/torch.set_default_dtype.html#torch.set_default_dtype
+                # dtype=self.current_state.dtype,
             )
             - self.step_size * self.grad(self.current_state)
         )

@@ -3,22 +3,23 @@
     "n_checkpoint": 5,
     "burnin": 2,
     "reloaded_checkpoint": 0,
-    "seed": 5678,
+    "seed": 1234,
     "compute_ci": false,
     "save_all": false,
-    "original_img_path": "../../data/house.h5",
+    "original_img_path": "../../data/cameraman.h5",
     "seed_data": 1234,
     "obs_path": "",
     "save_path": "",
     "save_path_resumed": "",
     "logfile_path": "",
-    "split_coef": 1e-3,
-    "reg_coef": 1e3,
+    "reg_coef": 1.0,
     "isnr": 40,
-    "kernel": {
-        "type": "gaussian",
-        "size": 3,
-        "std": 1,
-        "seed": 1234
-    }
+    "denoiser_params": {
+        "type": "ddfb",
+        "n_layers": 4,
+        "n_features": 64,
+        "denoising_level": null,
+        "L": 3
+    },
+    "mask_loss": 0.4
 }

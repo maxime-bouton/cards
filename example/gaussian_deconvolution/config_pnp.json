@@ -13,8 +13,15 @@
     "save_path_resumed": "",
     "logfile_path": "",
     "split_coef": 1e-3,
-    "reg_coef": 1e3,
+    "reg_coef": 1,
     "isnr": 40,
+    "denoiser_params": {
+        "type": "ddfb",
+        "n_layers": 4,
+        "n_features": 64,
+        "denoising_level": null,
+        "L": 3
+    },
     "kernel": {
         "type": "gaussian",
         "size": 3,

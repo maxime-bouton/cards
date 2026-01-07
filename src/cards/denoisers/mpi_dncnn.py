@@ -37,9 +37,16 @@ class MpiDnCNN(BaseDistributedDenoiser):
             The path to the pre-trained weights folder.
         """
         super(BaseDistributedDenoiser, self).__init__(weights_path)
+        if image_size.size < 3:
+            # NOTE: accommodate gray scale images (implicitly, number of channes is 1)
+            n_channels = 1
+            core_size = xp.concatenate((xp.ones(1, dtype=image_size.dtype), image_size))
+        else:
+            n_channels = image_size[-3]
+            core_size = image_size.copy()
 
         self.dncnn = load_pretrained_dncnn(
-            image_size[-3],
+            n_channels,
             weights_path=self.weights_path,
         )
 
@@ -53,7 +60,7 @@ class MpiDnCNN(BaseDistributedDenoiser):
             backward=False,
         )
 
-        core_size = image_size.copy()
+        # core_size = image_size.copy()
         core_size[-3] = self.dncnn.model[0].out_channels
 
         tile_range = (
