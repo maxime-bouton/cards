@@ -3,6 +3,8 @@ Can be executed on cpu or gpu depending on the settings of the backend.py file.
 """
 
 # TODO: documentation
+# FIXME: replace class variables by instance variables
+# FIXME: update name of variables (grid_size -> mpi_grid_shape, unify interfaces w.r.t. array shapes)
 
 from dataclasses import dataclass
 

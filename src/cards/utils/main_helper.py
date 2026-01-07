@@ -1,4 +1,4 @@
-"""Utility functions to build the applications associated with the experiments reported in :cite:`Bouton2025`."""
+r"""Utility functions to build the applications associated with the experiments reported in :cite:p:`Bouton2025`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
 #
@@ -81,6 +81,7 @@ def build_paths(params: dict, obs_f: str, model_params_f: str, mode_str: str) ->
 
 def main(
     mode: str,
+    device: str,
     rank: int,
     comm_size: int,
     params: dict,
@@ -99,7 +100,8 @@ def main(
         compute_fn = getattr(module, "compute_pnp")
     else:
         compute_fn = getattr(module, "compute_tv")
-    compute_fn(logger=logger, mode=mode, **args_main)
+    # compute_fn(logger=logger, mode=mode, **args_main)
+    compute_fn(logger=logger, mode=mode, device=device, **args_main)
 
     if rank == 0:
         analyze_data(
@@ -124,9 +126,16 @@ def run_main(
     parser.add_argument(
         "--mode",
         help="Select the implementation to use.",
-        default="serial-cpu",
+        default="serial",
         type=str,
-        choices={"serial-cpu", "serial-gpu", "mpi-cpu", "mpi-gpu"},
+        choices={"serial", "mpi"},
+    )
+    parser.add_argument(
+        "--device",
+        help="Select the type of hardware to use (CPU or GPU).",
+        default="cpu",
+        type=str,
+        choices={"cpu", "gpu"},
     )
     parser.add_argument(
         "--config",
@@ -140,7 +149,7 @@ def run_main(
         params = json.load(config_file)
 
     mpi = "mpi" in config_args.mode
-    gpu = "gpu" in config_args.mode
+    gpu = "gpu" in config_args.device
     if mpi:
         from mpi4py import MPI
 
@@ -148,10 +157,10 @@ def run_main(
         rank = comm.Get_rank()
         comm_size = comm.Get_size()
 
-        mode_str = f"{config_args.mode}_{comm_size}"
+        mode_str = f"{config_args.mode}-{config_args.device}_{comm_size}"
         log_file = f"rank_{rank}.log"
     else:
-        mode_str = config_args.mode
+        mode_str = f"{config_args.mode}-{config_args.device}"
         log_file = "sampling.log"
 
         rank = 0
@@ -159,6 +168,7 @@ def run_main(
 
     if gpu:
         bm.set_backend("cupy")
+        # TODO: modify instruction to allow multiple MPI proceses to use the same GPU
         gpu = bm.xp.cuda.Device(rank % bm.xp.cuda.runtime.getDeviceCount())
         gpu.use()
 
@@ -204,6 +214,7 @@ def run_main(
     results_file_name = "results"
     main(
         config_args.mode,
+        config_args.device,
         rank,
         comm_size,
         params,

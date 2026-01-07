@@ -57,9 +57,9 @@ class GpuPnpULA(BaseGpuTransitionKernel):
                     size=self.current_state.shape,
                     generator=rng,
                     device=rng.device,
-                ),
+                )
                 # TODO: proper dtype handling in the torch.normal call
-                dtype=self.current_state.dtype,
+                # dtype=self.current_state.dtype,
             )
             - self.step_size
             * (

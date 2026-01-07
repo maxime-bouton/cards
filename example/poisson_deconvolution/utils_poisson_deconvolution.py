@@ -1,3 +1,13 @@
+r"""Utility functions to set the Poisson deconvolution example script for the experiments reported in :cite:p:`Bouton2025` (synthetic data generation, sampling and post-processing steps)."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+
+# TODO: revise script to also accommodate gray scale images (for which n_channels = 1 is not explicitly present when using xxx.shape)
+
 import logging
 from pathlib import Path
 
@@ -14,6 +24,7 @@ from cards.models.poisson_deconvolution_tv_model import (
     DistributedPoissonDeconvolutionTvModel,
     PoissonDeconvolutionTvModel,
 )
+from cards.operators.dft_convolution import DftConvolution
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
 from cards.sampler.base_sampler import SamplerParameters
 from cards.sampler.distributed_sampler import DistributedSampler
@@ -23,8 +34,6 @@ from cards.sampler.serial_sampler import SerialSampler
 from cards.transition_kernel.gpu_pnp_ula import GpuPnpULA
 from cards.transition_kernel.gpu_psgla import GpuPSGLA
 from cards.transition_kernel.psgla import PSGLA
-from cards.utils.utils_observations import fit_kernel_shape
-
 from cards.utils.path_builder import (
     deconvolution_str,
     obs_dir,
@@ -34,13 +43,12 @@ from cards.utils.utils import extract_subset_from_dict
 from cards.utils.utils_img import read_dtype, read_img_shape
 from cards.utils.utils_observations import (
     apply_poisson_noise,
+    fit_kernel_shape,
     generate_and_save_observations,
     generate_gaussian_kernel,
     generate_motion_kernel,
     slice_linear_conv_to_original,
 )
-
-from cards.operators.dft_convolution import DftConvolution
 
 
 def poisson_deconvolution_params(params: dict) -> dict:
@@ -215,7 +223,8 @@ def compute_tv(
     reg_coef: float,
     split_coef1: float,
     split_coef2: float,
-    mode: str = "serial-cpu",
+    mode: str = "serial",
+    device: str = "cpu",
 ):
     kernel, dynamic_range, gt_shape, _ = load_from_h5(obs_path)
     step_size_X, step_size_Z1, step_size_Z2 = (
@@ -230,30 +239,34 @@ def compute_tv(
 
     kernel = fit_kernel_shape(kernel, gt_shape)
 
-    if "mpi" in mode:
-        from mpi4py import MPI
+    match mode:
+        case "mpi":
+            from mpi4py import MPI
 
-        comm = MPI.COMM_WORLD
-        size = comm.Get_size()
-        # MPI.Compute_dims(size, 2)
-        grid_size = np.asarray([1] * (len(gt_shape) - 2) + [size, 1])
+            comm = MPI.COMM_WORLD
+            size = comm.Get_size()
+            # MPI.Compute_dims(size, 2)
+            grid_size = np.asarray([1] * (len(gt_shape) - 2) + [size, 1])
 
-        op = MpiDftConvolution(np.asarray(gt_shape), kernel, comm, grid_size)
-        y = np.empty(op.adjoint_communicator.cartslicer.tile_size, dtype=kernel.dtype)
-        with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
-            f["y"].read_direct(  # type: ignore
-                y,
-                op.adjoint_communicator.cartslicer.slice_global_buffer_to_tile,
+            op = MpiDftConvolution(np.asarray(gt_shape), kernel, comm, grid_size)
+            y = np.empty(
+                op.adjoint_communicator.cartslicer.tile_size, dtype=kernel.dtype
             )
-        if "gpu" in mode:
-            y = xp.asarray(y)
+            with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
+                f["y"].read_direct(  # type: ignore
+                    y,
+                    op.adjoint_communicator.cartslicer.slice_global_buffer_to_tile,
+                )
+            if "gpu" in device:
+                y = xp.asarray(y)
 
-        state_shape = tuple(op.direct_communicator.cartslicer.tile_size)
-
-    else:
-        with h5py.File(obs_path, "r") as f:
-            y = xp.asarray(f["y"])
-        state_shape = gt_shape
+            state_shape = tuple(op.direct_communicator.cartslicer.tile_size)
+        case "serial":
+            with h5py.File(obs_path, "r") as f:
+                y = xp.asarray(f["y"])
+            state_shape = gt_shape
+        case _:
+            raise ValueError(f"Unknown run mode: {mode}")
 
     model_params = PoissonDeconvolutionParameters(
         y,
@@ -264,43 +277,47 @@ def compute_tv(
         split_coef2,
     )
 
-    if "cpu" in mode:
-        X = PSGLA(state_shape, step_size_X, dtype=y.dtype)
-        Z1 = PSGLA(y.shape, step_size_Z1, dtype=y.dtype)
-        Z2 = PSGLA((2, *state_shape), step_size_Z2, dtype=y.dtype)  #! breaking
-    elif "gpu" in mode:
-        X = GpuPSGLA(state_shape, step_size_X, dtype=y.dtype)
-        Z1 = GpuPSGLA(y.shape, step_size_Z1, dtype=y.dtype)
-        Z2 = GpuPSGLA((2, *state_shape), step_size_Z2, dtype=y.dtype)  #! breaking
-    else:
-        raise ValueError(f"Unknown mode: {mode}")
+    match device:
+        case "cpu":
+            X = PSGLA(state_shape, step_size_X, dtype=y.dtype)
+            Z1 = PSGLA(y.shape, step_size_Z1, dtype=y.dtype)
+            Z2 = PSGLA((2, *state_shape), step_size_Z2, dtype=y.dtype)
+        case "gpu":
+            X = GpuPSGLA(state_shape, step_size_X, dtype=y.dtype)
+            Z1 = GpuPSGLA(y.shape, step_size_Z1, dtype=y.dtype)
+            Z2 = GpuPSGLA((2, *state_shape), step_size_Z2, dtype=y.dtype)
+        case _:
+            raise ValueError(f"Unknown device: {device}")
 
-    if "mpi" in mode:
-        model = DistributedPoissonDeconvolutionTvModel(
-            comm,
-            np.asarray(gt_shape),
-            grid_size,
-            model_params,
-            X,
-            Z1,
-            Z2,
-        )
-
-        if "cpu" in mode:
-            sampler = DistributedSampler(comm, sampler_params, model, logger)
-        else:
-            sampler = MultiGpuSampler(
+    match mode:
+        case "mpi":
+            model = DistributedPoissonDeconvolutionTvModel(
                 comm,
-                sampler_params,
-                model,
-                logger,
-                gpu_id=comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
-            )  # default gpu affectation
-    else:
-        model = PoissonDeconvolutionTvModel(model_params, X, Z1, Z2)
-        Sampler = SerialSampler if "cpu" in mode else GpuSampler
-        sampler = Sampler(sampler_params, model, logger)
+                np.asarray(gt_shape),
+                grid_size,
+                model_params,
+                X,
+                Z1,
+                Z2,
+            )
 
+            if device == "cpu":
+                sampler = DistributedSampler(comm, sampler_params, model, logger)
+            else:
+                # TODO: revise / generalise default gpu assignment
+                sampler = MultiGpuSampler(
+                    comm,
+                    sampler_params,
+                    model,
+                    logger,
+                    gpu_id=comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
+                )
+        case "serial":
+            model = PoissonDeconvolutionTvModel(model_params, X, Z1, Z2)
+            Sampler = SerialSampler if device == "cpu" else GpuSampler
+            sampler = Sampler(sampler_params, model, logger)
+        case _:
+            raise ValueError(f"Unknown run mode: {mode}")
     sampler.sample()
 
 
@@ -312,7 +329,8 @@ def compute_pnp(
     split_coef1: float,
     split_coef2: float,
     denoiser_params: dict,
-    mode: str = "serial-cpu",
+    mode: str = "serial",
+    device: str = "cpu",
 ):
     eps = denoiser_params["denoising_level"] ** 2
     kernel, dynamic_range, gt_shape, _ = load_from_h5(obs_path)
@@ -331,29 +349,33 @@ def compute_pnp(
 
     kernel = fit_kernel_shape(kernel, gt_shape)
 
-    if "mpi" in mode:
-        from mpi4py import MPI
+    match mode:
+        case "mpi":
+            from mpi4py import MPI
 
-        comm = MPI.COMM_WORLD
-        size = comm.Get_size()
-        grid_size = np.asarray([1] * (len(gt_shape) - 2) + [size, 1])
+            comm = MPI.COMM_WORLD
+            size = comm.Get_size()
+            grid_size = np.asarray([1] * (len(gt_shape) - 2) + [size, 1])
 
-        op = MpiDftConvolution(np.asarray(gt_shape), kernel, comm, grid_size)
-        y = np.empty(op.adjoint_communicator.cartslicer.tile_size, dtype=kernel.dtype)
-        with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
-            f["y"].read_direct(  # type: ignore
-                y,
-                op.adjoint_communicator.cartslicer.slice_global_buffer_to_tile,
+            op = MpiDftConvolution(np.asarray(gt_shape), kernel, comm, grid_size)
+            y = np.empty(
+                op.adjoint_communicator.cartslicer.tile_size, dtype=kernel.dtype
             )
-        if "gpu" in mode:
-            y = xp.asarray(y)
+            with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
+                f["y"].read_direct(  # type: ignore
+                    y,
+                    op.adjoint_communicator.cartslicer.slice_global_buffer_to_tile,
+                )
+            if "gpu" in device:
+                y = xp.asarray(y)
 
-        state_shape = tuple(op.direct_communicator.cartslicer.tile_size)
-
-    else:
-        with h5py.File(obs_path, "r") as f:
-            y = xp.asarray(f["y"])
-        state_shape = gt_shape
+            state_shape = tuple(op.direct_communicator.cartslicer.tile_size)
+        case "serial":
+            with h5py.File(obs_path, "r") as f:
+                y = xp.asarray(f["y"])
+            state_shape = gt_shape
+        case _:
+            raise ValueError(f"Unknown run mode: {mode}")
 
     model_params = PoissonDeconvolutionParameters(
         y,
@@ -364,73 +386,88 @@ def compute_pnp(
         split_coef2,
     )
 
-    if "cpu" in mode:
-        raise NotImplementedError("PNP is not implemented for CPU mode.")
-    elif "gpu" in mode:
-        X = GpuPSGLA(state_shape, step_size_X, dtype=y.dtype)
-        Z1 = GpuPSGLA(y.shape, step_size_Z1, dtype=y.dtype)
-        Z2 = GpuPnpULA(state_shape, step_size_Z2, reg_coef, eps, lambda_, dtype=y.dtype)
+    match device:
+        case "cpu":
+            raise NotImplementedError("PnP is not implemented for CPU device.")
+        case "gpu":
+            X = GpuPSGLA(state_shape, step_size_X, dtype=y.dtype)
+            Z1 = GpuPSGLA(y.shape, step_size_Z1, dtype=y.dtype)
+            Z2 = GpuPnpULA(
+                state_shape, step_size_Z2, reg_coef, eps, lambda_, dtype=y.dtype
+            )
+        case _:
+            raise ValueError(f"Unknown device: {device}")
 
-    if "mpi" in mode:
-        match denoiser_params["type"]:
-            case "ddfb":
-                from cards.denoisers.mpi_ddfb import MpiDDFB
+    match mode:
+        case "mpi":
+            match denoiser_params["type"]:
+                case "ddfb":
+                    from cards.denoisers.mpi_ddfb import MpiDDFB
 
-                denoiser = MpiDDFB(
-                    comm,
-                    grid_size,
-                    image_size=np.asarray(gt_shape),
-                    n_layers=denoiser_params["n_layers"],
-                    n_features=denoiser_params["n_features"],
-                )
-            case "dncnn":
-                from cards.denoisers.mpi_dncnn import MpiDnCNN
+                    denoiser = MpiDDFB(
+                        comm,
+                        grid_size,
+                        image_size=np.asarray(gt_shape),
+                        n_layers=denoiser_params["n_layers"],
+                        n_features=denoiser_params["n_features"],
+                    )
+                case "dncnn":
+                    from cards.denoisers.mpi_dncnn import MpiDnCNN
 
-                denoiser = MpiDnCNN(comm, grid_size, image_size=np.asarray(gt_shape))
-            case _:
-                raise ValueError(f"Unknown denoiser type: {denoiser_params['type']}")
-        model = DistributedPoissonDeconvolutionPnpModel(
-            comm,
-            np.asarray(gt_shape),
-            grid_size,
-            model_params,
-            X,
-            Z1,
-            Z2,
-            denoiser,
-        )
-        if "cpu" in mode:
-            sampler = DistributedSampler(comm, sampler_params, model, logger)
-        else:
-            sampler = MultiGpuSampler(
+                    denoiser = MpiDnCNN(
+                        comm, grid_size, image_size=np.asarray(gt_shape)
+                    )
+                case _:
+                    raise ValueError(
+                        f"Unknown denoiser type: {denoiser_params['type']}"
+                    )
+            model = DistributedPoissonDeconvolutionPnpModel(
                 comm,
-                sampler_params,
-                model,
-                logger,
-                comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
-            )  # default gpu affectation
-    else:
-        match denoiser_params["type"]:
-            case "ddfb":
-                from cards.denoisers.serial_ddfb import SerialDDFB
-
-                denoiser = SerialDDFB(
-                    image_size=np.asarray(gt_shape),
-                    n_layers=denoiser_params["n_layers"],
-                    n_features=denoiser_params["n_features"],
+                np.asarray(gt_shape),
+                grid_size,
+                model_params,
+                X,
+                Z1,
+                Z2,
+                denoiser,
+            )
+            if device == "cpu":
+                sampler = DistributedSampler(comm, sampler_params, model, logger)
+            else:
+                # TODO: revise / generalise default gpu assignment
+                sampler = MultiGpuSampler(
+                    comm,
+                    sampler_params,
+                    model,
+                    logger,
+                    comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
                 )
-            case "dncnn":
-                from cards.denoisers.serial_dncnn import SerialDnCNN
+        case "serial":
+            match denoiser_params["type"]:
+                case "ddfb":
+                    from cards.denoisers.serial_ddfb import SerialDDFB
 
-                denoiser = SerialDnCNN(image_size=np.asarray(gt_shape))
-            case "drunet":
-                from cards.denoisers.serial_drunet import SerialDRUNet
+                    denoiser = SerialDDFB(
+                        image_size=np.asarray(gt_shape),
+                        n_layers=denoiser_params["n_layers"],
+                        n_features=denoiser_params["n_features"],
+                    )
+                case "dncnn":
+                    from cards.denoisers.serial_dncnn import SerialDnCNN
 
-                denoiser = SerialDRUNet(image_size=np.asarray(gt_shape))
-            case _:
-                raise ValueError(f"Unknown denoiser type: {denoiser_params['type']}")
-        model = PoissonDeconvolutionPnpModel(model_params, X, Z1, Z2, denoiser)
-        Sampler = SerialSampler if "cpu" in mode else GpuSampler
-        sampler = Sampler(sampler_params, model, logger)
+                    denoiser = SerialDnCNN(image_size=np.asarray(gt_shape))
+                case "drunet":
+                    from cards.denoisers.serial_drunet import SerialDRUNet
+
+                    denoiser = SerialDRUNet(image_size=np.asarray(gt_shape))
+                case _:
+                    raise ValueError(
+                        f"Unknown denoiser type: {denoiser_params['type']}"
+                    )
+            model = PoissonDeconvolutionPnpModel(model_params, X, Z1, Z2, denoiser)
+            Sampler = SerialSampler if device == "cpu" else GpuSampler
+            sampler = Sampler(sampler_params, model, logger)
+        case _:
+            raise ValueError(f"Unknown run mode: {mode}")
 
     sampler.sample()

@@ -1,4 +1,5 @@
-"""Utility functions to generate/handle artificialy deteriorated data."""
+r"""Utility functions to generate synthetic data for the inpainting and
+deconvolution experiments reported in :cite:p:`Bouton2025`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
 #

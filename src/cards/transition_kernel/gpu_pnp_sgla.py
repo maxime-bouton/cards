@@ -9,10 +9,11 @@ Langevin algorithm (PnP-PSGLA) :cite:p:`Renaud2025`"""
 
 # TODO: check convention: state_shape or dims
 # TODO: missing documentation
-# FIXME: not sure we really need a specific class for PnP (simply replace prox by a denoiser... interface should a prior be the same)
+# FIXME: not sure we really need a specific class for PnP (simply replace prox by a denoiser interface should a priori be the same)
 # FIXME: epsilon never used: need to check implementation of PnP-* kernels: where it the noise level supposed to be used? part of the denoiser / handled there?
 
 import torch
+from typing import Optional
 
 from cards.backend import xp
 from cards.transition_kernel.base_transition_kernel import BaseGpuTransitionKernel
@@ -42,11 +43,11 @@ class GpuPnpSGLA(BaseGpuTransitionKernel):
         self,
         state_shape: tuple[int, ...],
         step_size: float,
-        dtype: xp.dtype | None = None,
+        dtype: Optional[xp.dtype] = None,
+        initial_value: Optional[xp.ndarray] = None,
     ) -> None:
-        super().__init__(state_shape, dtype=dtype)
+        super().__init__(state_shape, dtype=dtype, initial_value=initial_value)
         self.step_size = step_size
-        # self.epsilon = epsilon
 
     def denoise(self, state: xp.ndarray) -> xp.ndarray:
         r"""Apply pre-trained denoiser involved in PnP-PSGLA.
@@ -98,9 +99,10 @@ class GpuPnpSGLA(BaseGpuTransitionKernel):
                     size=self.current_state.shape,
                     generator=rng,
                     device=rng.device,
-                ),
+                )
                 # TODO: proper dtype handling in the torch.normal call
-                dtype=self.current_state.dtype,
+                # https://docs.pytorch.org/docs/stable/generated/torch.set_default_dtype.html#torch.set_default_dtype
+                # dtype=self.current_state.dtype,
             )
             - self.step_size * self.grad(self.current_state)
         )
