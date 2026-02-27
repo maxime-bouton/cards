@@ -1,0 +1,18 @@
+{
+    "dataPath" : "../data/inpainting_data_cameraman_ds1_isnr40.h5",
+    "sampleSize" : 1000,
+    "nbCheckpoint" : 10,
+    "alpha" : 0.0001,
+    "regularizationCoefficient" : 1000,
+    "savePath" : "../../../produced_data/sample/",
+    "reload" : false,
+    "numLoadedBatch" : 5,
+    "reloadSavePath" : "../../../produced_data/resumed/",
+    "originPath" : "../../../data/cameraman.h5",
+    "seed" : 1234,
+    "data_seed" : 1234,
+    "burnin" : 2,
+    "mask_loss" : 0.4,
+    "isnr" : 40,
+    "logFilename": "../../../produced_data/inpainting_cameraman.log"
+}

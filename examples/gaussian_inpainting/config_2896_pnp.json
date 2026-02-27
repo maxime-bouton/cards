@@ -1,0 +1,25 @@
+{
+    "checkpoint_size": 1000,
+    "n_checkpoint": 10,
+    "burnin": 1,
+    "reloaded_checkpoint": 0,
+    "seed": 42,
+    "compute_ci": false,
+    "save_all": false,
+    "original_img_path": "../../data/2896.h5",
+    "seed_data": 1234,
+    "obs_path": "",
+    "save_path": "",
+    "save_path_resumed": "",
+    "logfile_path": "",
+    "isnr": 15,
+    "mask_loss": 0.7,
+    "reg_coef": 1,
+    "denoiser_params": {
+        "type": "ddfb",
+        "n_layers": 4,
+        "n_features": 64,
+        "denoising_level": null,
+        "L": 2
+    }
+}
