@@ -1,0 +1,25 @@
+{
+    "checkpoint_size": 500,
+    "n_checkpoint": 40,
+    "burnin": 10,
+    "reloaded_checkpoint": 0,
+    "seed": 42,
+    "compute_ci": true,
+    "save_all": false,
+    "original_img_path": "../../data/lille.h5",
+    "seed_data": 1234,
+    "obs_path": "",
+    "save_path": "",
+    "save_path_resumed": "",
+    "logfile_path": "",
+    "isnr": 25,
+    "mask_loss": 0.8,
+    "reg_coef": 1.25,
+    "denoiser_params": {
+        "type": "ddfb",
+        "n_layers": 19,
+        "n_features": 64,
+        "denoising_level": null,
+        "L": 0
+    }
+}

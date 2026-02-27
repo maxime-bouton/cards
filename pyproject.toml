@@ -1,0 +1,55 @@
+[project]
+authors = [{name = "Stéphane Despierres", email = "stephane.despierres@centralelille.fr"}, {name = "Pierre-Antoine Thouvenin", email = "pierreantoine.thouvenin@centrale.fr"}]
+description = "Add a short description here"
+name = "mcmc"
+requires-python = ">= 3.11"
+version = "0.1.0"
+dependencies = [ "torch>=2.7.1,<3", "torchvision>=0.22.1,<0.23", "deepinv>=0.3.0,<0.4", "torcheval>=0.0.7,<0.0.8"]
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.pypi-dependencies]
+mcmc = { path = ".", editable = true }
+
+[tool.pixi.dependencies]
+coverage = ">=7.9.1,<8"
+cupy = ">=13.4.1,<14"
+furo = ">=2024.8.6,<2025"
+h5py = { version = ">=3.14.0,<4", build = "mpi*" }
+ipykernel = ">=6.29.5,<7"
+matplotlib = ">=3.10.3,<4"
+mpi = { version = ">=1.0,<2", build = "openmpi*" }
+mpi4py = ">=4.1.0,<5"
+mypy = ">=1.16.1,<2"
+numba = ">=0.61.2,<0.62"
+pre-commit = ">=4.2.0,<5"
+pytest = ">=8.4.1,<9"
+python = ">=3.13.3,<3.14"
+ruff = ">=0.12.0,<0.13"
+scikit-image = ">=0.25.2,<0.26"
+scipy = ">=1.15.2,<2"
+sphinx = ">=8.2.3,<9"
+sphinx-autoapi = ">=3.5.0,<4"
+sphinx-design = ">=0.6.1,<0.7"
+sphinx_rtd_theme = ">=3.0.1,<4"
+sphinxcontrib-bibtex = ">=2.6.4,<3"
+tqdm = ">=4.67.1,<5"
+ipyparallel = ">=9.0.1,<10"
+pandas = ">=2.3.0,<3"
+seaborn = ">=0.13.2,<0.14"
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "mpi: parallel tests requiring mpi",
+    "numpy: tests relying on numpy as a computing backend",
+    "torch: tests relying on torch as a computing backend",
+]
+addopts = "-ra -q -vv"
+testpaths = "tests"
