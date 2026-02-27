@@ -88,7 +88,10 @@ class MpiDDFB(BaseDistributedDenoiser):
         Dk_tmp = self.mpi_conv.forward((tile_x_ref - Dk_T_u).clip(0, 1), layer.Dk)
         return (tile_u + layer.tau_k * Dk_tmp).clip(-nu, nu)
 
-    def __call__(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
+    # TODO: investigate mixed type computations / conversions (compared to the serial case)
+    def __call__(
+        self, input_image: xp.ndarray, sigma: float, torch_dtype=None, cp_dtype=None
+    ) -> xp.ndarray:
         """
         Apply the distributed DDFB.
 

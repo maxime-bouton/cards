@@ -3,6 +3,7 @@
 # TODO: documentation
 
 import numpy as np
+import torch
 from mpi4py import MPI
 
 from cards.backend import xp
@@ -40,8 +41,8 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
         if (type(self.X) is PSGLA) or (type(self.X) is GpuPSGLA):
             self.X.prox = prox_nonegativity
-            self.X.grad = (
-                lambda state: self.dynamic_range**2
+            self.X.grad = lambda state: (
+                self.dynamic_range**2
                 * self.convolution_operator.adjoint(
                     self.convX - self.Z1.current_state / self.dynamic_range
                 )
@@ -52,28 +53,35 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
             raise ValueError("Kernel type not yet supported by this model.")
 
         if (type(self.Z1) is PSGLA) or (type(self.Z1) is GpuPSGLA):
-            self.Z1.prox = lambda state: (
-                prox_KL(state, self.observations, lam=self.Z1.step_size)
+            self.Z1.prox = lambda state: prox_KL(
+                state, self.observations, lam=self.Z1.step_size
             )
-            self.Z1.grad = (
-                lambda state: (state - self.dynamic_range * self.convX)
-                / self.split_coef1
+            self.Z1.grad = lambda state: (
+                (state - self.dynamic_range * self.convX) / self.split_coef1
             )
         else:
             raise ValueError("Kernel type not yet supported by this model.")
 
         if type(self.Z2) is GpuPnpULA:
-            self.Z2.denoise = lambda state: self.denoiser(state, self.Z2.epsilon**0.5)
-            self.Z2.grad = (
-                lambda state: (state - self.X.current_state) / self.split_coef2
+            self.Z2.denoise = lambda state: self.denoiser(
+                state,
+                self.Z2.epsilon**0.5,
+                torch_dtype=torch.float32,
+                cp_dtype=xp.float64,
+            )
+            self.Z2.grad = lambda state: (
+                (state - self.X.current_state) / self.split_coef2
             )
             self.Z2.project = lambda state: state.clip(-1, 2)
         elif type(self.Z2) is GpuPnpSGLA:
             self.Z2.denoise = lambda state: self.denoiser(
-                state, self.Z2.reg_coef * self.Z2.epsilon**0.5
+                state,
+                self.Z2.reg_coef * self.Z2.epsilon**0.5,
+                torch_dtype=torch.float32,
+                cp_dtype=xp.float64,
             )
-            self.Z2.grad = (
-                lambda state: (state - self.X.current_state) / self.split_coef2
+            self.Z2.grad = lambda state: (
+                (state - self.X.current_state) / self.split_coef2
             )
         else:
             raise ValueError("Kernel type not yet supported by this model.")
