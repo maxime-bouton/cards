@@ -1,4 +1,4 @@
-from .utils_inpainting import (
+from utils_inpainting import (
     build_obs_and_model_paths,
     gaussian_inpainting_params,
     generate_inpainting_observations,
@@ -28,4 +28,4 @@ if __name__ == "__main__":
 # python -m main --config config.json --mode serial --device cpu
 # python -m main --config config.json --mode serial --device gpu
 # mpirun -n 2 python -m mpi4py main.py --config config.json --mode mpi --device cpu
-# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py main.py --mode mpi --device gpu
+# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py main.py --config config.json --mode mpi --device gpu

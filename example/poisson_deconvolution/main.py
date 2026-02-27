@@ -1,4 +1,4 @@
-from .utils_poisson_deconvolution import (
+from utils_poisson_deconvolution import (
     build_obs_and_model_paths,
     define_slices,
     generate_poisson_deconvolution_observations,

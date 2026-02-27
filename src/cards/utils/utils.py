@@ -84,7 +84,7 @@ def expanded_left_view(array: xp.ndarray, ndim: int) -> xp.ndarray:
     return xp.broadcast_to(array, expand_shape_left(array.shape, ndim))
 
 
-def xp2torch(x: xp.ndarray, add_batch: bool = True):
+def xp2torch(x: xp.ndarray, add_batch: bool = True, torch_dtype=None):
     """Convert a ndarray to a PyTorch tensor.
 
     Parameters
@@ -99,10 +99,10 @@ def xp2torch(x: xp.ndarray, add_batch: bool = True):
     torch.Tensor
         PyTorch tensor.
     """
-    return torch.as_tensor(x[None, :] if add_batch else x)
+    return torch.as_tensor(x[None, :] if add_batch else x).to(torch_dtype)
 
 
-def torch2xp(x: torch.Tensor, remove_batch: bool = True):
+def torch2xp(x: torch.Tensor, remove_batch: bool = True, cp_dtype=None):
     """Convert a PyTorch tensor to a ndarray.
 
     Parameters
@@ -117,7 +117,7 @@ def torch2xp(x: torch.Tensor, remove_batch: bool = True):
     xp.ndarray
         Converted ndarray.
     """
-    return xp.asarray((x.squeeze(0) if remove_batch else x).detach())
+    return xp.asarray((x.squeeze(0) if remove_batch else x).detach(), dtype=cp_dtype)
 
 
 def array_to_plt_img(arr: np.ndarray):

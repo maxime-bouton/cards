@@ -20,13 +20,13 @@ mpi4py = ">=4.1.1,<5"
 h5py = { version = ">=3.15.1,<4", build = "*openmpi*" }
 scipy = ">=1.16.3,<2"
 imageio = ">=2.37.0,<3"
-tqdm = ">=4.67.1,<5"
+tqdm = ">=4.67.3,<5"
 matplotlib = ">=3.10.8,<4"
-scikit-image = ">=0.25.2,<0.26"
+scikit-image = ">=0.26.0,<0.27"
 numba = ">=0.63.1,<0.64"
 numpy = ">=2.3.5,<3"
-pytorch = ">=2.9.1,<3"
-torchvision = ">=0.24.1,<0.25"
+pytorch = ">=2.10.0,<3"
+torchvision = ">=0.25.0,<0.26"
 jupyter = ">=1.1.1,<2"
 
 
@@ -44,20 +44,20 @@ full = { features = ["gpu", "dev", "doc", "test"], solve-group = "gpu" }
 system-requirements = { cuda = "12" }
 
 [tool.pixi.feature.gpu.dependencies]
-cupy = ">=13.6.0,<14"
-ucx = ">=1.19.1,<2"
+cupy = ">=14.0.1,<15"
+ucx = ">=1.20.0,<2"
 
 [tool.pixi.feature.test.dependencies]
 pytest = ">=9.0.2,<10"
-coverage = ">=7.13.0,<8"
+coverage = ">=7.13.4,<8"
 
 [tool.pixi.feature.doc.dependencies]
-furo = ">=2024.8.6,<2025"
+furo = ">=2025.12.19,<2026"
 sphinx = ">=8.2.3,<9"
-sphinx_rtd_theme = ">=3.0.2,<4"
+sphinx_rtd_theme = ">=3.1.0,<4"
 sphinxcontrib-bibtex = ">=2.6.5,<3"
-sphinx-autoapi = ">=3.6.1,<4"
-sphinx-design = ">=0.6.1,<0.7"
+sphinx-autoapi = ">=3.7.0,<4"
+sphinx-design = ">=0.7.0,<0.8"
 
 [tool.pixi.feature.doc.pypi-dependencies]
 sphinxcontrib-apa = ">=1.0.0, <2"
@@ -67,11 +67,11 @@ genbadge = ">=1.1.3, <2"
 wily = ">=1.25.0, <2"
 
 [tool.pixi.feature.dev.dependencies]
-isort = ">=7.0.0,<8"
+isort = ">=8.0.0,<9"
 pre-commit = ">=4.5.1,<5"
-conda-build = ">=25.11.1,<26"
-anaconda-client = ">=1.13.1,<2"
-ruff = ">=0.14.10,<0.15"
+conda-build = ">=26.1.0,<27"
+anaconda-client = ">=1.14.1,<2"
+ruff = ">=0.15.2,<0.16"
 
 
 [tool.pixi.package]

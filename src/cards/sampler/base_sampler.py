@@ -195,7 +195,7 @@ class BaseSampler(ABC):
         """
         if self.rank == 0:
             pbar = tqdm(total=self.nb_batches, desc="Sampling", unit="it")
-            pbar.update(self.start_batch_num)
+            # pbar.update(self.start_batch_num)
 
         for batch_num in range(self.start_batch_num, self.nb_batches + 1):
             self.model.estimator_builder.reset()
@@ -222,9 +222,9 @@ class BaseSampler(ABC):
             self._save_all_data(batch_num)
 
             if self.rank == 0:
+                pbar.update()
                 self.logger.info(
                     "Batch {} out of {} computed".format(batch_num, self.nb_batches)
                 )
                 self.logger.info("Potential: {:1.3e}".format(self.potential[-1]))
                 self.logger.info("Time: {:1.3e}".format(self.computation_time[-1]))
-                pbar.update()

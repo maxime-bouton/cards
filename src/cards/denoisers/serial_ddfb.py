@@ -50,7 +50,12 @@ class SerialDDFB(BaseDenoiser):
         rng = torch.Generator(next(self.ddfb.parameters()).device).manual_seed(42)
         self.ddfb.update_lip(tuple(image_size[-3:]), rng=rng)
 
-    def __call__(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
+    def __call__(
+        self, input_image: xp.ndarray, sigma: float, torch_dtype=None, cp_dtype=None
+    ) -> xp.ndarray:
         # TODO: add error or warning when the number of channels in the input does not fit that of the denoiser
         with torch.no_grad():
-            return torch2xp(self.ddfb(xp2torch(input_image), sigma))
+            return torch2xp(
+                self.ddfb(xp2torch(input_image, torch_dtype=torch_dtype), sigma),
+                cp_dtype=cp_dtype,
+            )
