@@ -194,12 +194,11 @@ def compute_step_sizes_gaussian_inpainting_pnp(
     return step_size_X, lambda_
 
 
-def load_from_h5(filename) -> tuple[xp.ndarray, float, tuple[int, ...]]:
+def load_from_h5(filename) -> tuple[float, tuple[int, ...]]:
     with h5py.File(filename, "r") as data_file:
-        mask = xp.asarray(data_file["mask"])
         sigma2 = data_file["sigma2"][()]  # type: ignore
         gt_shape = data_file["x"].shape  # type: ignore
-    return mask, sigma2, gt_shape
+    return sigma2, gt_shape
 
 
 def compute_tv(
@@ -211,13 +210,10 @@ def compute_tv(
     mode: str = "serial",
     device: str = "cpu",
 ):
-    # FIXME: mask is loaded entirely on all processes in MPI mode
-    mask, sigma2, gt_shape = load_from_h5(obs_path)
+    sigma2, gt_shape = load_from_h5(obs_path)
     step_size_X, step_size_Z = compute_step_sizes_gaussian_inpainting_tv(
         split_coef, sigma2
     )
-
-    mask = fit_mask_shape(mask, gt_shape)
 
     match mode:
         case "mpi":
@@ -240,21 +236,25 @@ def compute_tv(
             )
             state_shape = tuple(cartslicer.tile_size)
 
-            mask = mask[cartslicer.slice_global_buffer_to_tile]
-
+            mask = np.empty(state_shape[-2:], dtype=int)
             dtype = read_dtype(obs_path, "y")
             y = np.empty(state_shape, dtype=dtype)
             with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
                 f["y"].read_direct(y, cartslicer.slice_global_buffer_to_tile)
+                # NOTE: mask is only 2D, slices accommodate up to 3D
+                f["mask"].read_direct(mask, cartslicer.slice_global_buffer_to_tile[-2:])
             if device == "gpu":
                 y = xp.asarray(y)
+                mask = xp.asarray(mask)
         case "serial":
             with h5py.File(obs_path, "r") as f:
                 y = xp.asarray(f["y"])
+                mask = xp.asarray(f["mask"])
             state_shape = gt_shape
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 
+    mask = fit_mask_shape(mask, state_shape)
     model_params = GaussianInpaintingTvParameters(y, mask, sigma2, reg_coef, split_coef)
 
     match device:
@@ -309,8 +309,7 @@ def compute_pnp(
     mode: str = "serial",
     device: str = "cpu",
 ):
-    mask, sigma2, gt_shape = load_from_h5(obs_path)
-    mask = fit_mask_shape(mask, gt_shape)
+    sigma2, gt_shape = load_from_h5(obs_path)
 
     eps = (
         denoiser_params["denoising_level"] ** 2
@@ -345,27 +344,31 @@ def compute_pnp(
             )
             state_shape = tuple(cartslicer.tile_size)
 
-            mask = mask[cartslicer.slice_global_buffer_to_tile]
-
+            mask = np.empty(state_shape[-2:], dtype=int)
             dtype = read_dtype(obs_path, "y")
             y = np.empty(state_shape, dtype=dtype)
             interpolation = np.empty_like(y)
             with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
                 f["y"].read_direct(y, cartslicer.slice_global_buffer_to_tile)
+                # NOTE: mask is only 2D, slices accommodate up to 3D
+                f["mask"].read_direct(mask, cartslicer.slice_global_buffer_to_tile[-2:])
                 f["interpolation"].read_direct(
                     interpolation, cartslicer.slice_global_buffer_to_tile
                 )
             if device == "gpu":
                 y = xp.asarray(y)
+                mask = xp.asarray(mask)
                 interpolation = xp.asarray(interpolation)
         case "serial":
             with h5py.File(obs_path, "r") as f:
                 y = xp.asarray(f["y"])
+                mask = xp.asarray(f["mask"])
                 interpolation = xp.asarray(f["interpolation"])
             state_shape = gt_shape
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 
+    mask = fit_mask_shape(mask, state_shape)
     model_params = GaussianInpaintingPnpParameters(y, mask, sigma2, reg_coef)
 
     match device:
