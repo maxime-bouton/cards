@@ -1,6 +1,6 @@
 r"""Utility functions to set the Gaussian deconvolution example script for the experiments reported in :cite:p:`Bouton2025` (synthetic data generation, sampling and post-processing steps)."""
 
-# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse

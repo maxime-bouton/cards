@@ -1,6 +1,6 @@
 r"""Abstract CPU implementation for the Moreau-Yosida Unajusted Langevin Algorithm (MYULA) :cite:p:`Durmus2018`."""
 
-# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
@@ -61,7 +61,7 @@ class MYULA(BaseTransitionKernel):
 
     def __init__(
         self,
-        dims,
+        state_shape,
         lipschitz_cst: float,
         regularization_factor: float = 1.0,
         stepsize_factor: float = 0.5,
@@ -74,7 +74,7 @@ class MYULA(BaseTransitionKernel):
 
         Parameters
         ----------
-        dims : tuple[int, ...]
+        state_shape : tuple[int, ...]
             Shape of the parameter handled by the transition kernel.
         lipschitz_cst : float
             Lipschitz constant :math:`L_f` of :math:`\nabla f`.
@@ -92,7 +92,7 @@ class MYULA(BaseTransitionKernel):
             The parameters ``stepsize_factor`` and ``regularization_factor``
             both need to be <= 1.
         """
-        super(MYULA, self).__init__(dims)
+        super(MYULA, self).__init__(state_shape)
 
         if xp.minimum(stepsize_factor, regularization_factor) > 1:
             raise ValueError(

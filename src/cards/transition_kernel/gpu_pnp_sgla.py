@@ -1,7 +1,7 @@
 r"""Generic implementation of the Plug-and-Playp proximal stochastic gradient
 Langevin algorithm (PnP-PSGLA) :cite:p:`Renaud2025`"""
 
-# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
@@ -12,8 +12,9 @@ Langevin algorithm (PnP-PSGLA) :cite:p:`Renaud2025`"""
 # FIXME: not sure we really need a specific class for PnP (simply replace prox by a denoiser interface should a priori be the same)
 # FIXME: epsilon never used: need to check implementation of PnP-* kernels: where it the noise level supposed to be used? part of the denoiser / handled there?
 
-import torch
 from typing import Optional
+
+import torch
 
 from cards.backend import xp
 from cards.transition_kernel.base_transition_kernel import BaseGpuTransitionKernel

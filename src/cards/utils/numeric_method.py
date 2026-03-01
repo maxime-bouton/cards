@@ -1,6 +1,6 @@
 r"""Short implementation of the power method to evaluate the Lipshotz contsant of operators."""
 
-# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse

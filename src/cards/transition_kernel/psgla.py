@@ -2,7 +2,7 @@ r"""Abstract CPU implementation for the Proximal Stochastic Gradient Langevin
 Algorithm (PSGLA) :cite:p:`Salim2020`.
 """
 
-# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
@@ -44,20 +44,23 @@ class PSGLA(BaseTransitionKernel):
     """
 
     def __init__(
-        self, dims: tuple[int, ...], step_size: float, dtype: Optional[xp.dtype] = None
+        self,
+        state_shape: tuple[int, ...],
+        step_size: float,
+        dtype: Optional[xp.dtype] = None,
     ) -> None:
         r"""Constructor of the PSGLA class.
 
         Parameters
         ----------
-        dims : tuple[int, ...]
+        state_shape : tuple[int, ...]
             Shape of the parameter handled by the transition kernel.
         step_size : float
             Step-size value used in the transition.
         dtype : xp.dtype | None, optional
             Parameter type, by default None.
         """
-        super(PSGLA, self).__init__(dims, dtype=dtype)
+        super(PSGLA, self).__init__(state_shape, dtype=dtype)
         self.step_size = step_size
         # FIXME: add prox parameter here, so that it can be taken into account directly in mc_step, and not rewritten each time in the implementation of prox (prox_step = step_size * prox_parameter)
         # FIXME: add default method to compute step-size from Lipschitz constant?
