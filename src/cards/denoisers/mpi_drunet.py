@@ -1,4 +1,4 @@
-r"""Distributed denoiser class for the DRUNet network :cite:`Zhang2021`."""
+r"""Distributed denoiser class for the DRUNet network :cite:p:`Zhang2021`."""
 
 from pathlib import Path
 
@@ -21,21 +21,19 @@ class MpiDRUNet(BaseDistributedDenoiser):
         image_size: np.ndarray,
         weights_path=Path(__file__).parents[3] / "data/weights/drunet",
     ):
-        """
-        Distributed DRUNet.
+        r"""Distributed implementation of the DRUNet :cite:p:`Zhang2021` network.
 
         Parameters
         ----------
-        image_size: np.ndarray
-            The input shape
-        comm: BaseCartesianCommunicator
-            The Cartesian communicator
-        timer: TimerRegistry, optional
-            The timer registry
-        logger: logging.Logger, optional
-            If unspecified, no logging will be displayed (default is None).
+        comm : mpi4py.MPI.Comm
+            Underlying MPI communicator.
+        grid_size : xp.ndarray[int]
+            Number of workers along each of the ``d`` dimensions of the
+            communicator grid.
+        image_size: xp.ndarray
+            Input image shape.
         weights_path : str, optional
-            The path to the pre-trained weights folder.
+            Path to the folder containing the pre-trained denoiser weights.
 
         Warning
         -------

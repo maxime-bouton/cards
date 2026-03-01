@@ -1,4 +1,4 @@
-"""Utility functions to load the weights of a denoiser."""
+r"""Utility functions to load the weights of a denoiser."""
 
 from pathlib import Path
 
@@ -15,7 +15,7 @@ def load_pretrained_ddfb(
     n_features=64,
     weights_path=Path(__file__).parents[3] / "data/weights/ddfb",
 ) -> DDFB:
-    """Instantiate a DDFB model with pre-trained weights.
+    r"""Instantiate a DDFB model with pre-trained weights.
 
     This function creates an instance of the DDFB model and loads pre-trained weights
     from the specified path. It also sets the model to evaluation mode and updates the
@@ -30,7 +30,7 @@ def load_pretrained_ddfb(
     n_features : int, optional
         Number of feature maps per layer. Default is 64.
     weights_path : str, optional
-        The path to the pre-trained weights folder. Default is "WEIGHTS_DIR".
+        Path to the pre-trained weights folder. Default is `"data/weights/ddfb"`.
 
     Returns
     -------

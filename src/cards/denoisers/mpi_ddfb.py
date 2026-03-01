@@ -1,8 +1,7 @@
-r"""Distributed denoiser class for the Deep Dual Forward-Backward (DDFB) network :cite:`Repetti2022eusipco`."""
+r"""Distributed denoiser class for the Deep Dual Forward-Backward (DDFB) network :cite:p:`Repetti2022eusipco`."""
 
 from pathlib import Path
 
-import numpy as np
 import torch
 from mpi4py import MPI
 
@@ -12,40 +11,35 @@ from cards.denoisers.ddfb.network_ddfb import DFBLayer
 from cards.denoisers.denoiser_loader import load_pretrained_ddfb
 from cards.operators.mpi_torch_convolution import MpiTorchConvolution
 
-# FIXME: investigate older shared_comm branch (some input not used)
-# FIXME: shared_input_buffer not used, revise implementation
-
 
 class MpiDDFB(BaseDistributedDenoiser):
     def __init__(
         self,
         comm: MPI.Comm,
-        grid_size: np.ndarray,
-        image_size: np.ndarray,
+        grid_size: xp.ndarray,
+        image_size: xp.ndarray,
         n_layers: int,
         n_features: int,
         weights_path=Path(__file__).parents[3] / "data/weights/ddfb",
-        # use_shared_input_buffer: bool = False,
     ):
-        r"""
-        Distributed DDFB.
+        r"""Distributed implementation for the Deep Dual Forward-Backward (DDFB)
+        denoiser :cite:p:`Repetti2022eusipco`.
 
         Parameters
         ----------
-        image_size: np.ndarray
-            The input shape
+        comm : mpi4py.MPI.Comm
+            Underlying MPI communicator.
+        grid_size : xp.ndarray[int]
+            Number of workers along each of the ``d`` dimensions of the
+            communicator grid.
+        image_size: xp.ndarray
+            Input image shape.
         n_layers: int
-            The number of DFBLayers
+            Number of DDFB layers.
         n_features: int
-            The number of channels in the dual space of the convolution operators.
-        comm: BaseCartesianCommunicator
-            The Cartesian communicator
-        timer: TimerRegistry, optional
-            The timer registry
-        logger: logging.Logger, optional
-            If unspecified, no logging will be displayed (default is None).
+            Number of channels in the dual space of the convolution operators.
         weights_path : str, optional
-            The path to the pre-trained weights folder.
+            Path to the folder containing the pre-trained denoiser weights.
         """
         super(BaseDistributedDenoiser, self).__init__(weights_path)
         if image_size.size < 3:
@@ -88,24 +82,27 @@ class MpiDDFB(BaseDistributedDenoiser):
         Dk_tmp = self.mpi_conv.forward((tile_x_ref - Dk_T_u).clip(0, 1), layer.Dk)
         return (tile_u + layer.tau_k * Dk_tmp).clip(-nu, nu)
 
-    # TODO: investigate mixed type computations / conversions (compared to the serial case)
     def __call__(
         self, input_image: xp.ndarray, sigma: float, torch_dtype=None, cp_dtype=None
     ) -> xp.ndarray:
-        """
-        Apply the distributed DDFB.
+        r"""Apply the distributed denoiser.
 
         Parameters
         ----------
         input_image: xp.ndarray
-            The input x tile. Tile size.
+            Input image tile.
         sigma: float
-            The regularization parameter
+            Denoiser parameter (noise standard deviation).
+        torch_dtype : torch.dtype or None, optional
+            Numerical precision to be used for computations with `torch`. Default is `None`.
+        cp_dtype : xp.dtype or None, optional
+            Numerical precision to be used for computations with `xp` (`numpy`
+            or `cupy`). Default is `None`.
 
         Returns
         -------
         xp.ndarray
-            The denoised x tile
+            Denoised image tile.
         """
         tile_u = self.mpi_conv.forward(input_image.clip(0, 1), self.ddfb.D0)
         for layer in self.ddfb.layers:
@@ -119,7 +116,7 @@ class MpiDDFB(BaseDistributedDenoiser):
         return (input_image - D0_T_u).clip(0, 1)
 
     def forward_no_comm(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
-        """Apply the DDFB denoiser without communication on the first layer.
+        r"""Apply the DDFB denoiser without communication on the first layer.
 
         This method can be used to avoid memory duplication when the input
         buffer is common to different operators, thereby reducing the overall
@@ -128,16 +125,17 @@ class MpiDDFB(BaseDistributedDenoiser):
         Parameters
         ----------
         input_image : xp.ndarray
-            Image facet (i.e., including ghost-cell) to denoise.
-        sigma : float
-            Standard deviation of the Gaussian noise.
+            Input image facet (i.e., image buffer including ghost-cell) to denoise.
+        sigma: float
+            Denoiser parameter (noise standard deviation).
 
         Returns
         -------
         xp.ndarray
             Denoised image facet.
         """
-        assert isinstance(sigma, float)  #! fail on np.float or torch.float?
+        # TODO: see if accommodating xp.float* or torch.float*
+        assert isinstance(sigma, float)
         tile_u = self.mpi_conv.forward_no_comm(input_image.clip(0, 1), self.ddfb.D0)
         for layer in self.ddfb.layers:
             tile_u = self._apply_layer(
@@ -157,11 +155,11 @@ class MpiDDFB(BaseDistributedDenoiser):
         ).clip(0, 1)
 
     @property
-    def get_recv_size(self) -> np.ndarray:
+    def get_recv_size(self) -> xp.ndarray:
         return self.mpi_conv.direct_communicator.cartslicer.recv_size
 
     @property
-    def get_send_size(self) -> np.ndarray:
+    def get_send_size(self) -> xp.ndarray:
         return self.mpi_conv.direct_communicator.cartslicer.send_size
 
     @property

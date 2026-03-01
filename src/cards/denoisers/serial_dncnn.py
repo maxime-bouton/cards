@@ -1,4 +1,4 @@
-r"""Serial denoiser class for the DnCNN network :cite:`Zhang2017`."""
+r"""Serial denoiser class for the DnCNN network :cite:p:`Zhang2017`."""
 
 from pathlib import Path
 
@@ -17,15 +17,14 @@ class SerialDnCNN(BaseDenoiser):
         image_size: np.ndarray,
         weights_path=Path(__file__).parents[3] / "data/weights/dncnn",
     ):
-        """
-        Serial DnCNN.
+        r"""Serial DnCNN network :cite:p:`Zhang2017`.
 
         Parameters
         ----------
-        image_size: np.ndarray
-            The input shape.
+        image_size: xp.ndarray
+            Input image shape.
         weights_path : str, optional
-            The path to the pre-trained weights folder.
+            Path to the folder containing the pre-trained denoiser weights.
         """
         super(SerialDnCNN, self).__init__(weights_path)
         if image_size.size < 3:
@@ -36,7 +35,35 @@ class SerialDnCNN(BaseDenoiser):
 
         self.dncnn = load_pretrained_dncnn(n_channels, weights_path=self.weights_path)
 
-    def __call__(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
+    def __call__(
+        self,
+        input_image: xp.ndarray,
+        sigma: float,
+        torch_dtype: xp.dtype | None = None,
+        cp_dtype: torch.dtype | None = None,
+    ) -> xp.ndarray:
+        r"""Apply the serial denoiser.
+
+        Parameters
+        ----------
+        input_image: xp.ndarray
+            Input image tile.
+        sigma: float
+            Denoiser parameter (noise standard deviation).
+        torch_dtype : torch.dtype or None, optional
+            Numerical precision to be used for computations with `torch`. Default is `None`.
+        cp_dtype : xp.dtype or None, optional
+            Numerical precision to be used for computations with `xp` (`numpy`
+            or `cupy`). Default is `None`.
+
+        Returns
+        -------
+        xp.ndarray
+            Denoised image.
+        """
         # TODO: add error or warning when the number of channels in the input does not fit that of the denoiser
         with torch.no_grad():
-            return torch2xp(self.dncnn(xp2torch(input_image)))
+            return torch2xp(
+                self.dncnn(xp2torch(input_image, torch_dtype=torch_dtype)),
+                cp_dtype=cp_dtype,
+            )
