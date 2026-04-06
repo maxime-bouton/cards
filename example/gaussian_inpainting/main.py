@@ -6,8 +6,6 @@ from utils_inpainting import (
 
 from cards.utils.main_helper import run_main
 
-# FIXME: make sure PnP samplers can run for synthetic data generated from a gray_scale image with implicit number of channels
-# FIXME: use bicubic interpolation as initialization for TV experiments as well?
 if __name__ == "__main__":
     run_main(
         gaussian_inpainting_params,

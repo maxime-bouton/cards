@@ -10,6 +10,8 @@ r"""Abstract CPU implementation for the Moreau-Yosida Unajusted Langevin Algorit
 
 # TODO: documentation
 
+from typing import Optional
+
 from cards.backend import xp
 from cards.transition_kernel.base_transition_kernel import BaseTransitionKernel
 
@@ -65,6 +67,8 @@ class MYULA(BaseTransitionKernel):
         lipschitz_cst: float,
         regularization_factor: float = 1.0,
         stepsize_factor: float = 0.5,
+        dtype: Optional[xp.dtype] = None,
+        initial_value: xp.ndarray | None = None,
     ) -> None:
         r"""Constructor.
 
@@ -85,6 +89,10 @@ class MYULA(BaseTransitionKernel):
         stepsize_factor : float, optional
             Stepsize factor :math:`s` reducing the default stepsize adopted for
             MYULA, by default 0.5
+        dtype : xp.dtype | None, optional
+            Parameter type, by default None.
+        initial_value: xp.ndarray | None, optional
+            Initial parameter value, by default None.
 
         Raises
         ------
@@ -92,7 +100,9 @@ class MYULA(BaseTransitionKernel):
             The parameters ``stepsize_factor`` and ``regularization_factor``
             both need to be <= 1.
         """
-        super(MYULA, self).__init__(state_shape)
+        super(MYULA, self).__init__(
+            state_shape, dtype=dtype, initial_value=initial_value
+        )
 
         if xp.minimum(stepsize_factor, regularization_factor) > 1:
             raise ValueError(
@@ -161,5 +171,6 @@ class MYULA(BaseTransitionKernel):
             (1 - self._cst2) * self.current_state
             - self.step_size * self.grad(self.current_state)
             + self._cst2 * self.prox(self.current_state)
-            + self._cst1 * rng.standard_normal(self.current_state.shape)
+            + self._cst1
+            * rng.standard_normal(self.current_state.shape, dtype=self.dtype)
         )

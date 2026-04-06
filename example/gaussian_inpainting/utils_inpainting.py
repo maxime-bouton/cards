@@ -7,6 +7,8 @@ r"""Utility functions to set the Gaussian inpainting example script for the expe
 # Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 # TODO: revise script to also accommodate gray scale images (for which n_channels = 1 is not explicitly present when using xxx.shape)
+# FIXME: use bicubic interpolation to initialize sampler based with TV regularization as well?
+# see l. 264, and 269
 
 import logging
 
@@ -259,10 +261,14 @@ def compute_tv(
 
     match device:
         case "cpu":
-            X = PSGLA(state_shape, step_size_X, dtype=y.dtype)
+            X = PSGLA(
+                state_shape, step_size_X, dtype=y.dtype
+            )  # TODO: to be added: initial_value=interpolation
             Z = PSGLA((2, *state_shape), step_size_Z, dtype=y.dtype)
         case "gpu":
-            X = GpuPSGLA(state_shape, step_size_X, dtype=y.dtype)
+            X = GpuPSGLA(
+                state_shape, step_size_X, dtype=y.dtype
+            )  # TODO: to be added: initial_value=interpolation
             Z = GpuPSGLA((2, *state_shape), step_size_Z, dtype=y.dtype)
         case _:
             raise ValueError(f"Unknown device: {device}")
@@ -382,7 +388,7 @@ def compute_pnp(
                 sigma2,
                 lambda_,
                 dtype=y.dtype,
-                initialization=interpolation,
+                initial_value=interpolation,
             )
         case _:
             raise ValueError(f"Unknown device: {device}")

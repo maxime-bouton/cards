@@ -66,7 +66,7 @@ class GpuPSGLA(BaseGpuTransitionKernel):
         initial_value : cards.backend.xp.ndarray | None, optional
             Initial value for the chain (optional).
         """
-        super().__init__(state_shape, initial_value, dtype=dtype)
+        super().__init__(state_shape, dtype=dtype, initial_value=initial_value)
         self.step_size = step_size
 
     # NOTE: The methods prox and grad should return at this stage, and be

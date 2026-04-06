@@ -7,8 +7,6 @@ from utils_gaussian_deconvolution import (
 
 from cards.utils.main_helper import run_main
 
-
-# FIXME: make sure PnP samplers can run for synthetic data generated from a gray_scale image with implicit number of channels
 if __name__ == "__main__":
     run_main(
         gaussian_deconvolution_params,

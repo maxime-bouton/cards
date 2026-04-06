@@ -48,6 +48,7 @@ class PSGLA(BaseTransitionKernel):
         state_shape: tuple[int, ...],
         step_size: float,
         dtype: Optional[xp.dtype] = None,
+        initial_value: xp.ndarray | None = None,
     ) -> None:
         r"""Constructor of the PSGLA class.
 
@@ -59,8 +60,12 @@ class PSGLA(BaseTransitionKernel):
             Step-size value used in the transition.
         dtype : xp.dtype | None, optional
             Parameter type, by default None.
+        initial_value: xp.ndarray | None, optional
+            Initial parameter value, by default None.
         """
-        super(PSGLA, self).__init__(state_shape, dtype=dtype)
+        super(PSGLA, self).__init__(
+            state_shape, dtype=dtype, initial_value=initial_value
+        )
         self.step_size = step_size
         # FIXME: add prox parameter here, so that it can be taken into account directly in mc_step, and not rewritten each time in the implementation of prox (prox_step = step_size * prox_parameter)
         # FIXME: add default method to compute step-size from Lipschitz constant?
@@ -83,6 +88,6 @@ class PSGLA(BaseTransitionKernel):
         self.current_state = self.prox(
             self.current_state
             + (2 * self.step_size) ** 0.5
-            * rng.standard_normal(self.current_state.shape)
+            * rng.standard_normal(self.current_state.shape, dtype=self.dtype)
             - self.step_size * self.grad(self.current_state)
         )

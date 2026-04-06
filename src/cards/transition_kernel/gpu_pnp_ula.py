@@ -27,9 +27,9 @@ class GpuPnpULA(BaseGpuTransitionKernel):
         epsilon: float,
         lambda_: float,
         dtype: xp.dtype | None = None,
-        initialization: xp.ndarray | None = None,
+        initial_value: xp.ndarray | None = None,
     ) -> None:
-        super().__init__(state_shape, dtype=dtype, initial_value=initialization)
+        super().__init__(state_shape, dtype=dtype, initial_value=initial_value)
         self.step_size = step_size
         self.reg_coef = reg_coef
         self.lambda_ = lambda_

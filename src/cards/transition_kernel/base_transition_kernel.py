@@ -20,6 +20,8 @@ class BaseTransitionKernel(ABC):
     ----------
     current_state : cards.backend.xp.ndarray
         Current state of the parameter handled by the transition kernel.
+    dtype : cards.backend.xp.dtype
+        Parameter type, by default None.
 
     Methods
     -------

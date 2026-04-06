@@ -129,7 +129,7 @@ python -m pytest --mode serial --device gpu
 python -m pytest --mode serial --device gpu
 
 # running all MPI tests on CPU
-mpiexec -n 2 python -m mpi4py -m pytest -m mpi
+mpiexec -n 2 python -m mpi4py -m pytest --mode mpi --device cpu
 
 # running all MPI tests on GPU
 mpiexec -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m pytest --mode mpi --device gpu
