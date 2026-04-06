@@ -15,9 +15,9 @@ class LinearOperator(ABC):
 
     Attributes
     ----------
-    image_size : numpy.ndarray of int, of size ``d``
+    image_size : cards.backend.xp.ndarray of int, of size ``d``
         Full image size.
-    data_size : numpy.ndarray of int, of size ``d``
+    data_size : cards.backend.xp.ndarray of int, of size ``d``
         Full data size.
     ndims : int
         Number of axis (dimensions) in the problem.
@@ -32,9 +32,9 @@ class LinearOperator(ABC):
 
         Parameters
         ----------
-        image_size : numpy.ndarray of int, of size ``d``
+        image_size : cards.backend.xp.ndarray of int, of size ``d``
             Full image size.
-        data_size : numpy.ndarray of int
+        data_size : cards.backend.xp.ndarray of int
             Full data size.
         """
         # if not image_size.size == data_size.size:
@@ -52,7 +52,7 @@ class LinearOperator(ABC):
 
         Parameters
         ----------
-        input_image : numpy.ndarray
+        input_image : cards.backend.xp.ndarray
             Input array (image space).
 
         Note
@@ -69,7 +69,7 @@ class LinearOperator(ABC):
 
         Parameters
         ----------
-        input_data : numpy.ndarray
+        input_data : cards.backend.xp.ndarray
             Input array (data space).
 
         Note

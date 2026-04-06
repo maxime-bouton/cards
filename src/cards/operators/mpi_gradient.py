@@ -18,8 +18,9 @@ class MpiGradient2d:
         grid_size: np.ndarray,
         comm: MPI.Comm = MPI.COMM_WORLD,
         enable_internal_buffer: bool = True,
-        dtype: xp.dtype = xp.float64,
+        dtype: xp.dtype | None = xp.float64,
     ):
+        self.dtype = dtype
         self.comm = comm
         dim_extension = [0] * (len(grid_size) - 2)
         overlap = np.asarray(dim_extension + [1, 1])
@@ -39,7 +40,7 @@ class MpiGradient2d:
             np.asarray(dim_extension + [1, 0]),
             np.asarray(dim_extension + [1, 0]),
             backward=True,
-            dtype=dtype,
+            dtype=self.dtype,
         )
         self.adj_cart_comm_h = SyncCartesianCommunicator(
             self.comm,
@@ -48,7 +49,7 @@ class MpiGradient2d:
             np.asarray(dim_extension + [0, 1]),
             np.asarray(dim_extension + [0, 1]),
             backward=True,
-            dtype=dtype,
+            dtype=self.dtype,
         )
 
         self.rank = self.cart_comm.rank
@@ -61,16 +62,18 @@ class MpiGradient2d:
 
         if enable_internal_buffer:
             self.local_buffer = xp.zeros(
-                self.cart_comm.cartslicer.facet_size, dtype=dtype
+                self.cart_comm.cartslicer.facet_size, dtype=self.dtype
             )
-        self.adj_buffer = xp.zeros(self.cart_comm.cartslicer.tile_size, dtype=dtype)
+        self.adj_buffer = xp.zeros(
+            self.cart_comm.cartslicer.tile_size, dtype=self.dtype
+        )
         self.local_buffer_adj_v = xp.zeros(
             self.adj_cart_comm_v.cartslicer.facet_size,
-            dtype=dtype,
+            dtype=self.dtype,
         )
         self.local_buffer_adj_h = xp.zeros(
             self.adj_cart_comm_h.cartslicer.facet_size,
-            dtype=dtype,
+            dtype=self.dtype,
         )
 
     def chunk_gradient_2d(self, x: xp.ndarray):
@@ -93,13 +96,13 @@ class MpiGradient2d:
             "gradient_2d: Invalid input, expected len(x.shape)==len(is_last.shape)"
         )
 
-        # worker in last position along axis 1 of the grid: no border coming from
-        # the next worker
+        # worker in last position along axis 1 of the grid: no border coming
+        # from the next worker
 
         *c, h, w = x.shape
         local_h = h if self.is_last[-2] else h - 1
         local_w = w if self.is_last[-1] else w - 1
-        u = xp.zeros((2, *c, local_h, local_w), dtype=x.dtype)
+        u = xp.zeros((2, *c, local_h, local_w), dtype=self.dtype)  # x.dtype
 
         # horizontal differences uh = u[0, :, :]
         if self.is_last[-1]:
@@ -155,8 +158,8 @@ class MpiGradient2d:
             "gradient_2d_adjoint: Invalid input, expected len(uh.shape) == len(uv.shape)"
         )
 
-        # self.adj_buffer.fill(0) #! cupy memory management does not allow that
-        self.adj_buffer = xp.zeros(self.adj_shape)
+        # self.adj_buffer = xp.zeros(self.adj_shape, dtype=self.dtype)
+        self.adj_buffer.fill(0)
 
         # vertical: uv = u[1, :, :, :]
         if self.is_first[-2]:  # no overlap along axis 0

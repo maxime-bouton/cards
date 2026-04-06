@@ -214,7 +214,7 @@ class MpiDftConvolution(LinearOperator):
         grid_size: xp.ndarray,
         backward=False,
         enable_internal_buffer: bool = True,
-        dtype: xp.dtype = xp.float64,
+        dtype: xp.dtype | None = xp.float64,
         tile_range: np.ndarray | None = None,
     ):
         r"""Synchronous distributed implementation of a (linear) convolution
@@ -251,6 +251,7 @@ class MpiDftConvolution(LinearOperator):
         TypeError
             Only real-valued kernel supported.
         """
+        self.dtype = dtype
         data_size = image_size + np.array([*kernel.shape], dtype="i") - 1
         if not image_size.size == data_size.size:
             raise ValueError(
