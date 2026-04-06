@@ -65,6 +65,9 @@
   - [ ] complete pipeline for versioninin with [`bumpver`](https://github.com/mbarkhau/bumpver), see also https://realpython.com/pypi-publish-python-package/
   - [ ] generate changelogs with [`towncrier`](https://towncrier.readthedocs.io/en/stable/index.html)
 
+- Add GPU support on MAC through [mlx](https://github.com/ml-explore/mlx)
+- Investigate [onnx](https://github.com/onnx/onnx) for network weights
+
 - Management and build
   - [ ] build support for 'win-64' 'osx-64' 'osx-arm64' for the dependencies considered (per-platform requirements in `pyproject.toml`)
   - [ ] adding new backend for Apple plateforms : [MLX](https://ml-explore.github.io/mlx/build/html/index.html), see example here

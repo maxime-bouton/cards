@@ -102,8 +102,9 @@ class GpuPnpSGLA(BaseGpuTransitionKernel):
                     device=rng.device,
                 )
                 # TODO: proper dtype handling in the torch.normal call
-                # https://docs.pytorch.org/docs/stable/generated/torch.set_default_dtype.html#torch.set_default_dtype
                 # dtype=self.current_state.dtype,
+                # https://docs.pytorch.org/docs/stable/generated/torch.set_default_dtype.html#torch.set_default_dtype
+                # https://github.com/pytorch/pytorch/issues/40568
             )
             - self.step_size * self.grad(self.current_state)
         )

@@ -45,13 +45,11 @@ class BaseTransitionKernel(ABC):
         dtype : cards.backend.xp.dtype | None, optional
             Parameter type, by default None.
         """
+        self.dtype = dtype
         if initial_value is not None:
-            self.current_state = initial_value
+            self.current_state = initial_value.astype(self.dtype)
         else:
-            if dtype is not None:
-                self.current_state = xp.zeros(state_shape, dtype=dtype)
-            else:
-                self.current_state = xp.zeros(state_shape)
+            self.current_state = xp.zeros(state_shape, dtype=self.dtype)
 
     @abstractmethod
     def mc_step(self, rng) -> None:
