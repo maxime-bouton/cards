@@ -124,7 +124,7 @@ pytest --markers
 python -m pytest --collect-only
 
 # running all serial tests on CPU
-python -m pytest --mode serial --device gpu
+python -m pytest --mode serial --device cpu
 
 # running all serial tests on GPU
 python -m pytest --mode serial --device gpu
