@@ -23,6 +23,7 @@
     - [Setup](#setup)
     - [Testing](#testing)
   - [License](#license)
+  - [Citation](#citation)
 
 </details>
 
@@ -140,3 +141,22 @@ mpiexec -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=tr
 ## License
 
 The project is licensed under the [GPL-3.0 license](LICENSE).
+
+## Citation
+
+If you reuse this code, please cite the [associated paper](<>).
+
+```bib
+@article{Bouton2026,
+  arxivid      = {2511.00870},
+  author       = {Maxime Bouton and Pierre-Antoine Thouvenin and Audrey Repetti and Pierre Chainais},
+  code         = {https://github.com/maxime-bouton/cards},
+  date         = {2026-04},
+  eprinttype   = {arxiv},
+  journaltitle = {{IEEE Trans. Comput. Imag.}},
+  month        = apr,
+  note         = {to appear},
+  title        = {A Distributed {P}lug-and-{P}lay {MCMC} Algorithm for High-Dimensional Inverse Problems},
+  url          = {https://hal.science/hal-05326314},
+}
+```

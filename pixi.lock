@@ -2545,7 +2545,7 @@ packages:
 - pypi: ./
   name: cards
   version: 0.1.0
-  sha256: 5adc83fc70b4374bdf0e05d9cc347f08f65ed03fed2f80eedcb7e73cfff89995
+  sha256: 3d55f9f892566751b3139934e7eaf3b439137e613ad10b997a4fa3505b4a8006
 - conda: https://conda.anaconda.org/conda-forge/noarch/certifi-2026.1.4-pyhd8ed1ab_0.conda
   sha256: 110338066d194a715947808611b763857c15458f8b3b97197387356844af9450
   md5: eacc711330cd46939f66cd401ff9c44b

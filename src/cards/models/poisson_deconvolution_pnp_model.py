@@ -1,6 +1,7 @@
-"""Implementation of a poisson deconvolution model using the plug and pay method."""
+r"""Implementation of a poisson deconvolution model using the plug and pay method."""
 
 # TODO: documentation
+# TODO: typing
 
 import numpy as np
 import torch
@@ -116,12 +117,12 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
         self.Z2.current_state = xp.asarray(states["Z2"])
         self.convX = self.convolution_operator.forward(self.X.current_state)
 
-    def update(self, rng: np.random.Generator):
+    def update(self, rng: xp.random.Generator | torch.Generator) -> None:
         """update Gobal update of the model. Updates every kernel used by the model and computes annex variables.
 
         Parameters
         ----------
-        rng : np.random.Generator
+        rng : np.random.Generator | torch.Generator
             Random number generator, given by the sampler.
         """
         self.X.mc_step(rng)
@@ -198,7 +199,7 @@ class DistributedPoissonDeconvolutionPnpModel(
         self.set_local_sizes()
 
     def set_slices(self):
-        """set_slices Describes which portion of the global buffer the current thread must handle.
+        """Describes which portion of the global buffer the current thread must handle.
 
         Returns
         -------
@@ -217,7 +218,7 @@ class DistributedPoissonDeconvolutionPnpModel(
         self.slices = slices
 
     def set_global_sizes(self):
-        """set_global_sizes Describe the gobla sizes of several global buffers.
+        """Describes the gobal sizes of several global buffers.
 
         Returns
         -------
@@ -230,9 +231,7 @@ class DistributedPoissonDeconvolutionPnpModel(
             self.convolution_operator.adjoint_communicator.cartslicer.global_buffer_size,
             dtype=int,
         )
-        sizes["Z2"] = np.asarray(
-            self.full_size, dtype=int
-        )  # ? same dimensions as adj? -> (2,*full_size)?
+        sizes["Z2"] = np.asarray(self.full_size, dtype=int)
 
         sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
 

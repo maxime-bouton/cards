@@ -24,11 +24,15 @@
   - [specific build documentation](https://prefix-dev.github.io/pixi-build-backends/)
 
 - [x] Restructure README, separating base user installation from dev instructions
+- [ ] add MPIDRUNet in examples on current branch (check https://gitlab.cristal.univ-lille.fr/parallelmcmc/cards/-/blob/pnp/example/poisson_deconvolution/utils_poisson_deconvolution.py?ref_type=heads), `pnp` branch
+- [ ] Clarify instructions/interface to create slices for the slices (`global_to_tile_slice`, `local_to_global`)
 - Double check all code base with Maxime
     - [ ] checking sampling examples, rerun representative experiments
     - [ ] checking integration examples (based on revised application scripts)
     - [ ] convert all shapes in slicers and communicators from `np.array`s to `Tuple[int, ...]`
     - [ ] solve runtime issues for PnP samplers (size issue gray images, see where gray denoiser is selected)
+- [ ] Cleanup example main scripts for local data sizes (use only minimum amount of code to do this)
+- [ ] Redefine CartesianSlicer to make `send_size` and `recv_size` optional (when 0, no overlap to take into account)
 - [ ] Add testing CI instruction to build the package under different configurations?
 
 -  documentation
