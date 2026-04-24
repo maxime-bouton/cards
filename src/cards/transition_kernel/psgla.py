@@ -10,8 +10,7 @@ Algorithm (PSGLA) :cite:p:`Salim2020`.
 #
 # adpated from: https://gitlab.cristal.univ-lille.fr/pthouven/dsgs
 
-# TODO: documentation
-# TODO: fuse with gpu_psgla (only differs through one instruction)
+# TODO: fuse with GpuPSGLA if possible
 
 from typing import Optional
 
@@ -20,8 +19,8 @@ from cards.transition_kernel.base_transition_kernel import BaseTransitionKernel
 
 
 class PSGLA(BaseTransitionKernel):
-    r"""Generic CPU implementation of the Proximal Stochastic Gradient Langevin
-    Algorithm (PSGLA) :cite:p:`Salim2020`, with target distribution of the form
+    r"""Abstract CPU implementation of the Proximal Stochastic Gradient Langevin
+    Algorithm (PSGLA) :cite:p:`Salim2020`, with target distribution
 
     .. math::
             \pi(x) \propto \exp( -f(x) - g(x)),
@@ -34,13 +33,6 @@ class PSGLA(BaseTransitionKernel):
     ----------
     step_size : float
         Step-size value used in the PSGLA transition.
-
-    Methods
-    -------
-    prox(xp.ndarray)
-        Compute the proximity operator of the non-smooth term in the negative log-posterior probability density function.
-    grad(xp.ndarray)
-        Compute the gradient of the differentiable term in the negative log-posterior probability density function.
     """
 
     def __init__(
@@ -48,9 +40,9 @@ class PSGLA(BaseTransitionKernel):
         state_shape: tuple[int, ...],
         step_size: float,
         dtype: Optional[xp.dtype] = None,
-        initial_value: xp.ndarray | None = None,
+        initial_value: Optional[xp.ndarray] = None,
     ) -> None:
-        r"""Constructor of the PSGLA class.
+        r"""PSGLA constructor.
 
         Parameters
         ----------
@@ -58,33 +50,32 @@ class PSGLA(BaseTransitionKernel):
             Shape of the parameter handled by the transition kernel.
         step_size : float
             Step-size value used in the transition.
-        dtype : xp.dtype | None, optional
+        dtype : cards.backend.xp.dtype | None, optional
             Parameter type, by default None.
-        initial_value: xp.ndarray | None, optional
-            Initial parameter value, by default None.
+        initial_value: cards.backend.xp.ndarray | None, optional
+            Initial state value, by default None.
         """
         super(PSGLA, self).__init__(
             state_shape, dtype=dtype, initial_value=initial_value
         )
         self.step_size = step_size
-        # FIXME: add prox parameter here, so that it can be taken into account directly in mc_step, and not rewritten each time in the implementation of prox (prox_step = step_size * prox_parameter)
-        # FIXME: add default method to compute step-size from Lipschitz constant?
 
-    # NOTE: The methods prox and grad should return at this stage, and be
-    # defined by the user in any script where this class is actually used
+    # NOTE: prox and grad should be defined by the user
     # https://stackoverflow.com/questions/10374527/dynamically-assigning-function-implementation-in-python
 
     def prox(self, state: xp.ndarray) -> xp.ndarray:
-        """Compute the proximity operator of the non-smooth term in the
-        negative log-posterior function. Needs to be defined by the user."""
-        raise ValueError("Warning : proximal operator not defined!")
+        r"""Compute the proximity operator of the non-smooth term in the
+        negative log-posterior function. To be defined by the user.
+        """
+        raise ValueError("Proximal operator not defined.")
 
     def grad(self, state: xp.ndarray) -> xp.ndarray:
-        """Compute the gradient of the differentiable term in the negative
-        log-posterior function. Needs to be defined by the user."""
-        raise ValueError("Warning : gradient function not defined!")
+        r"""Compute the gradient of the differentiable term in the negative
+        log-posterior function. To be defined by the user.
+        """
+        raise ValueError("Gradient function not defined.")
 
-    def mc_step(self, rng) -> None:
+    def mc_step(self, rng: xp.random.Generator) -> None:
         self.current_state = self.prox(
             self.current_state
             + (2 * self.step_size) ** 0.5

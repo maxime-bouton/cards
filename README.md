@@ -104,6 +104,17 @@ pixi shell --environment full
 # eval "$(pixi shell-hook --environment full)"
 ```
 
+- Provided examples can be run as follows
+
+```bash
+pixi shell -e full
+cd examples/gaussian_deconvolution
+python -m main --config config_2048_tv.json --mode serial --device cpu
+# mpirun -n 2 python -m mpi4py main.py --config config.json --mode mpi --device cpu
+python -m main --config config_2048_pnp.json --mode serial --device gpu
+# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py main.py --config config_2048_pnp.json --mode mpi --device gpu
+```
+
 </details>
 
 <details>

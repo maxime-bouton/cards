@@ -21,7 +21,7 @@ class BaseTransitionKernel(ABC):
     current_state : cards.backend.xp.ndarray
         Current state of the parameter handled by the transition kernel.
     dtype : cards.backend.xp.dtype
-        Parameter type, by default None.
+        Numeric type for the state, by default None (default configuration).
 
     Methods
     -------
@@ -42,8 +42,8 @@ class BaseTransitionKernel(ABC):
         ----------
         state_shape : Tuple[int, ...]
             Shape of the parameter handled by the transition kernel.
-        initial_value : cp.ndarray | None, optional
-            Initial value for the chain (optional).
+        initial_value : xp.ndarray | None, optional
+            Initial state value, by default None.
         dtype : cards.backend.xp.dtype | None, optional
             Parameter type, by default None.
         """

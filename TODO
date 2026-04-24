@@ -25,8 +25,9 @@
 
 - [x] Restructure README, separating base user installation from dev instructions
 - [x] add MPIDRUNet in examples on current branch (check https://gitlab.cristal.univ-lille.fr/parallelmcmc/cards/-/blob/pnp/example/poisson_deconvolution/utils_poisson_deconvolution.py?ref_type=heads), `pnp` branch
-- [ ] Fix MPI tests issues for distributed denoisers (currently failing with odd number for DRUNet, failing for all with 9 workers)
-- [ ] Clarify instructions/interface to create slices for the slices (`global_to_tile_slice`, `local_to_global`)
+- [x] Fix MPI tests issues for distributed denoisers (currently failing with odd number for DRUNet)
+    - failure expected: implementation only working for now if pstial dimensions divisible by 8
+- [x] Clarify instructions/interface to create slices (`global_to_tile_slice`, `local_to_global`)
 - Double check all code base with Maxime
     - [ ] checking sampling examples, rerun representative experiments
     - [ ] checking integration examples (based on revised application scripts)
@@ -34,6 +35,7 @@
     - [ ] solve runtime issues for PnP samplers (size issue gray images, see where gray denoiser is selected)
 - [ ] Cleanup example main scripts for local data sizes (use only minimum amount of code to do this)
 - [ ] Redefine CartesianSlicer to make `send_size` and `recv_size` optional (when 0, no overlap to take into account)
+- [ ] Revise handling of `dtype` in sampler / transition kernels (not fully enforced between `torch` and `cupy`, difference in default precision (`flost64` for `cupy`, against `flost32` for `torch`))
 - [ ] Add testing CI instruction to build the package under different configurations?
 
 -  documentation
@@ -57,6 +59,9 @@
 
 - New core features
     - [ ] MML (marginal maximum likelihood features, based on older codes already available internally)
+    - Langevin-based kernels:
+        - [ ] add prox parameter in __init__, so that it can be taken into account directly in mc_step, and not rewritten each time in the implementation of prox (prox_step = step_size * prox_parameter)?
+        - [ ] add default method to compute step-size from Lipschitz constant?
 
 - Documentation
   - [ ] getting started (doc sphinx), install, tuto
@@ -66,7 +71,10 @@
   - [ ] revise writing for the tutorial + display in the sphinx documentation
   - enhance documentation: https://realpython.com/documenting-python-code/#docstring-formats
   - [ ] proper typing, possibly with [`mypy`](https://mypy.readthedocs.io/en/stable/existing_code.html) or `pyright`, or [ty](https://github.com/astral-sh/ty), more recent
-   Example setup: https://mypy.readthedocs.io/en/stable/config_file.html#config-file
+   - Refs:
+    - https://docs.python.org/3/library/typing.html
+    - https://mypy.readthedocs.io/en/stable/cheat_sheet_py3.html
+    - Example setup: https://mypy.readthedocs.io/en/stable/config_file.html#config-file
   - [ ] complete pipeline for versioninin with [`bumpver`](https://github.com/mbarkhau/bumpver), see also https://realpython.com/pypi-publish-python-package/
   - [ ] generate changelogs with [`towncrier`](https://towncrier.readthedocs.io/en/stable/index.html)
 

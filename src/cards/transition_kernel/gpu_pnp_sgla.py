@@ -1,16 +1,12 @@
-r"""Generic implementation of the Plug-and-Playp proximal stochastic gradient
-Langevin algorithm (PnP-PSGLA) :cite:p:`Renaud2025`"""
+r"""Abstract GPU implementation of the Plug-and-Playp proximal stochastic
+gradient Langevin algorithm (PnP-PSGLA) :cite:p:`Renaud2025`.
+"""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
 # Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
-
-# TODO: check convention: state_shape or dims
-# TODO: missing documentation
-# FIXME: not sure we really need a specific class for PnP (simply replace prox by a denoiser interface should a priori be the same)
-# FIXME: epsilon never used: need to check implementation of PnP-* kernels: where it the noise level supposed to be used? part of the denoiser / handled there?
 
 from typing import Optional
 
@@ -30,14 +26,6 @@ class GpuPnpSGLA(BaseGpuTransitionKernel):
     ----------
     step_size : float
         Step-size value used in the PnP-PSGLA transition.
-
-    Methods
-    -------
-    denoise(cards.backend.xp.ndarray)
-        Apply pre-trained denoiser involved in PnP-PSGLA.
-    grad(cards.backend.xp.ndarray)
-        Compute the gradient of the differentiable term in the negative
-        log-posterior probability density function.
     """
 
     def __init__(
@@ -47,6 +35,19 @@ class GpuPnpSGLA(BaseGpuTransitionKernel):
         dtype: Optional[xp.dtype] = None,
         initial_value: Optional[xp.ndarray] = None,
     ) -> None:
+        r"""Constructor of the GpuPnpSGLA class.
+
+        Parameters
+        ----------
+        state_shape : tuple[int, ...]
+            Shape of the parameter handled by the transition kernel.
+        step_size : float
+            Step-size value used in the transition.
+        dtype : xp.dtype | None, optional
+            Parameter type, by default None.
+        initial_value : xp.ndarray | None, optional
+            Initial state value, by default None.
+        """
         super().__init__(state_shape, dtype=dtype, initial_value=initial_value)
         self.step_size = step_size
 
@@ -67,7 +68,7 @@ class GpuPnpSGLA(BaseGpuTransitionKernel):
         ----
         To be defined by the user.
         """
-        raise ValueError("Warning: denoiser not defined!")
+        raise ValueError("Denoiser not defined!")
 
     def grad(self, state: xp.ndarray) -> xp.ndarray:
         r"""Compute the gradient of the differentiable term in the negative
@@ -87,9 +88,9 @@ class GpuPnpSGLA(BaseGpuTransitionKernel):
         ----
         To be defined by the user.
         """
-        raise ValueError("Warning: gradient function not defined!")
+        raise ValueError("Gradient function not defined.")
 
-    def mc_step(self, rng):
+    def mc_step(self, rng: torch.Generator):
         self.current_state = self.denoise(
             self.current_state
             + (2 * self.step_size) ** 0.5

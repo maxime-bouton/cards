@@ -1,4 +1,4 @@
-r"""Abstract CPU implementation for the Moreau-Yosida Unajusted Langevin Algorithm (MYULA) :cite:p:`Durmus2018`."""
+r"""Abstract GPU implementation for the Moreau-Yosida Unajusted Langevin Algorithm (MYULA) :cite:p:`Durmus2018`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
@@ -10,12 +10,14 @@ r"""Abstract CPU implementation for the Moreau-Yosida Unajusted Langevin Algorit
 
 from typing import Optional
 
+import torch
+
 from cards.backend import xp
-from cards.transition_kernel.base_transition_kernel import BaseTransitionKernel
+from cards.transition_kernel.base_transition_kernel import BaseGpuTransitionKernel
 
 
-class MYULA(BaseTransitionKernel):
-    r"""Abstract CPU implementation of the MYULA transition kernel.
+class GpuMYULA(BaseGpuTransitionKernel):
+    r"""Abstract GPU implementation of the MYULA transition kernel.
 
     MYULA transition kernel :cite:p:`Durmus2018` associated with a target
     density of the form
@@ -68,7 +70,7 @@ class MYULA(BaseTransitionKernel):
         dtype: Optional[xp.dtype] = None,
         initial_value: xp.ndarray | None = None,
     ) -> None:
-        r"""MYULA Constructor.
+        r"""Constructor of the GpuMYULA class.
 
         Default recommendations from :cite:p:`Durmus2018` are used to set the
         stepsize and the regularization parameters involved in the MYULA
@@ -98,7 +100,7 @@ class MYULA(BaseTransitionKernel):
             The parameters ``stepsize_factor`` and ``regularization_factor``
             both need to be <= 1.
         """
-        super(MYULA, self).__init__(
+        super(GpuMYULA, self).__init__(
             state_shape, dtype=dtype, initial_value=initial_value
         )
 
@@ -168,11 +170,20 @@ class MYULA(BaseTransitionKernel):
         """
         raise ValueError("Gradient function not defined.")
 
-    def mc_step(self, rng: xp.random.Generator) -> None:
+    def mc_step(self, rng: torch.Generator) -> None:
         self.current_state = (
             (1 - self._cst2) * self.current_state
             - self.step_size * self.grad(self.current_state)
             + self._cst2 * self.prox(self.current_state)
             + self._cst1
-            * rng.standard_normal(self.current_state.shape, dtype=self.dtype)
+            * xp.from_dlpack(
+                torch.normal(
+                    mean=0,
+                    std=1,
+                    size=self.current_state.shape,
+                    generator=rng,
+                    device=rng.device,
+                )
+                # TODO: proper dtype handling in the torch.normal call
+            )
         )
