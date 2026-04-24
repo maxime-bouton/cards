@@ -4,10 +4,12 @@ import pytest
 from cards.backend import xp
 from cards.denoisers.mpi_ddfb import MpiDDFB
 from cards.denoisers.mpi_dncnn import MpiDnCNN
+from cards.denoisers.mpi_drunet import MpiDRUNet
 from cards.denoisers.serial_ddfb import SerialDDFB
 from cards.denoisers.serial_dncnn import SerialDnCNN
+from cards.denoisers.serial_drunet import SerialDRUNet
 
-# TODO: add test with gray images (n_channels = 1 explicitly in the input image shape, or just 2 dimensions)
+# TODO: add test with gray images (n_channels = 1), missing DDFB weights with nch=1
 
 
 # NOTE: only first spatial axis is partitioned because way too slow when both axes are.
@@ -16,8 +18,8 @@ def grid_size(comm_size: int) -> np.ndarray:
     return np.asarray([1, comm_size, 1])
 
 
-# NOTE: only one input shape configuration because DRUNet requires the dimensions of
-# each local tile to be multiples of 8 (on each spatial axis).
+# NOTE: only one input shape configuration: DRUNet requires the
+# dimensions of each local tile to be multiples of 8 (on each spatial axis).
 @pytest.fixture(params=[(3, 128, 128)])
 def input_shape(request):
     return request.param
@@ -30,9 +32,7 @@ def input_size(input_shape) -> np.ndarray:
 
 @pytest.mark.mpi
 def test_mpi_ddfb(seed, input_size, comm, grid_size):
-    """
-    Verify that the distributed DDFB yields results identical to the serial DDFB.
-    """
+    r"""Verify that the distributed DDFB yields results identical to the serial DDFB."""
     rng = xp.random.default_rng(seed)
     x = rng.random(input_size).astype(xp.float32)
 
@@ -58,9 +58,7 @@ def test_mpi_ddfb(seed, input_size, comm, grid_size):
 
 @pytest.mark.mpi
 def test_mpi_dncnn(seed, input_size, comm, grid_size):
-    """
-    Verify that the distributed DnCNN yields results identical to the serial DnCNN.
-    """
+    r"""Verify that the distributed DnCNN yields results identical to the serial DnCNN."""
     rng = xp.random.default_rng(seed)
     x = rng.random(input_size).astype(xp.float32)
 
@@ -74,20 +72,23 @@ def test_mpi_dncnn(seed, input_size, comm, grid_size):
     xp.testing.assert_allclose(y_serial, y_mpi, rtol=1e-5, atol=1e-5)
 
 
-# FIXME: current issue with odd number of workers, to be fixed
-# @pytest.mark.mpi
-# def test_mpi_drunet(seed, input_size, comm, grid_size):
-#     """
-#     Verify that the distributed DRUNet yields results identical to the serial DRUNet.
-#     """
-#     rng = xp.random.default_rng(seed)
-#     x = rng.random(input_size).astype(xp.float32)
+@pytest.mark.mpi
+def test_mpi_drunet(seed, input_size, comm, grid_size):
+    r"""Verify that the distributed DRUNet yields results identical to the serial DRUNet.
 
-#     serial_drunet = SerialDRUNet(image_size=input_size)
+    Warning
+    -------
+    DRUNet requires the dimensions of each local tile to be multiples of 8
+    (along each spatial axis).
+    """
+    rng = xp.random.default_rng(seed)
+    x = rng.random(input_size).astype(xp.float32)
 
-#     mpi_drunet = MpiDRUNet(comm, grid_size, image_size=input_size)
+    serial_drunet = SerialDRUNet(image_size=input_size)
 
-#     y_serial = serial_drunet(x, 0.03)[mpi_drunet.global_to_tile_slice]
-#     y_mpi = mpi_drunet(x[mpi_drunet.global_to_tile_slice], 0.03)
+    mpi_drunet = MpiDRUNet(comm, grid_size, image_size=input_size)
 
-#     xp.testing.assert_allclose(y_serial, y_mpi, rtol=1e-5, atol=1e-5)
+    y_serial = serial_drunet(x, 0.03)[mpi_drunet.global_to_tile_slice]
+    y_mpi = mpi_drunet(x[mpi_drunet.global_to_tile_slice], 0.03)
+
+    xp.testing.assert_allclose(y_serial, y_mpi, rtol=1e-5, atol=1e-5)
