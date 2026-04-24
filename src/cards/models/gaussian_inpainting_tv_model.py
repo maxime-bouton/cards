@@ -50,8 +50,8 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
         if (type(self.X) is PSGLA) or (type(self.X) is GpuPSGLA):
             self.X.prox = prox_nonegativity
-            self.X.grad = (
-                lambda state: self.mask * (state - self.observations) / self.sigma2
+            self.X.grad = lambda state: (
+                self.mask * (state - self.observations) / self.sigma2
                 + self.gradient_operator.adjoint(self.gradX - self.Z.current_state)
                 / self.split_coeff
             )
@@ -59,8 +59,8 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
             raise ValueError("Kernel type not yet supported by this model.")
 
         if (type(self.Z) is PSGLA) or (type(self.Z) is GpuPSGLA):
-            self.Z.prox = lambda state: (
-                prox_l21norm(state, lam=self.Z.step_size * self.reg_coeff, axis=0)
+            self.Z.prox = lambda state: prox_l21norm(
+                state, lam=self.Z.step_size * self.reg_coeff, axis=0
             )
             self.Z.grad = lambda state: (state - self.gradX) / self.split_coeff
         else:
@@ -172,15 +172,15 @@ class DistributedGaussianInpaintingTvModel(
         """
         slices = {}
         slices["X"] = (
-            self.gradient_operator.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
+            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
         )
         slices["Z"] = (
             np.s_[:],
-            *self.gradient_operator.cart_comm.cartslicer._get_slice_global_buffer_to_tile(),
+            *self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile,
         )
 
         slices["MMSE"] = (
-            self.gradient_operator.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
+            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
         )
 
         self.slices = slices

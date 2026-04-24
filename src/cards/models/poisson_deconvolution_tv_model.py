@@ -46,8 +46,8 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
         if (type(self.X) is PSGLA) or (type(self.X) is GpuPSGLA):
             self.X.prox = prox_nonegativity
-            self.X.grad = (
-                lambda state: self.dynamic_range**2
+            self.X.grad = lambda state: (
+                self.dynamic_range**2
                 * self.convolution_operator.adjoint(
                     self.convX - self.Z1.current_state / self.dynamic_range
                 )
@@ -59,19 +59,18 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
             raise ValueError("Kernel type not yet supported by this model.")
 
         if (type(self.Z1) is PSGLA) or (type(self.Z1) is GpuPSGLA):
-            self.Z1.prox = lambda state: (
-                prox_KL(state, self.observations, lam=self.Z1.step_size)
+            self.Z1.prox = lambda state: prox_KL(
+                state, self.observations, lam=self.Z1.step_size
             )
-            self.Z1.grad = (
-                lambda state: (state - self.dynamic_range * self.convX)
-                / self.split_coef1
+            self.Z1.grad = lambda state: (
+                (state - self.dynamic_range * self.convX) / self.split_coef1
             )
         else:
             raise ValueError("Kernel type not yet supported by this model.")
 
         if (type(self.Z2) is PSGLA) or (type(self.Z2) is GpuPSGLA):
-            self.Z2.prox = lambda state: (
-                prox_l21norm(state, lam=self.Z2.step_size * self.reg_coeff)
+            self.Z2.prox = lambda state: prox_l21norm(
+                state, lam=self.Z2.step_size * self.reg_coeff
             )
             self.Z2.grad = lambda state: (state - self.gradX) / self.split_coef2
         else:
@@ -199,18 +198,18 @@ class DistributedPoissonDeconvolutionTvModel(
         """
         slices = {}
         slices["X"] = (
-            self.gradient_operator.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
+            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
         )
         slices["Z1"] = (
-            self.convolution_operator.adjoint_communicator.cartslicer._get_slice_global_buffer_to_tile()
+            self.convolution_operator.adjoint_communicator.cartslicer.slice_global_buffer_to_tile
         )
         slices["Z2"] = (
             np.s_[:],
-            *self.gradient_operator.cart_comm.cartslicer._get_slice_global_buffer_to_tile(),
+            *self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile,
         )
 
         slices["MMSE"] = (
-            self.gradient_operator.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
+            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
         )
 
         self.slices = slices

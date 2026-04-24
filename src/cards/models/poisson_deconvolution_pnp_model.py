@@ -209,7 +209,7 @@ class DistributedPoissonDeconvolutionPnpModel(
         slices = {}
         slices["X"] = self.denoiser.global_to_tile_slice
         slices["Z1"] = (
-            self.convolution_operator.adjoint_communicator.cartslicer._get_slice_global_buffer_to_tile()
+            self.convolution_operator.adjoint_communicator.cartslicer.slice_global_buffer_to_tile
         )
         slices["Z2"] = self.denoiser.global_to_tile_slice
 

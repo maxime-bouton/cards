@@ -68,7 +68,7 @@ def test_shared_comm(
         {"grad": grad_op, "conv": conv_op},
     )
 
-    local_slice = shared_comm.shared_comm.cartslicer._get_slice_global_buffer_to_tile()
+    local_slice = shared_comm.shared_comm.cartslicer.slice_global_buffer_to_tile
     local_X = full_x[local_slice]
 
     # apply operators with dedicated communicators

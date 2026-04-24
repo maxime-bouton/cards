@@ -3,12 +3,12 @@ from os.path import join
 
 import cupy as cp
 import h5py
-
 from cards.models.gaussian_inpainting_model import (
     DistributedInpaintingModel,
     InpaintingModel,
     InpaintingParameters,
 )
+
 from cards.sampler.base_sampler import SamplerParameters
 from cards.sampler.distributed_sampler import DistributedSampler
 from cards.sampler.gpu_sampler import GpuSampler
@@ -200,7 +200,7 @@ def compute_distributed(
     )
 
     mask, sigma2, observations = load_from_h5(
-        data_path, slicer._get_slice_global_buffer_to_tile()
+        data_path, slicer.slice_global_buffer_to_tile
     )
 
     step_size_X, step_size_Z = compute_step_size(split_coef, sigma2)
@@ -251,7 +251,7 @@ def resume_distributed_sampler(
     )
 
     mask, sigma2, observations = load_from_h5(
-        data_path, slicer._get_slice_global_buffer_to_tile()
+        data_path, slicer.slice_global_buffer_to_tile
     )
 
     step_size_X, step_size_Z = compute_step_size(split_coef, sigma2)
@@ -308,7 +308,7 @@ def compute_multi_gpu(
 
     with cp.cuda.Device(gpu_id):
         mask01, sigma2, obs = load_from_h5(
-            data_path, slicer._get_slice_global_buffer_to_tile()
+            data_path, slicer.slice_global_buffer_to_tile
         )
         mask = cp.asarray(mask01)
         observations = cp.asarray(obs)
@@ -367,7 +367,7 @@ def resume_multi_gpu_sampler(
 
     with cp.cuda.Device(gpu_id):
         mask01, sigma2, obs = load_from_h5(
-            data_path, slicer._get_slice_global_buffer_to_tile()
+            data_path, slicer.slice_global_buffer_to_tile
         )
         mask = cp.asarray(mask01)
         observations = cp.asarray(obs)

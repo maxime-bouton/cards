@@ -154,4 +154,4 @@ class MpiDnCNN(BaseDistributedDenoiser):
 
     @property
     def global_to_tile_slice(self):
-        return self.edge_mpi_conv.direct_communicator.cartslicer._get_slice_global_buffer_to_tile()
+        return self.edge_mpi_conv.direct_communicator.cartslicer.slice_global_buffer_to_tile

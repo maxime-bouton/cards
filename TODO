@@ -24,7 +24,8 @@
   - [specific build documentation](https://prefix-dev.github.io/pixi-build-backends/)
 
 - [x] Restructure README, separating base user installation from dev instructions
-- [ ] add MPIDRUNet in examples on current branch (check https://gitlab.cristal.univ-lille.fr/parallelmcmc/cards/-/blob/pnp/example/poisson_deconvolution/utils_poisson_deconvolution.py?ref_type=heads), `pnp` branch
+- [x] add MPIDRUNet in examples on current branch (check https://gitlab.cristal.univ-lille.fr/parallelmcmc/cards/-/blob/pnp/example/poisson_deconvolution/utils_poisson_deconvolution.py?ref_type=heads), `pnp` branch
+- [ ] Fix MPI tests issues for distributed denoisers (currently failing with odd number for DRUNet, failing for all with 9 workers)
 - [ ] Clarify instructions/interface to create slices for the slices (`global_to_tile_slice`, `local_to_global`)
 - Double check all code base with Maxime
     - [ ] checking sampling examples, rerun representative experiments
