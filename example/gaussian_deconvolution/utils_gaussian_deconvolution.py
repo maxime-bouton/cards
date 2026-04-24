@@ -308,12 +308,13 @@ def compute_pnp(
         if denoiser_params["denoising_level"] is not None
         else sigma2
     )
+    L = denoiser_params.get("L", None) or 1.0
     step_size_X, lambda_ = compute_step_sizes_gaussian_deconvolution_pnp(
         sigma2,
         kernel,
         reg_coef,
-        L=denoiser_params.get("L", None) or 1.0,
-        eps=eps,
+        L,
+        eps,
     )
 
     kernel = fit_kernel_shape(kernel, gt_shape)
@@ -375,6 +376,12 @@ def compute_pnp(
                     from cards.denoisers.mpi_dncnn import MpiDnCNN
 
                     denoiser = MpiDnCNN(
+                        comm, grid_size, image_size=np.asarray(gt_shape)
+                    )
+                case "drunet":
+                    from cards.denoisers.mpi_drunet import MpiDRUNet
+
+                    denoiser = MpiDRUNet(
                         comm, grid_size, image_size=np.asarray(gt_shape)
                     )
                 case _:

@@ -7,7 +7,7 @@ r"""Utility functions to set the Gaussian inpainting example script for the expe
 # Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 # TODO: revise script to also accommodate gray scale images (for which n_channels = 1 is not explicitly present when using xxx.shape)
-# FIXME: use bicubic interpolation to initialize sampler based with TV regularization as well?
+# FIXME: bicubic interpolation to initialize sampler based with TV regularization as well?
 # see l. 264, and 269
 
 import logging
@@ -177,18 +177,17 @@ def compute_step_sizes_gaussian_inpainting_tv(
     split_coef: float,
     sigma2: float,
 ) -> tuple[float, float]:
-    x = 0.99 * 1.0 / (8.0 / split_coef + 1.0 / sigma2)
-    z = 0.99 * split_coef
-    return x, z
+    step_size_X = 0.99 * 1.0 / (8.0 / split_coef + 1.0 / sigma2)
+    step_size_Z = 0.99 * split_coef
+    return step_size_X, step_size_Z
 
 
 def compute_step_sizes_gaussian_inpainting_pnp(
     sigma2: float,
     reg_coef: float,
     L: float,
-    eps: float | None = None,
+    eps: float,
 ) -> tuple[float, float]:
-    eps = eps or sigma2
     Ly = 1 / sigma2
     lambda_ = 0.99 / (2 * L / eps + 4 * Ly)
     be = (reg_coef * L) / eps + 1 / lambda_ + Ly
@@ -241,17 +240,23 @@ def compute_tv(
             mask = np.empty(state_shape[-2:], dtype=int)
             dtype = read_dtype(obs_path, "y")
             y = np.empty(state_shape, dtype=dtype)
+            interpolation = np.empty_like(y)
             with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
                 f["y"].read_direct(y, cartslicer.slice_global_buffer_to_tile)
                 # NOTE: mask is only 2D, slices accommodate up to 3D
                 f["mask"].read_direct(mask, cartslicer.slice_global_buffer_to_tile[-2:])
+                f["interpolation"].read_direct(
+                    interpolation, cartslicer.slice_global_buffer_to_tile
+                )
             if device == "gpu":
                 y = xp.asarray(y)
                 mask = xp.asarray(mask)
+                interpolation = xp.asarray(interpolation)
         case "serial":
             with h5py.File(obs_path, "r") as f:
                 y = xp.asarray(f["y"])
                 mask = xp.asarray(f["mask"])
+                interpolation = xp.asarray(f["interpolation"])
             state_shape = gt_shape
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
@@ -262,14 +267,21 @@ def compute_tv(
     match device:
         case "cpu":
             X = PSGLA(
-                state_shape, step_size_X, dtype=y.dtype
-            )  # TODO: to be added: initial_value=interpolation
+                state_shape,
+                step_size_X,
+                dtype=y.dtype,
+                initial_value=interpolation,
+            )
             Z = PSGLA((2, *state_shape), step_size_Z, dtype=y.dtype)
         case "gpu":
             X = GpuPSGLA(
-                state_shape, step_size_X, dtype=y.dtype
-            )  # TODO: to be added: initial_value=interpolation
-            Z = GpuPSGLA((2, *state_shape), step_size_Z, dtype=y.dtype)
+                state_shape, step_size_X, dtype=y.dtype, initial_value=interpolation
+            )
+            Z = GpuPSGLA(
+                (2, *state_shape),
+                step_size_Z,
+                dtype=y.dtype,
+            )
         case _:
             raise ValueError(f"Unknown device: {device}")
 
@@ -322,11 +334,12 @@ def compute_pnp(
         if denoiser_params["denoising_level"] is not None
         else sigma2
     )
+    L = (denoiser_params.get("L", None) or 1.0,)
     step_size_X, lambda_ = compute_step_sizes_gaussian_inpainting_pnp(
         sigma2,
         reg_coef,
-        L=denoiser_params.get("L", None) or 1.0,
-        eps=eps,
+        L,
+        eps,
     )
 
     match mode:
@@ -379,7 +392,7 @@ def compute_pnp(
 
     match device:
         case "cpu":
-            raise NotImplementedError("PnP is not implemented for CPU device.")
+            raise NotImplementedError("PnP not implemented for CPU devices yet.")
         case "gpu":
             X = GpuPnpULA(
                 state_shape,
