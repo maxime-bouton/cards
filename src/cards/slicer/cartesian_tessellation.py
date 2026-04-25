@@ -97,7 +97,65 @@ def split_range(nchunks, N, overlap=0, backward=True, circular=False):
     return rg
 
 
-def local_split_range(nchunks, N, index, overlap=0, backward=True):
+# TODO: simplification attempt
+# def split_range(
+#     nchunks: int, N: int, overlap: int = 0, backward: bool = True
+# ) -> np.ndarray:
+#     r"""Tessellates :math:`\{ 0, \dotsc , N-1 \}` into multiple subsets.
+
+#     Tessellates :math:`\{ 0, \dotsc , N-1 \}` into (non-)overlapping
+#     subsets, each containing approximately the same number of indices.
+
+#     Parameters
+#     ----------
+#     nchunks : int
+#         Number of segments.
+#     N : int
+#         Total number of segments.
+#     overlap : int, optional
+#         Defines overlap size between segments (if any). Defaults to 0.
+#     backward : bool, optional
+#         Direction of the overlap, if any (backward or forward). Defaults to
+#         True.
+
+#     Returns
+#     -------
+#     np.ndarray[int]
+#         Start and end index of each segment. Shape: ``(nchunks, 2)``.
+
+#     Raises
+#     ------
+#     ValueError
+#         Error if the overlap is greater than the size of a segment.
+#     ValueError
+#         Error if the overlap is negative.
+#     """
+
+#     splits = np.linspace(-1, N - 1, num=nchunks + 1, dtype="i")
+
+#     if overlap > np.floor(N / nchunks):
+#         raise ValueError(r"More than 100% overlap between two consecutive segments")
+
+#     if overlap < 0:
+#         raise ValueError(
+#             r"Overlap between consecutive segments should be non-negative."
+#         )
+
+#     # start and end index of each segment w/o overlap
+#     rg = np.concatenate((splits[:-1][:, None] + 1, splits[1:][:, None]), axis=1)
+
+#     if backward:
+#         # overlap towards the left (backward)
+#         rg[1:-1, 0] -= overlap
+#     else:
+#         # overlap towards the right (forward)
+#         rg[1:-1, 1] += overlap
+#     return rg
+
+
+def local_split_range(
+    nchunks: int, N: int, index: int, overlap: int = 0, backward: bool = True
+) -> np.ndarray:
     r"""Return the portion of :math:`\{ 0, \dotsc , N-1 \}` handled by a
     process.
 
@@ -162,7 +220,13 @@ def local_split_range(nchunks, N, index, overlap=0, backward=True):
     return rg
 
 
-def local_split_range_nd(nchunks, N, index, overlap=None, backward=True):
+def local_split_range_nd(
+    nchunks: int,
+    N: int,
+    index: np.ndrray,
+    overlap: int | None = None,
+    backward: bool = True,
+) -> np.ndarray:
     r"""Return the portion of :math:`\{ 0, \dotsc , N-1 \}` (nD range
     of indices) handled by a process.
 
@@ -230,7 +294,7 @@ def local_split_range_nd(nchunks, N, index, overlap=None, backward=True):
     return rg
 
 
-def split_range_interleaved(nchunks, N):
+def split_range_interleaved(nchunks: int, N):
     r"""Tessellates :math:`\{ 0, \dotsc , N-1 \}` into interleaved subsets.
 
     Tessellates :math:`\{ 0, \dotsc , N-1 \}` into subsets of interleaved

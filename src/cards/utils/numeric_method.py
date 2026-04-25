@@ -21,7 +21,7 @@ def power_method(
     max_iter: int = 300,
     rng: torch.Generator | None = None,  # cp.random.BitGenerator
 ) -> float:
-    """
+    r"""
     Computes the largest singular value of an operator using the power method.
 
     Automatically determines whether H is PyTorch-based or CuPy-based.

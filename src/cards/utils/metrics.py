@@ -1,4 +1,4 @@
-"""Useful metrics to assess reconstruction quality."""
+r"""Useful metrics to assess reconstruction quality."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #

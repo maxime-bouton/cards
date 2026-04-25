@@ -7,7 +7,7 @@ communications on a Cartesian grid of processes."""
 
 import numpy as np
 
-from cards.slicer.cartesian_tesselation import local_split_range_nd
+from cards.slicer.cartesian_tessellation import local_split_range_nd
 from cards.slicer.comm_slicer import CommSlicer
 
 

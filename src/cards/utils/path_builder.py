@@ -1,4 +1,6 @@
-"""Utility functions that handles path management for the applications."""
+r"""Utility functions to handle path management for the example applications
+provided.
+"""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #

@@ -1,4 +1,4 @@
-"""Utility functions to load and normalize images."""
+r"""Utility functions to load and normalize images."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
@@ -20,7 +20,7 @@ def load_img(
     dtype: xp.dtype | None = None,
     key: str = "x",
 ) -> xp.ndarray:
-    """Load an image from a file.
+    r"""Load an image from a file.
 
     Parameters
     ----------
@@ -49,7 +49,7 @@ def load_img(
 
 
 def read_img_shape(path: str | Path, key: str = "x") -> tuple[int, ...]:
-    """Read the shape of an image from a file.
+    r"""Read the shape of an image from a file.
 
     Parameters
     ----------
@@ -75,7 +75,7 @@ def read_img_shape(path: str | Path, key: str = "x") -> tuple[int, ...]:
 
 
 def read_dtype(path: str | Path, key: str = "x") -> np.dtype:
-    """Read the dtype of a variable from a `.h5` file.
+    r"""Read the dtype of a variable from a `.h5` file.
 
     Parameters
     ----------
@@ -101,25 +101,25 @@ def read_dtype(path: str | Path, key: str = "x") -> np.dtype:
 
 def normalize_ndarray(
     x: xp.ndarray,
-    maximum: float = 1.0,
-    minimum: float = 0.0,
+    target_max: float = 1.0,
+    target_min: float = 0.0,
 ) -> xp.ndarray:
-    """Normalize an ndarray to a specified range.
+    r"""Normalize an input array to a specified range.
 
     Parameters
     ----------
     x : xp.ndarray
         The input ndarray to be normalized.
-    maximum : float, optional
-        The maximum value of the normalized ndarray, by default 1.0
-    minimum : float, optional
-        The minimum value of the normalized ndarray, by default 0.0
+    target_max : float, optional
+        Target maximum value after normalization, by default 1.0
+    target_main : float, optional
+        Target minimum value after normalization, by default 0.0
 
     Returns
     -------
     xp.ndarray
         The normalized ndarray, scaled to the range [minimum, maximum].
     """
-    a = minimum
-    b = maximum
-    return a + (b - a) * (x - xp.min(x)) / (xp.max(x) - xp.min(x))
+    return target_min + (target_max - target_min) * (x - xp.min(x)) / (
+        xp.max(x) - xp.min(x)
+    )
