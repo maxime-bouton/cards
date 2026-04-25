@@ -1,8 +1,10 @@
-"""Testing the Cartesian tessellation utilities implemented in
-dsgs.experimental.slicer.cartesian_tessellation.
+r"""Testing the Cartesian tessellation utilities implemented in
+cards.slicer.cartesian_tessellation.
 """
 
 # author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
+
+# adpated from: https://gitlab.cristal.univ-lille.fr/pthouven/dsgs
 
 import numpy as np
 import pytest
