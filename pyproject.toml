@@ -108,6 +108,9 @@ cupy = ">=13.6.0,<14"
 [tool.ruff]
 target-version = "py312"
 
+[tool.ty.environment]
+extra-paths = ["./example/gaussian_deconvolution", "./example/gaussian_inpainting", "./example/poisson_deconvolution"]
+
 [tool.pytest.ini_options]
 addopts = "-ra -q -vv"
 strict = true
