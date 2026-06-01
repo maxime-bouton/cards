@@ -17,6 +17,7 @@ def padding():
     return (2, 1)
 
 
+# FIXME: currently failing with 9 workers, to investigate
 @pytest.mark.mpi
 def test_mpi_torch_conv(input_shape, kernel_dims, padding, seed, comm, comm_size):
     """

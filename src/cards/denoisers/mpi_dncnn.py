@@ -1,8 +1,7 @@
-r"""Distributed denoiser class for the DnCNN network :cite:`Zhang2017`."""
+r"""Distributed denoiser class for the DnCNN network :cite:p:`Zhang2017`."""
 
 from pathlib import Path
 
-import numpy as np
 import torch
 from mpi4py import MPI
 
@@ -16,25 +15,23 @@ class MpiDnCNN(BaseDistributedDenoiser):
     def __init__(
         self,
         comm: MPI.Comm,
-        grid_size: np.ndarray,
-        image_size: np.ndarray,
+        grid_size: xp.ndarray,
+        image_size: xp.ndarray,
         weights_path=Path(__file__).parents[3] / "data/weights/dncnn",
     ):
-        """
-        Distributed DnCNN.
+        r"""Distributed implementation of the DnCNN :cite:p:`Zhang2017` network.
 
         Parameters
         ----------
-        image_size: np.ndarray
-            The input shape
-        comm: BaseCartesianCommunicator
-            The Cartesian communicator
-        timer: TimerRegistry, optional
-            The timer registry
-        logger: logging.Logger, optional
-            If unspecified, no logging will be displayed (default is None).
+        comm : mpi4py.MPI.Comm
+            Underlying MPI communicator.
+        grid_size : xp.ndarray[int]
+            Number of workers along each of the ``d`` dimensions of the
+            communicator grid.
+        image_size: xp.ndarray
+            Input image shape.
         weights_path : str, optional
-            The path to the pre-trained weights folder.
+            Path to the folder containing the pre-trained denoiser weights.
         """
         super(BaseDistributedDenoiser, self).__init__(weights_path)
         if image_size.size < 3:
@@ -88,20 +85,19 @@ class MpiDnCNN(BaseDistributedDenoiser):
         return self.core_mpi_conv.adjoint(tile_u, conv_adjoint).clip(min=0)
 
     def __call__(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
-        """
-        Apply the distributed DDFB.
+        r"""Apply the distributed denoiser.
 
         Parameters
         ----------
         input_image: xp.ndarray
-            The input x facet
+            Input image tile.
         sigma: float
-            The regularization parameter
+            Denoiser parameter (noise standard deviation).
 
         Returns
         -------
         xp.ndarray
-            The denoised x tile
+            Denoised image tile.
         """
         tile_u = self.edge_mpi_conv.forward(input_image, self.dncnn.model[0]).clip(
             min=0
@@ -115,21 +111,26 @@ class MpiDnCNN(BaseDistributedDenoiser):
         return input_image - self.edge_mpi_conv.adjoint(tile_u, self.dncnn.model[-1])
 
     def forward_no_comm(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
-        """forward_no_comm Apply the denoiser without communication on the first layer. Should be used with a shared buffer.
+        r"""Apply the denoiser without communication on the first layer.
+
+        This method can be used to avoid memory duplication when the input
+        buffer is common to different operators, thereby reducing the overall
+        memory footprint.
 
         Parameters
         ----------
         input_image : xp.ndarray
-            Image to denoise. Facet size.
-        sigma : float
-            Standard deviation of the gaussian noise.
+            Input image facet (i.e., image buffer including ghost-cell) to denoise.
+        sigma: float
+            Denoiser parameter (noise standard deviation).
 
         Returns
         -------
         xp.ndarray
             Denoised image.
         """
-        assert isinstance(sigma, float)  #! fail on np.float or torch.float?
+        # TODO: see if accommodating xp.float* or torch.float*
+        assert isinstance(sigma, float)
         tile_u = self.edge_mpi_conv.forward_no_comm(
             input_image, self.dncnn.model[0]
         ).clip(min=0)
@@ -144,13 +145,13 @@ class MpiDnCNN(BaseDistributedDenoiser):
         ] - self.edge_mpi_conv.adjoint(tile_u, self.dncnn.model[-1])
 
     @property
-    def get_recv_size(self) -> np.ndarray:
+    def get_recv_size(self) -> xp.ndarray:
         return self.edge_mpi_conv.direct_communicator.cartslicer.recv_size
 
     @property
-    def get_send_size(self) -> np.ndarray:
+    def get_send_size(self) -> xp.ndarray:
         return self.edge_mpi_conv.direct_communicator.cartslicer.send_size
 
     @property
     def global_to_tile_slice(self):
-        return self.edge_mpi_conv.direct_communicator.cartslicer._get_slice_global_buffer_to_tile()
+        return self.edge_mpi_conv.direct_communicator.cartslicer.slice_global_buffer_to_tile

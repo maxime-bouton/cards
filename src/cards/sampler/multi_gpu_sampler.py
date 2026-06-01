@@ -16,9 +16,8 @@ from cards.sampler.base_sampler import BaseSampler, SamplerParameters
 
 class MultiGpuSampler(BaseSampler):
     def _make_generator(self, seed):
-        # TODO check equivalent instructions in numpy
-        # FIXME: several processes can share the same seed if same dedicated GPU
-        combined = f"{self.rank}{seed}"  # should be self.rank here not gpu_id !
+        # TODO: check if instruction equivalent to numpy default
+        combined = f"{self.rank}{seed}"
         self.local_seed = int(hashlib.sha256(combined.encode()).hexdigest(), 16) % (
             2**32
         )

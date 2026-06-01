@@ -124,6 +124,7 @@ class MpiTorchConvolution(LinearOperator):
         TypeError
             Only real-valued kernel supported.
         """
+        self.dtype = np.float32
         self.kernel_size = np.array((1,) * (image_size.size - 2) + kernel_size)
         self.padding = np.array((0,) * (image_size.size - 2) + padding)
         data_size = image_size + 2 * self.padding - self.kernel_size + 1

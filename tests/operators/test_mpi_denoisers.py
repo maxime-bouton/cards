@@ -9,7 +9,7 @@ from cards.denoisers.serial_ddfb import SerialDDFB
 from cards.denoisers.serial_dncnn import SerialDnCNN
 from cards.denoisers.serial_drunet import SerialDRUNet
 
-# TODO: add test with gray images (n_channels = 1 explicitly in the input image shape, or just 2 dimensions)
+# TODO: add test with gray images (n_channels = 1), missing DDFB weights with nch=1
 
 
 # NOTE: only first spatial axis is partitioned because way too slow when both axes are.
@@ -18,8 +18,8 @@ def grid_size(comm_size: int) -> np.ndarray:
     return np.asarray([1, comm_size, 1])
 
 
-# NOTE: only one input shape configuration because DRUNet requires the dimensions of
-# each local tile to be multiples of 8 (on each spatial axis).
+# NOTE: only one input shape configuration: DRUNet requires the
+# dimensions of each local tile to be multiples of 8 (on each spatial axis).
 @pytest.fixture(params=[(3, 128, 128)])
 def input_shape(request):
     return request.param
@@ -32,9 +32,7 @@ def input_size(input_shape) -> np.ndarray:
 
 @pytest.mark.mpi
 def test_mpi_ddfb(seed, input_size, comm, grid_size):
-    """
-    Verify that the distributed DDFB yields results identical to the serial DDFB.
-    """
+    r"""Verify that the distributed DDFB yields results identical to the serial DDFB."""
     rng = xp.random.default_rng(seed)
     x = rng.random(input_size).astype(xp.float32)
 
@@ -60,9 +58,7 @@ def test_mpi_ddfb(seed, input_size, comm, grid_size):
 
 @pytest.mark.mpi
 def test_mpi_dncnn(seed, input_size, comm, grid_size):
-    """
-    Verify that the distributed DnCNN yields results identical to the serial DnCNN.
-    """
+    r"""Verify that the distributed DnCNN yields results identical to the serial DnCNN."""
     rng = xp.random.default_rng(seed)
     x = rng.random(input_size).astype(xp.float32)
 
@@ -78,8 +74,12 @@ def test_mpi_dncnn(seed, input_size, comm, grid_size):
 
 @pytest.mark.mpi
 def test_mpi_drunet(seed, input_size, comm, grid_size):
-    """
-    Verify that the distributed DRUNet yields results identical to the serial DRUNet.
+    r"""Verify that the distributed DRUNet yields results identical to the serial DRUNet.
+
+    Warning
+    -------
+    DRUNet requires the dimensions of each local tile to be multiples of 8
+    (along each spatial axis).
     """
     rng = xp.random.default_rng(seed)
     x = rng.random(input_size).astype(xp.float32)

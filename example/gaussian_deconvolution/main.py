@@ -7,8 +7,6 @@ from utils_gaussian_deconvolution import (
 
 from cards.utils.main_helper import run_main
 
-
-# FIXME: make sure PnP samplers can run for synthetic data generated from a gray_scale image with implicit number of channels
 if __name__ == "__main__":
     run_main(
         gaussian_deconvolution_params,
@@ -26,7 +24,7 @@ if __name__ == "__main__":
         show_results=False,
     )
 
-# python -m main --config config.json --mode serial-cpu
-# python -m main --config config.json --mode serial-gpu
-# mpirun -n 2 python -m mpi4py main.py --config config.json --mode mpi-cpu
-# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py main.py --mode mpi-gpu
+# python -m main --config config.json --mode serial --device cpu
+# python -m main --config config.json --mode serial --device gpu
+# mpirun -n 2 python -m mpi4py main.py --config config.json --mode mpi --device cpu
+# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py main.py --config config.json --mode mpi --device gpu

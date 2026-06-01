@@ -62,7 +62,7 @@ parsing bibtex file /home/pthouvenin/python/cards/doc/biblio.bib... parsed 27 en
 [AutoAPI] Rendering Data... [ 68%] cards.denoisers.ddfb.network_ddfb
 [AutoAPI] Rendering Data... [ 70%] cards.transition_kernel.gpu_psgla
 [AutoAPI] Rendering Data... [ 71%] cards.estimator.estimator_builder
-[AutoAPI] Rendering Data... [ 72%] cards.slicer.cartesian_tesselation
+[AutoAPI] Rendering Data... [ 72%] cards.slicer.cartesian_tessellation
 [AutoAPI] Rendering Data... [ 73%] cards.slicer.cartesian_comm_slicer
 [AutoAPI] Rendering Data... [ 75%] cards.denoisers.dncnn.network_dncnn
 [AutoAPI] Rendering Data... [ 76%] cards.operators.mpi_dft_convolution

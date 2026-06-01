@@ -148,7 +148,7 @@ def test_distributed_save_and_load(
         np.zeros(len(input_shape)),
         np.zeros(len(input_shape)),
     )
-    slice_facet_to_tile = sync_comm.cartslicer._get_slice_global_buffer_to_tile()
+    slice_facet_to_tile = sync_comm.cartslicer.slice_global_buffer_to_tile
 
     local_dim = sync_comm.cartslicer.tile_size
     x = rng.standard_normal(size=local_dim)
@@ -217,7 +217,7 @@ def test_mpi_save_full_batch(comm, input_shape, tmp_path, device, batch_size):
     )
 
     local_slice = {}
-    local_slice["X"] = slicer._get_slice_global_buffer_to_tile()
+    local_slice["X"] = slicer.slice_global_buffer_to_tile
     local_size = {}
     local_size["X"] = slicer.tile_size
     global_dims = {}
@@ -236,7 +236,7 @@ def test_mpi_save_full_batch(comm, input_shape, tmp_path, device, batch_size):
         data = xp.random.standard_normal(size=data.shape)
 
     data = comm.bcast(data, 0)
-    data_slice = np.s_[slice(None), *slicer._get_slice_global_buffer_to_tile()]
+    data_slice = np.s_[slice(None), *slicer.slice_global_buffer_to_tile]
     local_data = data[data_slice].copy()
 
     dm.full_batch["X"] = local_data

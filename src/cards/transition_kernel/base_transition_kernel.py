@@ -1,6 +1,6 @@
 r"""Abstract class to implement probability transition kernels."""
 
-# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
@@ -20,6 +20,8 @@ class BaseTransitionKernel(ABC):
     ----------
     current_state : cards.backend.xp.ndarray
         Current state of the parameter handled by the transition kernel.
+    dtype : cards.backend.xp.dtype
+        Numeric type for the state, by default None (default configuration).
 
     Methods
     -------
@@ -31,27 +33,25 @@ class BaseTransitionKernel(ABC):
 
     def __init__(
         self,
-        dims: tuple[int, ...],
+        state_shape: tuple[int, ...],
         initial_value: Optional[xp.ndarray] = None,
         dtype: Optional[xp.dtype] = None,
     ) -> None:
         r"""
         Parameters
         ----------
-        dims : Tuple[int, ...]
+        state_shape : Tuple[int, ...]
             Shape of the parameter handled by the transition kernel.
-        initial_value : cp.ndarray | None, optional
-            Initial value for the chain (optional).
+        initial_value : xp.ndarray | None, optional
+            Initial state value, by default None.
         dtype : cards.backend.xp.dtype | None, optional
             Parameter type, by default None.
         """
+        self.dtype = dtype
         if initial_value is not None:
-            self.current_state = initial_value
+            self.current_state = initial_value.astype(self.dtype)
         else:
-            if dtype is not None:
-                self.current_state = xp.zeros(dims, dtype=dtype)
-            else:
-                self.current_state = xp.zeros(dims)
+            self.current_state = xp.zeros(state_shape, dtype=self.dtype)
 
     @abstractmethod
     def mc_step(self, rng) -> None:

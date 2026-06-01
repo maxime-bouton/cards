@@ -42,22 +42,26 @@ class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
 
     def set_conditionals(self):
         if type(self.X) is GpuPnpULA:
-            self.X.denoise = lambda state: self.denoiser(state, self.X.epsilon**0.5)
-            self.X.grad = (
-                lambda state: self.convolution_operator.adjoint(
-                    self.convX - self.observations
-                )
+            self.X.denoise = lambda state: self.denoiser(
+                state,
+                self.X.epsilon**0.5,
+                torch_dtype=torch.float32,
+                cp_dtype=xp.float64,
+            )
+            self.X.grad = lambda state: (
+                self.convolution_operator.adjoint(self.convX - self.observations)
                 / self.sigma2
             )
             self.X.project = lambda state: state.clip(-1, 2)
         elif type(self.X) is GpuPnpSGLA:
             self.X.denoise = lambda state: self.denoiser(
-                state, self.X.reg_coef * self.X.epsilon**0.5
+                state,
+                self.X.reg_coef * self.X.epsilon**0.5,
+                torch_dtype=torch.float32,
+                cp_dtype=xp.float64,
             )
-            self.X.grad = (
-                lambda state: self.convolution_operator.adjoint(
-                    self.convX - self.observations
-                )
+            self.X.grad = lambda state: (
+                self.convolution_operator.adjoint(self.convX - self.observations)
                 / self.sigma2
             )
         else:

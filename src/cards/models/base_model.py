@@ -30,6 +30,8 @@ class BaseModel(ABC):
         """
         pass
 
+    # FIXME: method to be removed (not really defined or used in objects, to be clarified
+    # @abstractmethod
     def get_states4batch(self) -> dict:
         r"""Returns a dictionary containing a batch of samples for all the variables to be sampled from the model.
 
@@ -42,6 +44,8 @@ class BaseModel(ABC):
         """
         pass
 
+    # FIXME: method to be removed (not really defined or used in objects, to be clarified
+    # @abstractmethod
     def get_batch_sizes(self) -> dict:
         r"""Returns a dictionary containing the dimensions of the variables to be saved to disk.
 

@@ -73,7 +73,7 @@ class DftConvolution(LinearOperator):
         ----------
         image_size : ndarray[int], of size ``d``
             Full image size.
-        kernel : ndarray[float]
+        kernel : cards.backend.xp.ndarray[float]
             Input kernel. The array should have ``d`` axis, such that
             ``kernel.shape[i] < image_size[i]`` for ``i in range(d)``.
         data_size : ndarray[int] | tuple[int, ...], of size ``d``
@@ -130,12 +130,12 @@ class DftConvolution(LinearOperator):
 
         Parameters
         ----------
-        input_image : ndarray[float]
+        input_image : cards.backend.xp.ndarray[float]
             Input array (image space).
 
         Returns
         -------
-        ndarray
+        cards.backend.xp.ndarray
             Convolution result (direct operator).
         """
         return fft_conv(input_image, self.fft_kernel, self.data_size)
@@ -146,12 +146,12 @@ class DftConvolution(LinearOperator):
 
         Parameters
         ----------
-        input_data : ndarray[float]
+        input_data : cards.backend.xp.ndarray[float]
             Input array (data space).
 
         Returns
         -------
-        numpy.ndarray
+        cards.backend.xp.ndarray
             Convolution result (adjoint operator).
         """
         return fft_conv(input_data, xp.conj(self.fft_kernel), self.data_size)[

@@ -1,6 +1,6 @@
 r"""Utility functions to set the Poisson deconvolution example script for the experiments reported in :cite:p:`Bouton2025` (synthetic data generation, sampling and post-processing steps)."""
 
-# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
@@ -158,14 +158,14 @@ def compute_step_sizes_poisson_deconvolution_tv(
         Step sizes for the X and Z variables in the PSGLA transition kernel.
     """
 
-    x = 0.99 / (
+    step_size_X = 0.99 / (
         dynamic_range**2 / split_coef1 * xp.max(xp.abs(xp.fft.rfft2(kernel))) ** 2
         + 1 / split_coef2
     )
-    z1 = 0.99 * split_coef1
-    z2 = 0.99 / (reg_coef / split_coef2)
+    step_size_Z1 = 0.99 * split_coef1
+    step_size_Z2 = 0.99 / (reg_coef / split_coef2)
 
-    return x, z1, z2
+    return step_size_X, step_size_Z1, step_size_Z2
 
 
 def compute_step_sizes_poisson_deconvolution_pnp(
@@ -177,17 +177,17 @@ def compute_step_sizes_poisson_deconvolution_pnp(
     L: float,
     eps: float,
 ) -> tuple[float, float, float, float]:
-    x = 0.99 / (
+    step_size_X = 0.99 / (
         dynamic_range**2 / split_coef1 * xp.max(xp.abs(xp.fft.rfft2(kernel))) ** 2
         + 1 / split_coef2
     )
-    z1 = 0.99 * split_coef1
+    step_size_Z1 = 0.99 * split_coef1
     Ly = 0.99 * split_coef2
 
     lambda_ = 0.99 / (2 * L / eps + 4 * Ly)
     be = (reg_coef * L) / eps + 1 / lambda_ + Ly
-    z2 = 0.99 / (3 * be)
-    return x, z1, z2, lambda_
+    step_size_Z2 = 0.99 / (3 * be)
+    return step_size_X, step_size_Z1, step_size_Z2, lambda_
 
 
 def load_from_h5(
@@ -333,6 +333,7 @@ def compute_pnp(
     device: str = "cpu",
 ):
     eps = denoiser_params["denoising_level"] ** 2
+    L = denoiser_params.get("L", None) or 1.0
     kernel, dynamic_range, gt_shape, _ = load_from_h5(obs_path)
 
     step_size_X, step_size_Z1, step_size_Z2, lambda_ = (
@@ -342,8 +343,8 @@ def compute_pnp(
             dynamic_range,
             kernel,
             reg_coef,
-            L=denoiser_params.get("L", None) or 1.0,
-            eps=eps,
+            L,
+            eps,
         )
     )
 
@@ -366,7 +367,7 @@ def compute_pnp(
                     y,
                     op.adjoint_communicator.cartslicer.slice_global_buffer_to_tile,
                 )
-            if "gpu" in device:
+            if device == "gpu":
                 y = xp.asarray(y)
 
             state_shape = tuple(op.direct_communicator.cartslicer.tile_size)
@@ -417,6 +418,14 @@ def compute_pnp(
                     denoiser = MpiDnCNN(
                         comm, grid_size, image_size=np.asarray(gt_shape)
                     )
+
+                case "drunet":
+                    from cards.denoisers.mpi_drunet import MpiDRUNet
+
+                    denoiser = MpiDRUNet(
+                        comm, grid_size, image_size=np.asarray(gt_shape)
+                    )
+
                 case _:
                     raise ValueError(
                         f"Unknown denoiser type: {denoiser_params['type']}"

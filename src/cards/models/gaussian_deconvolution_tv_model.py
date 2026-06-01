@@ -51,10 +51,8 @@ class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
         if (type(self.X) is PSGLA) or (type(self.X) is GpuPSGLA):
             self.X.prox = prox_nonegativity
-            self.X.grad = (
-                lambda state: self.convolution_operator.adjoint(
-                    self.convX - self.observations
-                )
+            self.X.grad = lambda state: (
+                self.convolution_operator.adjoint(self.convX - self.observations)
                 / self.sigma2
                 + self.gradient_operator.adjoint(self.gradX - self.Z.current_state)
                 / self.split_coeff
@@ -63,8 +61,8 @@ class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
             raise ValueError("Kernel type not yet supported by this model.")
 
         if (type(self.Z) is PSGLA) or (type(self.Z) is GpuPSGLA):
-            self.Z.prox = lambda state: (
-                prox_l21norm(state, lam=self.Z.step_size * self.reg_coeff)
+            self.Z.prox = lambda state: prox_l21norm(
+                state, lam=self.Z.step_size * self.reg_coeff
             )
             self.Z.grad = lambda state: (state - self.gradX) / self.split_coeff
         else:
@@ -183,14 +181,14 @@ class DistributedGaussianDeconvolutionTvModel(
         """Describes which portion of the global buffer the current thread must handle."""
         slices = {}
         slices["X"] = (
-            self.gradient_operator.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
+            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
         )
         slices["Z"] = (
             np.s_[:],
-            *self.gradient_operator.cart_comm.cartslicer._get_slice_global_buffer_to_tile(),
+            *self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile,
         )
         slices["MMSE"] = (
-            self.gradient_operator.cart_comm.cartslicer._get_slice_global_buffer_to_tile()
+            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
         )
 
         self.slices = slices

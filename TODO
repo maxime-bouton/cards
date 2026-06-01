@@ -24,34 +24,54 @@
   - [specific build documentation](https://prefix-dev.github.io/pixi-build-backends/)
 
 - [x] Restructure README, separating base user installation from dev instructions
+- [x] add MPIDRUNet in examples on current branch (check https://gitlab.cristal.univ-lille.fr/parallelmcmc/cards/-/blob/pnp/example/poisson_deconvolution/utils_poisson_deconvolution.py?ref_type=heads), `pnp` branch
+- [x] Fix MPI tests issues for distributed denoisers (currently failing with odd number for DRUNet)
+    - failure expected: implementation only working for now if pstial dimensions divisible by 8
+- [x] Clarify instructions/interface to create slices (`global_to_tile_slice`, `local_to_global`)
 - Double check all code base with Maxime
     - [ ] checking sampling examples, rerun representative experiments
     - [ ] checking integration examples (based on revised application scripts)
     - [ ] convert all shapes in slicers and communicators from `np.array`s to `Tuple[int, ...]`
     - [ ] solve runtime issues for PnP samplers (size issue gray images, see where gray denoiser is selected)
+- [ ] Cleanup example main scripts for local data sizes (use only minimum amount of code to do this)
+- [ ] Redefine CartesianSlicer to make `send_size` and `recv_size` optional (when 0, no overlap to take into account)
+- [ ] Revise handling of `dtype` in sampler / transition kernels (not fully enforced between `torch` and `cupy`, difference in default precision (`flost64` for `cupy`, against `flost32` for `torch`))
 - [ ] Add testing CI instruction to build the package under different configurations?
 
--  documentation
+-  documentation & missing features from `pnp`
    - [x] README (setup information, dev information to sphinx / auxiliary panel "contributing")
    - [x] add note to disable ci `[skip ci]` in commit message, or `git push -o ci.skip`
-   - [x] MYULA
-   - [ ] PSGLA
-   - [x] data-manager
-   - [ ] estimators
+   - [x] transition_kernels
    - [ ] slicers
-   - [ ] samplers
-   - [ ] denoisers
+   - [ ] sampler
+   - [ ] data-manager
+   - operators
+    - [ ] measurement operators
+    - [ ] denoisers
+   - [ ] models
+   - [ ] functionals
+   - [ ] estimators
+   - [ ] communicator
 
 ## Towards v1.0 (Januray 2026 and later)
 
 - Existing core: improvements
   - [ ] use estimator including pixel-variance by default in the examples
   - [ ] allow multiple GPU workers to work on the same GPU, seeds to be revised accordingly
-  - [ ] full interface for post-processing scripts (more flexibility to create estimates when changing only burn-in, ...)
-  - [ ] independent post-process scripts, as currently available on the older `pnp` branch
+  - [ ] independent scripts/interface for post-processing samples (more flexibility to create estimates when changing only burn-in, ...), see `pnp` branch
 
 - New core features
     - [ ] MML (marginal maximum likelihood features, based on older codes already available internally)
+    - Langevin-based kernels:
+        - [ ] add prox parameter in __init__, so that it can be taken into account directly in mc_step, and not rewritten each time in the implementation of prox (prox_step = step_size * prox_parameter)?
+        - [ ] add default method to compute step-size from Lipschitz constant?
+        - [ ] diffusion-based samplers (Coeurdoux and others, ...)
+        - [ ] additional inverse problems (ORION-B, PDEs, meshes, ...)
+
+- Management, backends and build
+  - [ ] build support for 'win-64' 'osx-64' 'osx-arm64' for the dependencies considered (per-platform requirements in `pyproject.toml`)
+  - [ ] adding new GPU backend for Apple plateforms : [mlx](https://github.com/ml-explore/mlx), see example here
+  - [ ] investigate [onnx](https://github.com/onnx/onnx) for network weights
 
 - Documentation
   - [ ] getting started (doc sphinx), install, tuto
@@ -61,10 +81,9 @@
   - [ ] revise writing for the tutorial + display in the sphinx documentation
   - enhance documentation: https://realpython.com/documenting-python-code/#docstring-formats
   - [ ] proper typing, possibly with [`mypy`](https://mypy.readthedocs.io/en/stable/existing_code.html) or `pyright`, or [ty](https://github.com/astral-sh/ty), more recent
-   Example setup: https://mypy.readthedocs.io/en/stable/config_file.html#config-file
-  - [ ] complete pipeline for versioninin with [`bumpver`](https://github.com/mbarkhau/bumpver), see also https://realpython.com/pypi-publish-python-package/
+   - Refs:
+    - https://docs.python.org/3/library/typing.html
+    - https://mypy.readthedocs.io/en/stable/cheat_sheet_py3.html
+    - Example setup: https://mypy.readthedocs.io/en/stable/config_file.html#config-file
+  - [ ] complete pipeline for versioninig with [`bumpver`](https://github.com/mbarkhau/bumpver), see also https://realpython.com/pypi-publish-python-package/
   - [ ] generate changelogs with [`towncrier`](https://towncrier.readthedocs.io/en/stable/index.html)
-
-- Management and build
-  - [ ] build support for 'win-64' 'osx-64' 'osx-arm64' for the dependencies considered (per-platform requirements in `pyproject.toml`)
-  - [ ] adding new backend for Apple plateforms : [MLX](https://ml-explore.github.io/mlx/build/html/index.html), see example here

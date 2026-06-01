@@ -23,6 +23,7 @@
     - [Setup](#setup)
     - [Testing](#testing)
   - [License](#license)
+  - [Citation](#citation)
 
 </details>
 
@@ -103,6 +104,17 @@ pixi shell --environment full
 # eval "$(pixi shell-hook --environment full)"
 ```
 
+- Provided examples can be run as follows
+
+```bash
+pixi shell -e full
+cd examples/gaussian_deconvolution
+python -m main --config config_2048_tv.json --mode serial --device cpu
+# mpirun -n 2 python -m mpi4py main.py --config config.json --mode mpi --device cpu
+python -m main --config config_2048_pnp.json --mode serial --device gpu
+# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py main.py --config config_2048_pnp.json --mode mpi --device gpu
+```
+
 </details>
 
 <details>
@@ -123,13 +135,13 @@ pytest --markers
 python -m pytest --collect-only
 
 # running all serial tests on CPU
-python -m pytest --mode serial --device gpu
+python -m pytest --mode serial --device cpu
 
 # running all serial tests on GPU
 python -m pytest --mode serial --device gpu
 
 # running all MPI tests on CPU
-mpiexec -n 2 python -m mpi4py -m pytest -m mpi
+mpiexec -n 2 python -m mpi4py -m pytest --mode mpi --device cpu
 
 # running all MPI tests on GPU
 mpiexec -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m pytest --mode mpi --device gpu
@@ -140,3 +152,22 @@ mpiexec -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=tr
 ## License
 
 The project is licensed under the [GPL-3.0 license](LICENSE).
+
+## Citation
+
+If you reuse this code, please cite the [associated paper](<>).
+
+```bib
+@article{Bouton2026,
+  arxivid      = {2511.00870},
+  author       = {Maxime Bouton and Pierre-Antoine Thouvenin and Audrey Repetti and Pierre Chainais},
+  code         = {https://github.com/maxime-bouton/cards},
+  date         = {2026-04},
+  eprinttype   = {arxiv},
+  journaltitle = {{IEEE Trans. Comput. Imag.}},
+  month        = apr,
+  note         = {to appear},
+  title        = {A Distributed {P}lug-and-{P}lay {MCMC} Algorithm for High-Dimensional Inverse Problems},
+  url          = {https://hal.science/hal-05326314},
+}
+```

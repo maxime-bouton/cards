@@ -1,8 +1,10 @@
-"""Implementation of a poisson deconvolution model using the plug and pay method."""
+r"""Implementation of a poisson deconvolution model using the plug and pay method."""
 
 # TODO: documentation
+# TODO: typing
 
 import numpy as np
+import torch
 from mpi4py import MPI
 
 from cards.backend import xp
@@ -40,8 +42,8 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
         if (type(self.X) is PSGLA) or (type(self.X) is GpuPSGLA):
             self.X.prox = prox_nonegativity
-            self.X.grad = (
-                lambda state: self.dynamic_range**2
+            self.X.grad = lambda state: (
+                self.dynamic_range**2
                 * self.convolution_operator.adjoint(
                     self.convX - self.Z1.current_state / self.dynamic_range
                 )
@@ -52,28 +54,35 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
             raise ValueError("Kernel type not yet supported by this model.")
 
         if (type(self.Z1) is PSGLA) or (type(self.Z1) is GpuPSGLA):
-            self.Z1.prox = lambda state: (
-                prox_KL(state, self.observations, lam=self.Z1.step_size)
+            self.Z1.prox = lambda state: prox_KL(
+                state, self.observations, lam=self.Z1.step_size
             )
-            self.Z1.grad = (
-                lambda state: (state - self.dynamic_range * self.convX)
-                / self.split_coef1
+            self.Z1.grad = lambda state: (
+                (state - self.dynamic_range * self.convX) / self.split_coef1
             )
         else:
             raise ValueError("Kernel type not yet supported by this model.")
 
         if type(self.Z2) is GpuPnpULA:
-            self.Z2.denoise = lambda state: self.denoiser(state, self.Z2.epsilon**0.5)
-            self.Z2.grad = (
-                lambda state: (state - self.X.current_state) / self.split_coef2
+            self.Z2.denoise = lambda state: self.denoiser(
+                state,
+                self.Z2.epsilon**0.5,
+                torch_dtype=torch.float32,
+                cp_dtype=xp.float64,
+            )
+            self.Z2.grad = lambda state: (
+                (state - self.X.current_state) / self.split_coef2
             )
             self.Z2.project = lambda state: state.clip(-1, 2)
         elif type(self.Z2) is GpuPnpSGLA:
             self.Z2.denoise = lambda state: self.denoiser(
-                state, self.Z2.reg_coef * self.Z2.epsilon**0.5
+                state,
+                self.Z2.reg_coef * self.Z2.epsilon**0.5,
+                torch_dtype=torch.float32,
+                cp_dtype=xp.float64,
             )
-            self.Z2.grad = (
-                lambda state: (state - self.X.current_state) / self.split_coef2
+            self.Z2.grad = lambda state: (
+                (state - self.X.current_state) / self.split_coef2
             )
         else:
             raise ValueError("Kernel type not yet supported by this model.")
@@ -108,12 +117,12 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
         self.Z2.current_state = xp.asarray(states["Z2"])
         self.convX = self.convolution_operator.forward(self.X.current_state)
 
-    def update(self, rng: np.random.Generator):
+    def update(self, rng: xp.random.Generator | torch.Generator) -> None:
         """update Gobal update of the model. Updates every kernel used by the model and computes annex variables.
 
         Parameters
         ----------
-        rng : np.random.Generator
+        rng : np.random.Generator | torch.Generator
             Random number generator, given by the sampler.
         """
         self.X.mc_step(rng)
@@ -190,7 +199,7 @@ class DistributedPoissonDeconvolutionPnpModel(
         self.set_local_sizes()
 
     def set_slices(self):
-        """set_slices Describes which portion of the global buffer the current thread must handle.
+        """Describes which portion of the global buffer the current thread must handle.
 
         Returns
         -------
@@ -200,7 +209,7 @@ class DistributedPoissonDeconvolutionPnpModel(
         slices = {}
         slices["X"] = self.denoiser.global_to_tile_slice
         slices["Z1"] = (
-            self.convolution_operator.adjoint_communicator.cartslicer._get_slice_global_buffer_to_tile()
+            self.convolution_operator.adjoint_communicator.cartslicer.slice_global_buffer_to_tile
         )
         slices["Z2"] = self.denoiser.global_to_tile_slice
 
@@ -209,7 +218,7 @@ class DistributedPoissonDeconvolutionPnpModel(
         self.slices = slices
 
     def set_global_sizes(self):
-        """set_global_sizes Describe the gobla sizes of several global buffers.
+        """Describes the gobal sizes of several global buffers.
 
         Returns
         -------
@@ -222,9 +231,7 @@ class DistributedPoissonDeconvolutionPnpModel(
             self.convolution_operator.adjoint_communicator.cartslicer.global_buffer_size,
             dtype=int,
         )
-        sizes["Z2"] = np.asarray(
-            self.full_size, dtype=int
-        )  # ? same dimensions as adj? -> (2,*full_size)?
+        sizes["Z2"] = np.asarray(self.full_size, dtype=int)
 
         sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
 

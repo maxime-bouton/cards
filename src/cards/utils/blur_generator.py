@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFilter
 
 
 class MotionBlurKernel:
-    """
+    r"""
     Generate realistic motion blur kernels with configurable size and intensity.
 
     Parameters
@@ -40,7 +40,7 @@ class MotionBlurKernel:
         self._kernel = self.generate()
 
     def _generate_path(self):
-        """
+        r"""
         Generate a random motion blur path based on intensity.
 
         Returns
@@ -83,7 +83,7 @@ class MotionBlurKernel:
         return [(z.real, z.imag) for z in path_complex]
 
     def generate(self):
-        """
+        r"""
         Generate the motion blur kernel as a normalized numpy array.
 
         Returns
@@ -113,7 +113,7 @@ class MotionBlurKernel:
         return kernel
 
     def save(self, filepath):
-        """
+        r"""
         Save the kernel to an HDF5 file.
 
         Parameters
@@ -129,7 +129,7 @@ class MotionBlurKernel:
 
     @property
     def kernel(self):
-        """
+        r"""
         Get the generated kernel as a numpy array.
 
         Returns
