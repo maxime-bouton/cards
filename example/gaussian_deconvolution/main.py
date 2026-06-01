@@ -1,4 +1,4 @@
-from .utils_gaussian_deconvolution import (
+from utils_gaussian_deconvolution import (
     build_obs_and_model_paths,
     define_slices,
     gaussian_deconvolution_params,

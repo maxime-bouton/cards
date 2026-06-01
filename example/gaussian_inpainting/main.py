@@ -1,4 +1,4 @@
-from .utils_inpainting import (
+from utils_inpainting import (
     build_obs_and_model_paths,
     gaussian_inpainting_params,
     generate_inpainting_observations,
