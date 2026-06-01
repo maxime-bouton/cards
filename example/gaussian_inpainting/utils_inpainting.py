@@ -334,7 +334,7 @@ def compute_pnp(
         if denoiser_params["denoising_level"] is not None
         else sigma2
     )
-    L = (denoiser_params.get("L", None) or 1.0,)
+    L = denoiser_params.get("L", None) or 1.0
     step_size_X, lambda_ = compute_step_sizes_gaussian_inpainting_pnp(
         sigma2,
         reg_coef,

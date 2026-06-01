@@ -293,7 +293,7 @@ def generate_and_save_observations(
     """
 
     img = load_img(original_img_path)
-    normalized_img = normalize_ndarray(img, maximum=maximum)
+    normalized_img = normalize_ndarray(img, target_max=maximum)
 
     rng = np.random.default_rng(seed_data)
 
