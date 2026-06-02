@@ -156,6 +156,7 @@ class DistributedGaussianDeconvolutionPnpModel(
 
         super().__init__(params, X, denoiser)
 
+        # TODO: revise definition of this variables, to put in BaseDistributedModel?
         self.slices = {}
         self.global_sizes = {}
         self.local_sizes = {}

@@ -180,6 +180,7 @@ class DistributedPoissonDeconvolutionTvModel(
         )
         super().__init__(params, X, Z1, Z2)
 
+        # TODO: revise definition of this variables, to put in BaseDistributedModel?
         self.slices = {}
         self.global_sizes = {}
         self.local_sizes = {}
