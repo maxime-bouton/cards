@@ -342,16 +342,16 @@ def test_sync_send_recv_rank(
 
     ndims = grid_size.size
 
-    src = np.squeeze(np.empty((nworkers, ndims), dtype="i"))
-    dest = np.squeeze(np.empty((nworkers, ndims), dtype="i"))
+    src = np.empty((nworkers, ndims), dtype="i")
+    dest = np.empty((nworkers, ndims), dtype="i")
 
     for rank in range(nworkers):
         ranknd = np.array(np.unravel_index(rank, grid_size), dtype="i")
         dest[rank] = sync_cart_comm.send_rank(ranknd, grid_size, backward=backward)
         src[rank] = sync_cart_comm.send_rank(ranknd, grid_size, backward=not backward)
 
-    assert np.allclose(dest, expected_dest)
-    assert np.allclose(src, expected_src)
+    assert np.allclose(np.squeeze(dest), expected_dest)
+    assert np.allclose(np.squeeze(src), expected_src)
 
 
 # @pytest.mark.parametrize(
