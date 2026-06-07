@@ -1,4 +1,4 @@
-"""Base class for poisson deconvolution models."""
+r"""Base class to define Poisson deconvolution models leveraging approximate data augmentation (AXDA :cite:`Vono2020`)."""
 
 # TODO: documentation
 

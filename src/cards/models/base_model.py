@@ -1,8 +1,10 @@
 r"""Abstract class specifying the interface common to all models, used to
-define an application and the sampling strategy selected. Methods in the class
-encode the interaction between the transition kernels underlying a sampler tailored to a specific inference problem. The methods declared here are called
-within the sampler.
+define an application and the associated sampling strategy.
+Methods in this class encode the interaction between the transition kernels underlying a sampler tailored to a specific inference problem.
+The methods declared in this module are called within the sampler.
 """
+
+# TODO: refine wording in documentation
 
 from abc import ABC, abstractmethod
 

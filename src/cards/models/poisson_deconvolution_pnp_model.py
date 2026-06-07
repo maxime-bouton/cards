@@ -1,4 +1,10 @@
-r"""Implementation of a poisson deconvolution model using the plug and pay method."""
+r"""Implementation of a Poisson deconvolution model using a PnP prior to reproduce the experiments reported in :cite:p:`Bouton2025`."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 # TODO: documentation
 # TODO: typing

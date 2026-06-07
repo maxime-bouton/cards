@@ -1,6 +1,10 @@
-"""Implementation of a model used to build a solution to a deconvolution problem under gaussian noise.
-Can be executed on cpu or gpu depending on the settings of the backend.py file.
-"""
+r"""Implementation of a Gaussian deconvolution model under a TV prior to reproduce the experiments reported in :cite:p:`Bouton2025`."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 # TODO: documentation
 
