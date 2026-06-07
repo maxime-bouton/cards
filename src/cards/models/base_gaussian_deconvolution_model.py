@@ -28,10 +28,10 @@ class BaseGaussianDeconvolutionModel(BaseModel):
     convolution_operator: DftConvolution | MpiDftConvolution
 
     def __init__(self, params: GaussianDeconvolutionParams, X: BaseTransitionKernel):
+        self.X = X
         super().__init__()
         self.observations = params.observations
         self.convolution_kernel = params.kernel
-        self.X = X
         self.reg_coeff = params.reg_coeff
 
         self.sigma2 = params.sigma2

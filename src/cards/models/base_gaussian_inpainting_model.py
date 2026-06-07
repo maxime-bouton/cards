@@ -26,13 +26,13 @@ class GaussianInpaintingParameters:
 
 class BaseGaussianInpaintingModel(BaseModel):
     def __init__(self, params: GaussianInpaintingParameters, X: BaseTransitionKernel):
+        self.X = X
         super().__init__()
+
         self.observations = params.observations
         self.mask = params.mask
         self.reg_coeff = params.reg_coeff
         self.sigma2 = params.sigma2
-
-        self.X = X
 
         self.estimator_builder = MMSEBuilder(
             X.current_state.shape, dtype=X.current_state.dtype, name="X"

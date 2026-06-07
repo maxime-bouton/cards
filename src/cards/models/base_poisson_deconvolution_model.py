@@ -36,12 +36,12 @@ class BasePoissonDeconvolutionModel(BaseModel):
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
     ):
-        super().__init__()
-        self.observations = params.observations
-        self.convolution_kernel = params.kernel
         self.X = X
         self.Z1 = Z1
         self.Z2 = Z2
+        super().__init__()
+        self.observations = params.observations
+        self.convolution_kernel = params.kernel
         self.reg_coeff = params.reg_coeff
 
         self.split_coef1 = params.split_coef1

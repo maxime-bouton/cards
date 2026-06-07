@@ -44,20 +44,6 @@ class BaseModel(ABC):
         """
         pass
 
-    # FIXME: method to be removed (not really defined or used in objects, to be clarified
-    # @abstractmethod
-    def get_batch_sizes(self) -> dict:
-        r"""Returns a dictionary containing the dimensions of the variables to be saved to disk.
-
-        This method is only called when a batch of samples needs to be saved to disk.
-
-        Returns
-        -------
-        dict
-            Dictionary continaing the dimensions of the variables we want to save.
-        """
-        pass
-
     @abstractmethod
     def set_states(self, states: dict):
         r"""Set the variables in the model to the associated value passed in input.
@@ -97,9 +83,14 @@ class BaseModel(ABC):
 
 
 class BaseDistributedModel(BaseModel):
-    # FIXME: see if declaration as class variables really needed
-    global_sizes: dict
-    slices: dict
+    def __init__(self):
+        self.global_sizes = {}
+        self.local_sizes = {}
+        self.slices = {}
+
+        self.set_slices()
+        self.set_global_sizes()
+        self.set_local_sizes()
 
     @abstractmethod
     def set_slices(self):

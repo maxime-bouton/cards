@@ -39,18 +39,18 @@ class MultiGpuSampler(BaseSampler):
     ):
         self.comm = comm
         self.gpu_id = gpu_id
+        # TODO: revise GPU usage
         self.nb_gpu = cp.cuda.runtime.getDeviceCount()
 
         super().__init__(params, model, logger, save_full_batch)
 
         self.data_manager = DataManager(
-            self.batch_size,
-            self._save_full_batch,
-            self.model.get_batch_sizes(),
-            self.model.global_sizes,
-            self.model.slices,
+            batch_size=self.batch_size,
+            save_full_batch=save_full_batch,
+            sizes=self.model.local_sizes,
+            global_sizes=self.model.global_sizes,
+            local_slices=self.model.slices,
         )
-
         self.start_gpu = cp.cuda.Event()
         self.end_gpu = cp.cuda.Event()
 
