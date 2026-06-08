@@ -20,30 +20,33 @@ mpi4py = ">=4.1.2,<5"
 h5py = { version = ">=3.16.0,<4", build = "*openmpi*" }
 scipy = ">=1.16.3,<2"
 imageio = ">=2.37.0,<3"
-tqdm = ">=4.67.3,<5"
+tqdm = ">=4.68.1,<5"
 matplotlib = ">=3.10.9,<4"
 scikit-image = ">=0.26.0,<0.27"
 numba = ">=0.65.1,<0.66"
 numpy = ">=2.4.6,<3"
-pytorch = ">=2.10.0,<3"
-torchvision = ">=0.26.0,<0.27"
 jupyter = ">=1.1.1,<2"
-
 
 [tool.pixi.pypi-dependencies]
 cards = { path = ".", editable = true }
 
 [tool.pixi.environments]
-test = { features = ["test"], solve-group = "default" }
-doc = { features = ["doc"], solve-group = "default" }
-gpu = { features = ["gpu"], solve-group = "gpu" }
+test = { features = ["cpu", "test"], solve-group = "default" }
+doc  = { features = ["cpu", "doc"],  solve-group = "default" }
+gpu  = { features = ["gpu"],         solve-group = "gpu" }
 full = { features = ["gpu", "dev", "doc", "test"], solve-group = "gpu" }
 
 # https://pixi.sh/latest/reference/pixi_manifest/#the-feature-table
+[tool.pixi.feature.cpu.dependencies]
+pytorch = ">=2.11.0,<3"
+torchvision = ">=0.26.0,<0.27"
+
 [tool.pixi.feature.gpu]
 system-requirements = { cuda = "12" }
 
 [tool.pixi.feature.gpu.dependencies]
+pytorch = { version = ">=2.11.0,<3", build = "*cuda*" }
+torchvision = { version = ">=0.26.0,<0.27", build = "*cuda*" }
 cupy = ">=14.1.1,<15"
 ucx = ">=1.20.0,<2"
 
@@ -71,8 +74,8 @@ isort = ">=8.0.1,<9"
 pre-commit = ">=4.6.0,<5"
 conda-build = ">=26.5.0,<27"
 anaconda-client = ">=1.14.1,<2"
-ruff = ">=0.15.15,<0.16"
-ty = ">=0.0.40,<0.0.41"
+ruff = ">=0.15.16,<0.16"
+ty = ">=0.0.44,<0.0.45"
 
 
 [tool.pixi.package]
