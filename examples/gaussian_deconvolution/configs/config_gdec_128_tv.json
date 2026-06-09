@@ -1,0 +1,24 @@
+{
+    "checkpoint_size": 10,
+    "n_checkpoint": 10,
+    "burnin": 1,
+    "reloaded_checkpoint": 0,
+    "seed": 42,
+    "seed_data": 1234,
+    "compute_ci": false,
+    "save_all": false,
+    "obs_path": "",
+    "save_path": "",
+    "save_path_resumed": "",
+    "logfile_path": "",
+    "original_img_path": "../../data/128.h5",
+    "isnr": 25,
+    "kernel": {
+        "type": "motion",
+        "size": 5,
+        "intensity": 0.5,
+        "seed": 1234
+    },
+    "reg_coef": 40,
+    "split_coef": 1e-05
+}
