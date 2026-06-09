@@ -84,7 +84,9 @@ class MpiDnCNN(BaseDistributedDenoiser):
         tile_u = self.core_mpi_conv.forward(tile_u, conv_forward).clip(min=0)
         return self.core_mpi_conv.adjoint(tile_u, conv_adjoint).clip(min=0)
 
-    def __call__(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
+    def __call__(
+        self, input_image: xp.ndarray, sigma: float, torch_dtype=None, cp_dtype=None
+    ) -> xp.ndarray:
         r"""Apply the distributed denoiser.
 
         Parameters

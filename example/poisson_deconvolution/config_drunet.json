@@ -1,0 +1,10 @@
+{
+    "reg_coef": 1,
+    "split_coef1": 10,
+    "split_coef2": 1e-3,
+    "denoiser_params": {
+        "type": "drunet",
+        "denoising_level": 0.05,
+        "L": 7
+    }
+}

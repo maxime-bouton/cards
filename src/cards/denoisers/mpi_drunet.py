@@ -168,7 +168,9 @@ class MpiDRUNet(BaseDistributedDenoiser):
             tile_u = self._apply_res_layer(tile_u, conv, res.res[0], res.res[2])
         return tile_u
 
-    def __call__(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
+    def __call__(
+        self, input_image: xp.ndarray, sigma: float, torch_dtype=None, cp_dtype=None
+    ) -> xp.ndarray:
         _, h, w = input_image.shape
         noise_map = xp.full((1, h, w), sigma)
         tile_x0 = xp.concatenate((input_image, noise_map), axis=0)
