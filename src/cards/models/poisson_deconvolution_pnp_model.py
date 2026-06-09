@@ -1,4 +1,10 @@
-r"""Implementation of a poisson deconvolution model using the plug and pay method."""
+r"""Implementation of a Poisson deconvolution model using a PnP prior to reproduce the experiments reported in :cite:p:`Bouton2025`."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 # TODO: documentation
 # TODO: typing
@@ -190,15 +196,6 @@ class DistributedPoissonDeconvolutionPnpModel(
         )
         super().__init__(params, X, Z1, Z2, denoiser)
 
-        # TODO: revise definition of this variables, to put in BaseDistributedModel?
-        self.slices = {}
-        self.global_sizes = {}
-        self.local_sizes = {}
-
-        self.set_slices()
-        self.set_global_sizes()
-        self.set_local_sizes()
-
     def set_slices(self):
         """Describes which portion of the global buffer the current thread must handle.
 
@@ -207,16 +204,12 @@ class DistributedPoissonDeconvolutionPnpModel(
         dict
             Dictionary containing the slices of the global buffer that this thread will handle.
         """
-        slices = {}
-        slices["X"] = self.denoiser.global_to_tile_slice
-        slices["Z1"] = (
+        self.slices["X"] = self.denoiser.global_to_tile_slice
+        self.slices["Z1"] = (
             self.convolution_operator.adjoint_communicator.cartslicer.slice_global_buffer_to_tile
         )
-        slices["Z2"] = self.denoiser.global_to_tile_slice
-
-        slices["MMSE"] = self.denoiser.global_to_tile_slice
-
-        self.slices = slices
+        self.slices["Z2"] = self.denoiser.global_to_tile_slice
+        self.slices["MMSE"] = self.denoiser.global_to_tile_slice
 
     def set_global_sizes(self):
         """Describes the gobal sizes of several global buffers.
@@ -226,23 +219,16 @@ class DistributedPoissonDeconvolutionPnpModel(
         dict
             Global sizes of the variable of interest.
         """
-        sizes = {}
-        sizes["X"] = np.asarray(self.full_size, dtype=int)
-        sizes["Z1"] = np.asarray(
+        self.global_sizes["X"] = np.asarray(self.full_size, dtype=int)
+        self.global_sizes["Z1"] = np.asarray(
             self.convolution_operator.adjoint_communicator.cartslicer.global_buffer_size,
             dtype=int,
         )
-        sizes["Z2"] = np.asarray(self.full_size, dtype=int)
-
-        sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
-
-        self.global_sizes = sizes
+        self.global_sizes["Z2"] = np.asarray(self.full_size, dtype=int)
+        self.global_sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
 
     def set_local_sizes(self):
-        local_sizes = {}
-        local_sizes["X"] = self.X.current_state.shape
-        local_sizes["Z1"] = self.Z1.current_state.shape
-        local_sizes["Z2"] = self.Z2.current_state.shape
-        local_sizes["MMSE"] = self.X.current_state.shape
-
-        self.local_sizes = local_sizes
+        self.local_sizes["X"] = self.X.current_state.shape
+        self.local_sizes["Z1"] = self.Z1.current_state.shape
+        self.local_sizes["Z2"] = self.Z2.current_state.shape
+        self.local_sizes["MMSE"] = self.X.current_state.shape

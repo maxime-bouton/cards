@@ -1,4 +1,10 @@
-"""Base class for Gaussian deconvolution models."""
+r"""Base class defining Gaussian deconvolution models."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 # TODO: documentation
 
@@ -28,10 +34,10 @@ class BaseGaussianDeconvolutionModel(BaseModel):
     convolution_operator: DftConvolution | MpiDftConvolution
 
     def __init__(self, params: GaussianDeconvolutionParams, X: BaseTransitionKernel):
+        self.X = X
         super().__init__()
         self.observations = params.observations
         self.convolution_kernel = params.kernel
-        self.X = X
         self.reg_coeff = params.reg_coeff
 
         self.sigma2 = params.sigma2

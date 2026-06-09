@@ -50,11 +50,11 @@ class DistributedSampler(BaseSampler):
 
         if self._save_full_batch:
             self.data_manager = DataManager(
-                self.batch_size,
-                save_full_batch,
-                self.model.get_batch_sizes(),
-                self.model.global_sizes,
-                self.model.slices,
+                batch_size=self.batch_size,
+                save_full_batch=save_full_batch,
+                sizes=self.model.local_sizes,
+                global_sizes=self.model.global_sizes,
+                local_slices=self.model.slices,
             )
         else:
             self.data_manager = DataManager()

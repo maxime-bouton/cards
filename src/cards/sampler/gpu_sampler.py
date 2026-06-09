@@ -35,7 +35,8 @@ class GpuSampler(BaseSampler):
 
         if self._save_full_batch:
             self.data_manager = DataManager(
-                self.batch_size, self._save_full_batch, self.model.get_batch_sizes()
+                self.batch_size,
+                self._save_full_batch,
             )
         else:
             self.data_manager = DataManager()

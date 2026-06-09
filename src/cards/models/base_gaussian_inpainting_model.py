@@ -1,6 +1,10 @@
-"""Implement a model used to build a solution to an inpainting problem under
-Gaussian noise. Can be executed on CPU or GPU depending on the selected backend.
-"""
+r"""Base class defining Gaussian inpainting models."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
+# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
+# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 # TODO: documentation
 
@@ -26,13 +30,13 @@ class GaussianInpaintingParameters:
 
 class BaseGaussianInpaintingModel(BaseModel):
     def __init__(self, params: GaussianInpaintingParameters, X: BaseTransitionKernel):
+        self.X = X
         super().__init__()
+
         self.observations = params.observations
         self.mask = params.mask
         self.reg_coeff = params.reg_coeff
         self.sigma2 = params.sigma2
-
-        self.X = X
 
         self.estimator_builder = MMSEBuilder(
             X.current_state.shape, dtype=X.current_state.dtype, name="X"

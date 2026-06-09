@@ -1,8 +1,10 @@
 r"""Abstract class specifying the interface common to all models, used to
-define an application and the sampling strategy selected. Methods in the class
-encode the interaction between the transition kernels underlying a sampler tailored to a specific inference problem. The methods declared here are called
-within the sampler.
+define an application and the associated sampling strategy.
+Methods in this class encode the interaction between the transition kernels underlying a sampler tailored to a specific inference problem.
+The methods declared in this module are called within the sampler.
 """
+
+# TODO: refine wording in documentation
 
 from abc import ABC, abstractmethod
 
@@ -41,20 +43,6 @@ class BaseModel(ABC):
         -------
         dict
             Dictionary containing a batch of consecutive samples for each variable.
-        """
-        pass
-
-    # FIXME: method to be removed (not really defined or used in objects, to be clarified
-    # @abstractmethod
-    def get_batch_sizes(self) -> dict:
-        r"""Returns a dictionary containing the dimensions of the variables to be saved to disk.
-
-        This method is only called when a batch of samples needs to be saved to disk.
-
-        Returns
-        -------
-        dict
-            Dictionary continaing the dimensions of the variables we want to save.
         """
         pass
 
@@ -97,9 +85,14 @@ class BaseModel(ABC):
 
 
 class BaseDistributedModel(BaseModel):
-    # FIXME: see if declaration as class variables really needed
-    global_sizes: dict
-    slices: dict
+    def __init__(self):
+        self.global_sizes = {}
+        self.local_sizes = {}
+        self.slices = {}
+
+        self.set_slices()
+        self.set_global_sizes()
+        self.set_local_sizes()
 
     @abstractmethod
     def set_slices(self):

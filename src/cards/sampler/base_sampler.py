@@ -214,6 +214,7 @@ class BaseSampler(ABC):
                 self.computation_time[i] = self.get_elapsed_time()
 
                 if self.data_manager._save_full_batch:
+                    # FIXME: revise, method not used (check implementation when saving all states to disk)
                     self.data_manager.store_states(self.model.get_states4batch(), i)
 
             self.model.estimator_builder.build_estimator(self.batch_size)
