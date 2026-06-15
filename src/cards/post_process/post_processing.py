@@ -1,0 +1,252 @@
+import json
+from pathlib import Path
+
+import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+from cards.post_process.metrics import psnr, snr, ssim
+
+
+def analyze_data(
+    n_checkpoint: int,
+    checkpoint_size: int,
+    burnin: int,
+    save_path: str | Path,
+    obs_path: str | Path,
+    output_file_name: str,
+    dynamic_range: float = 1.0,
+    slices: slice = slice(None),
+    comm_size: int = 1,
+    save_picture: bool = True,
+    show_results=False,
+) -> None:
+    """Read the sample produced by a "compute" function and make some metrics out of it.
+
+    Parameters
+    ----------
+    n_checkpoint : int
+        Number of batches of the sample.
+    checkpoint_size: int
+        Number of steps between two checkpoints.
+    batch_size: int
+        Size of the batches.
+    burnin : int
+        Number of bacth to ignore to take into account the burn-in.
+    save_path : str | Path
+        Path to the directory where the sample has been saved.
+    obs_path : str | Path
+        Path to the file containing the deteriorated signal.
+    output_file_name : str
+        Full path to the file on which we will write the metrics.
+    slices : slice
+        Select which portion of the observation must be compared to the original.
+    comm_size : int
+        Number of process, must be used only in a distributed setting.
+    comm_size : int
+        Number of process, must be used only in a distributed setting.
+    """
+
+    save_path = Path(save_path)
+    obs_path = Path(obs_path)
+
+    results_path = save_path / f"burnin_{burnin}"
+    results_path.mkdir(parents=True, exist_ok=True)
+
+    with h5py.File(obs_path, "r") as file:
+        original = file["x"][:]
+        observations = file["y"][:] / dynamic_range
+        interpolation = file["interpolation"][:] if "interpolation" in file else None
+
+    potential_list = []
+    time_list = []
+
+    x_mmse = np.zeros_like(original, dtype=np.float64)
+
+    valid_samples = 0
+    for i in range(n_checkpoint):
+        with h5py.File(save_path / f"sample{i + 1}.h5", "r") as file:
+            potential_list.append(file["potential"][:])
+            time_list.append(file["computation_time"][:])
+
+            if i >= burnin:
+                x_mmse += file["MMSE"][:]
+                valid_samples += 1
+
+    if valid_samples > 0:
+        x_mmse /= valid_samples
+
+    potential = np.concatenate(potential_list)
+    time_array = np.concatenate(time_list, axis=-1)
+
+    atime = (np.mean(time_array, axis=-1) * 1000).round(2)
+    time_std = (np.std(time_array, axis=-1) * 1000).round(2)
+
+    obs_sliced = observations[slices]
+
+    results = {
+        "mean_time_ms": atime.tolist(),
+        "std_time_ms": time_std.tolist(),
+        "snr_obs": round(float(snr(original, obs_sliced)), 2),
+        "psnr_obs": round(float(psnr(original, obs_sliced)), 2),
+        "ssim_obs": round(float(ssim(original, obs_sliced)), 2),
+        "snr_recons": round(float(snr(original, x_mmse)), 2),
+        "psnr_recons": round(float(psnr(original, x_mmse)), 2),
+        "ssim_recons": round(float(ssim(original, x_mmse)), 2),
+    }
+
+    if interpolation is not None:
+        results.update(
+            {
+                "snr_interp": round(float(snr(original, interpolation)), 2),
+                "psnr_interp": round(float(psnr(original, interpolation)), 2),
+                "ssim_interp": round(float(ssim(original, interpolation)), 2),
+            }
+        )
+
+    with open(results_path / f"{output_file_name}.json", "w") as f:
+        json.dump(results, f, indent=2)
+
+    with h5py.File(results_path / "estim.h5", "w") as f:
+        f.create_dataset("x_mmse", data=x_mmse)
+
+    plot_results(
+        observations=observations,
+        original=original,
+        MMSE=x_mmse,
+        potential=potential,
+        save_path=results_path,
+        dynamic_range=dynamic_range,
+        slices=slices,
+        save_picture=save_picture,
+        show_results=show_results,
+    )
+
+
+def format_img(arr: np.ndarray, is_obs: bool = False, dynamic_range: float = 1.0):
+    """Safely handles 2D (grayscale) vs 3D (RGB: C, H, W) arrays for plotting.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input image array.
+    is_obs : bool, optional
+        Flag indicating if the image is an observation (default is False).
+    dynamic_range : float, optional
+        The dynamic range for scaling the image (default is 1.0).
+    """
+    if arr.ndim >= 3:
+        # converts to (H, W, C) format for 3D arrays
+        out = np.moveaxis(arr, 0, -1)
+    else:
+        out = arr.T
+
+    return out / dynamic_range if is_obs else out
+
+
+def plot_results(
+    observations: np.ndarray,
+    original: np.ndarray,
+    MMSE: np.ndarray,
+    potential: np.ndarray,
+    save_path: Path,
+    dynamic_range: float = 1.0,
+    slices: slice = slice(None),
+    save_picture: bool = True,
+    show_results: bool = False,
+    dpi: int = 300,
+    cmap: str = "gray",
+):
+    """Plot the data generated by a "compute" function : the reconstruction, the absolute error and the potential.
+
+    Parameters
+    ----------
+    observations : np.ndarray
+        Deteriorated signal.
+    original : np.ndarray
+        Original signal without any loss or noise.
+    MMSE : np.ndarray
+        Approximation of the original signal.
+    potential : np.ndarray
+        Historic of the potential for each step of the Markov chain.
+    save_path : Path
+        Path to the directory where we will save the figures.
+    dynamic_range : float
+        The dynamic range for scaling the images (default is 1.0).
+    slices : slice
+        Select which portion of the observation must be compared to the original.
+    save_picture : bool
+        Activate or deactivate the save of the printed figures.
+    show_results : bool
+        Activate or deactivate the display of the results.
+    dpi : int
+        Dots per inch for the saved figures (default is 300).
+    cmap : str
+        Colormap for the images (default is "gray").
+    """
+    save_path = Path(save_path)
+    if save_picture:
+        save_path.mkdir(parents=True, exist_ok=True)
+
+    img_true = format_img(original)
+    img_obs = format_img(observations, is_obs=True, dynamic_range=dynamic_range)
+    img_mmse = format_img(MMSE)
+
+    error_arr = np.abs(original - MMSE)
+    img_err = format_img(error_arr)
+
+    vmin, vmax = np.min(img_true), np.max(img_true)
+
+    fig_imgs, axes = plt.subplots(1, 4, figsize=(16, 4), gridspec_kw={"wspace": 0.2})
+    titles = ["Observations", "Ground Truth", "MMSE", "Absolute Error"]
+    images_data = [img_obs, img_true, img_mmse, img_err]
+
+    for ax, title, data in zip(axes, titles, images_data):
+        current_cmap = "inferno" if title == "Absolute Error" else cmap
+
+        im = ax.imshow(data, vmin=vmin, vmax=vmax, cmap=current_cmap)
+        ax.set_title(title, fontsize=14, pad=10)
+        ax.axis("off")
+
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        fig_imgs.colorbar(im, cax=cax)
+
+    if save_picture:
+        fig_imgs.savefig(
+            save_path / "reconstruction_grid.pdf",
+            format="pdf",
+            bbox_inches="tight",
+            dpi=dpi,
+        )
+
+    fig_pot, ax_pot = plt.subplots(figsize=(8, 4))
+    ax_pot.plot(potential, color="#1f77b4", linewidth=1.5)
+    ax_pot.set_title("Potential over Markov Chain Steps", fontsize=14)
+    ax_pot.set_xlabel("Steps", fontsize=12)
+    ax_pot.set_ylabel("Potential", fontsize=12)
+    ax_pot.grid(True, linestyle="--", alpha=0.7)
+
+    ax_pot.spines["top"].set_visible(False)
+    ax_pot.spines["right"].set_visible(False)
+
+    if save_picture:
+        fig_pot.savefig(
+            save_path / "potential.pdf", format="pdf", bbox_inches="tight", dpi=dpi
+        )
+
+    if show_results:
+        plt.show()
+
+    if save_picture:
+        plt.imsave(
+            save_path / "raw_mmse.png",
+            img_mmse.clip(0, 1),
+            vmin=vmin,
+            vmax=vmax,
+            cmap=cmap,
+        )
+        plt.imsave(
+            save_path / "raw_error.png", img_err, vmin=vmin, vmax=vmax, cmap="inferno"
+        )

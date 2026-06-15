@@ -19,6 +19,7 @@ import torch
 
 from cards.backend import bm
 from cards.logger import build_logger
+from cards.post_process.post_processing import analyze_data
 from cards.sampler.base_sampler import SamplerParameters
 from cards.utils.path_builder import (
     generate_obs_dir_path,
@@ -26,7 +27,6 @@ from cards.utils.path_builder import (
     prior_dir,
     sampling_dir,
 )
-from cards.utils.utils import analyze_data
 
 
 def create_sampler_params(params: dict) -> SamplerParameters:

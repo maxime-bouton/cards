@@ -7,7 +7,7 @@ r"""Useful metrics to assess reconstruction quality."""
 # Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 import numpy as np
-from skimage.metrics import structural_similarity
+from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 
 
 def snr(x: np.ndarray, y: np.ndarray) -> float:
@@ -67,3 +67,28 @@ def ssim(x: np.ndarray, y: np.ndarray) -> float:
         data_range=x.max() - x.min(),
         channel_axis=-3 if len(x.shape) > 2 else None,
     )  # type: ignore
+
+
+def psnr(x: np.ndarray, y: np.ndarray) -> float:
+    r"""Compute the Peak Signal-to-Noise Ratio (PSNR) between two images.
+
+    Parameters
+    ----------
+    x : np.ndarray
+        Reference image.
+    y : np.ndarray
+        Estimated image.
+
+    Returns
+    -------
+    float
+        Peak Signal-to-Noise Ratio between the input images.
+    """
+    if x.shape != y.shape:
+        raise ValueError("Input images must have the same shape.")
+
+    return peak_signal_noise_ratio(
+        x,
+        y,
+        data_range=1.0,
+    )
