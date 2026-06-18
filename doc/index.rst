@@ -24,8 +24,8 @@ The `associated github repository <https://github.com/maxime-bouton/cards/>`_ al
 .. toctree::
    :maxdepth: 1
    :caption: Development
-
-   autoapi/index
+   
+   api
 
 
 Indices and tables

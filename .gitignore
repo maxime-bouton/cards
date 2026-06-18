@@ -277,6 +277,7 @@ $RECYCLE.BIN/
 data/weights/drunet/*.pth
 data/weights/dncnn/dncnn*.pth
 doc/autoapi/*
+doc/api/*
 doc/_build/*
 
 # pixi environments
