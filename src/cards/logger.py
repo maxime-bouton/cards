@@ -1,4 +1,4 @@
-"""Utility functions to create and format looger outputs."""
+"""Utility functions to create and format logger outputs."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
@@ -79,3 +79,37 @@ def build_logger(
         logger.addHandler(console_handler)
 
     return logger
+
+
+class ProgressBar:
+    r"""A standalone MPI progress bar that coordinates perfectly with standard loggers.
+
+    Uses the 'Lift and Drop' pattern to erase itself before external logs
+    are printed, keeping a clean pinned-bottom UI without intercepting the logger.
+    """
+
+    def __init__(self, total: int, desc: str = "Sampling", bar_len: int = 45) -> None:
+        self.total = total
+        self.desc = desc
+        self.bar_len = bar_len
+        self._is_visible = False
+
+    def clear(self) -> None:
+        r"""Erase the progress bar from the terminal."""
+        if self._is_visible:
+            # \033[1A : Move cursor UP one line
+            # \033[2K : Erase the entire line
+            sys.stdout.write("\033[1A\033[2K")
+            self._is_visible = False
+
+    def update(self, current: int) -> None:
+        r"""Draw the progress bar on a new line."""
+        percent = min(current / self.total, 1.0)
+        filled = int(self.bar_len * percent)
+        bar = "█" * filled + "░" * (self.bar_len - filled)
+
+        pbar_line = f"{self.desc} |{bar}| {current}/{self.total} [{percent:>4.0%}]\n"
+
+        sys.stdout.write(pbar_line)
+        sys.stdout.flush()
+        self._is_visible = True
