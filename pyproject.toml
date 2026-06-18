@@ -61,6 +61,7 @@ sphinx_rtd_theme = ">=3.1.0,<4"
 sphinxcontrib-bibtex = ">=2.7.0,<3"
 sphinx-autoapi = ">=3.8.0,<4"
 sphinx-design = ">=0.7.0,<0.8"
+sphinx-autobuild = ">=2025.8.25,<2026"
 
 [tool.pixi.feature.doc.pypi-dependencies]
 sphinxcontrib-apa = ">=1.0.0, <2"
@@ -122,3 +123,7 @@ extra-paths = [
 addopts = "-ra -q -vv"
 strict = true
 testpaths = ["tests"]
+
+# tasks
+[tool.pixi.tasks]
+doc = { cmd = "sphinx-autobuild doc doc/_build/html --watch src", default-environment = "full" }
