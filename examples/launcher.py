@@ -147,17 +147,17 @@ def generate_slurm_script(
     # textwrap.dedent removes the leading python indentation so SLURM reads the #SBATCH tags correctly
     slurm_content = textwrap.dedent(f"""\
         #!/bin/bash
-        #SBATCH --job-name={job_name}    
-        #SBATCH --partition=gpu_p13        
-        #SBATCH -C v100-32g                 
-        #SBATCH --nodes=1                    
-        #SBATCH --cpus-per-task=1             
-        #SBATCH --hint=nomultithread        
-        #SBATCH --output=logs/{job_name}_%j.out   
-        #SBATCH --error=logs/{job_name}_%j.err   
-        #SBATCH --ntasks-per-node={workers}          
-        #SBATCH --gres=gpu:{workers}                 
-        #SBATCH --time={time_limit}                    
+        #SBATCH --job-name={job_name}
+        #SBATCH --partition=gpu_p13
+        #SBATCH -C v100-32g
+        #SBATCH --nodes=1
+        #SBATCH --cpus-per-task=1
+        #SBATCH --hint=nomultithread
+        #SBATCH --output=logs/{job_name}_%j.out
+        #SBATCH --error=logs/{job_name}_%j.err
+        #SBATCH --ntasks-per-node={workers}
+        #SBATCH --gres=gpu:{workers}
+        #SBATCH --time={time_limit}
 
         module purge
         {env_settings}

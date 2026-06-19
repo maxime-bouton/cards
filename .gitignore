@@ -278,6 +278,7 @@ data/weights/drunet/*.pth
 data/weights/dncnn/dncnn*.pth
 doc/autoapi/*
 doc/_build/*
+examples/*/run_*json
 
 # pixi environments
 .pixi

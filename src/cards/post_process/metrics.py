@@ -66,7 +66,7 @@ def ssim(x: np.ndarray, y: np.ndarray) -> float:
         y,
         data_range=x.max() - x.min(),
         channel_axis=-3 if len(x.shape) > 2 else None,
-    )  # type: ignore
+    )
 
 
 def psnr(x: np.ndarray, y: np.ndarray) -> float:

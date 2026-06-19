@@ -53,6 +53,10 @@
    - [ ] estimators
    - [ ] communicator
 
+- distributed data generation
+    - [ ] make sure the lambda are aware of the distributed context
+    - [ ] reuse objects / operators between main script and data generation
+
 ## Towards v1.0 (Januray 2026 and later)
 
 - Existing core: improvements

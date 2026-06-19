@@ -31,17 +31,23 @@ class GaussianDeconvolutionParams:
 
 
 class BaseGaussianDeconvolutionModel(BaseModel):
-    convolution_operator: DftConvolution | MpiDftConvolution
-
-    def __init__(self, params: GaussianDeconvolutionParams, X: BaseTransitionKernel):
+    def __init__(
+        self,
+        params: GaussianDeconvolutionParams,
+        convolution_operator: DftConvolution | MpiDftConvolution,
+        X: BaseTransitionKernel,
+    ):
         self.X = X
         super().__init__()
-        self.observations = params.observations
-        self.convolution_kernel = params.kernel
-        self.reg_coeff = params.reg_coeff
 
+        self.observations = params.observations
+        self.convolution_operator = convolution_operator
+
+        # model hyperparameters
+        self.reg_coeff = params.reg_coeff
         self.sigma2 = params.sigma2
 
+        # internal buffers
         self.convX = xp.zeros_like(self.observations)
 
         self.estimator_builder = MMSEBuilder(

@@ -56,7 +56,7 @@ def power_method(
     #     if rng is None:
     #         x = cp.random.rand(*shape)
     #     else:
-    #         x = rng.rand(shape)  # type: ignore
+    #         x = rng.rand(shape)
 
     x /= xp.linalg.norm(x)
     val = 1.0

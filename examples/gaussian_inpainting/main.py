@@ -11,12 +11,13 @@ if __name__ == "__main__":
         gaussian_inpainting_params,
         lambda d: {},
         build_obs_and_model_paths,
-        lambda p: generate_inpainting_observations(
+        lambda p, mode: generate_inpainting_observations(
             p["original_img_path"],
             p["mask_loss"],
             p["isnr"],
             p["seed_data"],
             p["obs_path"],
+            mode=mode,
         ),
         module_name="utils_inpainting",
         save_picture=False,

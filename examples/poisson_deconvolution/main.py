@@ -12,12 +12,13 @@ if __name__ == "__main__":
         poisson_deconvolution_params,
         define_slices,
         build_obs_and_model_paths,
-        lambda p: generate_poisson_deconvolution_observations(
+        lambda p, mode: generate_poisson_deconvolution_observations(
             p["original_img_path"],
             p["kernel"],
             p["dynamic_range"],
             p["seed_data"],
             p["obs_path"],
+            mode=mode,
         ),
         module_name="utils_poisson_deconvolution",
         save_picture=False,
@@ -27,4 +28,4 @@ if __name__ == "__main__":
 # python -m main --config config.json --mode serial --device cpu
 # python -m main --config config.json --mode serial --device gpu
 # mpirun -n 2 python -m mpi4py main.py --config config.json --mode mpi --device cpu
-# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py main.py --mode mpi --device gpu
+# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py main.py --config config.json --mode mpi --device gpu
