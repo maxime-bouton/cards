@@ -65,7 +65,7 @@ def read_img_shape(path: str | Path, key: str = "x") -> tuple[int, ...]:
     """
     if Path(path).suffix == ".h5":
         with h5py.File(path) as file:
-            return file[key].shape  # type: ignore
+            return file[key].shape
     else:
         with Image.open(path) as img:
             # NOTE: lazy loading of the size (image is not loaded in memory)
@@ -91,7 +91,7 @@ def read_dtype(path: str | Path, key: str = "x") -> np.dtype:
     """
     if Path(path).suffix == ".h5":
         with h5py.File(path) as file:
-            return file[key].dtype  # type: ignore
+            return file[key].dtype
     else:
         raise ValueError(
             "The provided path does not point to a .h5 file. "

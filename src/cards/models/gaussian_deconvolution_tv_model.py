@@ -12,7 +12,6 @@ from abc import ABC
 from dataclasses import dataclass
 
 import numpy as np
-from mpi4py import MPI
 
 from cards.backend import xp
 from cards.functionals.prox import l21_norm, prox_l21norm, prox_nonegativity
@@ -25,9 +24,6 @@ from cards.operators.dft_convolution import DftConvolution
 from cards.operators.gradient import Gradient2d
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
 from cards.operators.mpi_gradient import MpiGradient2d
-from cards.transition_kernel.base_transition_kernel import (
-    BaseTransitionKernel,
-)
 from cards.transition_kernel.gpu_psgla import GpuPSGLA
 from cards.transition_kernel.psgla import PSGLA
 
@@ -38,18 +34,20 @@ class GaussianDeconvolutionTvParams(GaussianDeconvolutionParams):
 
 
 class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
-    gradient_operator: Gradient2d | MpiGradient2d
-
     def __init__(
         self,
         params: GaussianDeconvolutionTvParams,
-        X: BaseTransitionKernel,
-        Z: BaseTransitionKernel,
+        convolution_operator: DftConvolution | MpiDftConvolution,
+        gradient_operator: Gradient2d | MpiGradient2d,
+        X: PSGLA | GpuPSGLA,
+        Z: PSGLA | GpuPSGLA,
     ):
+        self.gradient_operator = gradient_operator
+
         self.Z = Z
         self.split_coeff = params.split_coeff
         self.gradX = xp.zeros_like(X.current_state)
-        super().__init__(params, X)
+        super().__init__(params, convolution_operator, X)
 
     def set_conditionals(self):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
@@ -102,6 +100,7 @@ class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         self.gradX = self.gradient_operator.forward(self.X.current_state)
         self.convX = self.convolution_operator.forward(self.X.current_state)
 
+    # TODO: revise typing here
     def update(self, rng: np.random.Generator):
         """Gobal update of the model. Updates every kernel used by the model and computes annex variables.
 
@@ -119,7 +118,7 @@ class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         self.Z.mc_step(rng)
 
     def compute_potential(self) -> float:
-        """compute_potential Compute the potential of the targeted distribution for the current step.
+        r"""Compute the potential of the target posterior distribution for the current state.
 
         Returns
         -------
@@ -135,16 +134,17 @@ class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
 class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionTvModel):
     def __init__(
         self,
+        convolution_operator: DftConvolution,
         params: GaussianDeconvolutionTvParams,
-        X: BaseTransitionKernel,
-        Z: BaseTransitionKernel,
+        X: PSGLA | GpuPSGLA,
+        Z: PSGLA | GpuPSGLA,
     ):
-        self.gradient_operator = Gradient2d(np.asarray(X.current_state.shape))
-        self.convolution_operator = DftConvolution(
-            np.asarray(X.current_state.shape), params.kernel, params.observations.shape
-        )
+        gradient_operator = Gradient2d(np.asarray(X.current_state.shape))
+        # self.convolution_operator = DftConvolution(
+        #     np.asarray(X.current_state.shape), params.kernel, params.observations.shape
+        # )
 
-        super().__init__(params, X, Z)
+        super().__init__(params, convolution_operator, gradient_operator, X, Z)
 
 
 class DistributedGaussianDeconvolutionTvModel(
@@ -153,24 +153,25 @@ class DistributedGaussianDeconvolutionTvModel(
 ):
     def __init__(
         self,
-        comm: MPI.Comm,
-        full_size: np.ndarray,
-        grid_size: np.ndarray,
+        convolution_operator: MpiDftConvolution,
         params: GaussianDeconvolutionTvParams,
-        X: BaseTransitionKernel,
-        Z: BaseTransitionKernel,
+        X: PSGLA | GpuPSGLA,
+        Z: PSGLA | GpuPSGLA,
     ):
-        self.comm = comm
-        self.full_size = full_size
+        self.full_size = convolution_operator.image_size
 
-        self.gradient_operator = MpiGradient2d(self.full_size, grid_size, self.comm)
-        self.convolution_operator = MpiDftConvolution(
-            self.full_size,
-            params.kernel,
-            self.comm,
-            grid_size,
+        gradient_operator = MpiGradient2d(
+            convolution_operator.image_size,
+            convolution_operator.grid_size,
+            convolution_operator.comm,
         )
-        super().__init__(params, X, Z)
+        # convolution_operator = MpiDftConvolution(
+        #     self.full_size,
+        #     params.kernel,
+        #     self.comm,
+        #     grid_size,
+        # )
+        super().__init__(params, convolution_operator, gradient_operator, X, Z)
 
     def set_slices(self):
         """Describes which portion of the global buffer the current thread must handle."""

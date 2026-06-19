@@ -23,10 +23,8 @@
     "split_coef1": 10,
     "split_coef2": 0.001,
     "denoiser_params": {
-        "type": "ddfb",
-        "n_layers": 4,
-        "n_features": 64,
+        "type": "drunet",
         "denoising_level": 0.05,
-        "L": 2
+        "L": 7
     }
 }

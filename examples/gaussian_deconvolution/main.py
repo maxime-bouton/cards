@@ -12,17 +12,19 @@ if __name__ == "__main__":
         gaussian_deconvolution_params,
         define_slices,
         build_obs_and_model_paths,
-        lambda p: generate_gaussian_deconvolution_observations(
+        lambda p, mode: generate_gaussian_deconvolution_observations(
             p["original_img_path"],
             p["kernel"],
             p["isnr"],
             p["seed_data"],
             p["obs_path"],
+            mode=mode,
         ),
         module_name="utils_gaussian_deconvolution",
         save_picture=False,
         show_results=False,
     )
+
 
 # python -m main --config config.json --mode serial --device cpu
 # python -m main --config config.json --mode serial --device gpu
