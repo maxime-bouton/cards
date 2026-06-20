@@ -13,6 +13,20 @@ from cards.sampler.base_sampler import BaseSampler, SamplerParameters
 
 
 class GpuSampler(BaseSampler):
+    def __init__(self, params: SamplerParameters, model, logger, save_full_batch=False):
+        super().__init__(params, model, logger, save_full_batch)
+
+        if self._save_full_batch:
+            self.data_manager = DataManager(
+                self.batch_size,
+                self._save_full_batch,
+            )
+        else:
+            self.data_manager = DataManager()
+
+        self.start_gpu = cp.cuda.Event()
+        self.end_gpu = cp.cuda.Event()
+
     def _make_generator(self, seed):
         return torch.Generator(device="cuda").manual_seed(seed)
 
@@ -29,20 +43,6 @@ class GpuSampler(BaseSampler):
         return (
             cp.cuda.get_elapsed_time(self.start_gpu, self.end_gpu) * 1e-3
         )  # converted from milisecond to second
-
-    def __init__(self, params: SamplerParameters, model, logger, save_full_batch=False):
-        super().__init__(params, model, logger, save_full_batch)
-
-        if self._save_full_batch:
-            self.data_manager = DataManager(
-                self.batch_size,
-                self._save_full_batch,
-            )
-        else:
-            self.data_manager = DataManager()
-
-        self.start_gpu = cp.cuda.Event()
-        self.end_gpu = cp.cuda.Event()
 
     def _get_potential(self):
         return self.model.compute_potential()

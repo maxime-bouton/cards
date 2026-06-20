@@ -13,7 +13,7 @@ import importlib
 import json
 from os.path import join
 from pathlib import Path
-from typing import Callable
+from typing import Callable  # NoReturn
 
 import torch
 
@@ -100,7 +100,6 @@ def main(
         compute_fn = getattr(module, "compute_pnp")
     else:
         compute_fn = getattr(module, "compute_tv")
-    # compute_fn(logger=logger, mode=mode, **args_main)
     compute_fn(logger=logger, mode=mode, device=device, **args_main)
 
     if rank == 0:
@@ -117,7 +116,7 @@ def run_main(
     get_specific_problem_params_fn: Callable[[dict], dict],
     get_specific_analysis_params_fn: Callable[[dict], dict],
     build_obs_and_model_paths_fn: Callable[[dict], tuple[str, str]],
-    generate_observations_fn: Callable,
+    generate_observations_fn: Callable[[dict, str], None],
     module_name: str,
     save_picture: bool = False,
     show_results: bool = True,
@@ -145,6 +144,14 @@ def run_main(
     )
     config_args = parser.parse_args()
 
+    # FIXME: remove, only for debugging
+    # config_args.device = "gpu"
+    # config_args.mode = "serial"
+    # config_args.config = (
+    #     "examples/gaussian_inpainting/configs/config_ginp_128_tv_debug.json"
+    # )
+    # -------
+
     with open(config_args.config) as config_file:
         params = json.load(config_file)
 
@@ -160,11 +167,11 @@ def run_main(
         mode_str = f"{config_args.mode}-{config_args.device}_{comm_size}"
         log_file = f"rank_{rank}.log"
     else:
-        mode_str = f"{config_args.mode}-{config_args.device}"
-        log_file = "sampling.log"
-
         rank = 0
         comm_size = 1
+
+        mode_str = f"{config_args.mode}-{config_args.device}"
+        log_file = "sampling.log"
 
     if gpu:
         bm.set_backend("cupy")
@@ -190,17 +197,10 @@ def run_main(
         )
         params["save_path"] = params["save_path_resumed"] or paths["save_dir_resumed"]
 
+    # TODO: check data generation working properly beyond Gaussian deconvolution
     if not (obs_path := Path(params["obs_path"])).exists():
-        if mpi:
-            # FIXME: progress bar not displayed when using mpi (alternative to tqdm ?)
-            if rank == 0:
-                obs_path.parent.mkdir(parents=True, exist_ok=True)
-                # TODO: generate data in parallel as well when using mpi
-                generate_observations_fn(params)
-            comm.Barrier()
-        else:
-            obs_path.parent.mkdir(parents=True, exist_ok=True)
-            generate_observations_fn(params)
+        obs_path.parent.mkdir(parents=True, exist_ok=True)
+        generate_observations_fn(params, config_args.mode)
 
     args_main = {
         "obs_path": params["obs_path"],

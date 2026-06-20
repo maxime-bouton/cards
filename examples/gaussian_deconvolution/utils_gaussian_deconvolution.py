@@ -6,7 +6,7 @@ r"""Utility functions to set the Gaussian deconvolution example script for the e
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
 # Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
-# TODO: revise script to also accommodate gray scale images (for which n_channels = 1 is not explicitly present when using xxx.shape)
+# FIXME: use DataManager instead to hide details on data loading
 
 import logging
 from pathlib import Path
@@ -45,9 +45,9 @@ from cards.utils.utils_img import read_dtype, read_img_shape
 from cards.utils.utils_observations import (
     apply_target_gaussian_noise,
     fit_kernel_shape,
-    generate_and_save_observations,
     generate_gaussian_kernel,
     generate_motion_kernel,
+    generate_observations,
     slice_linear_conv_to_original,
 )
 
@@ -62,10 +62,11 @@ def gaussian_deconvolution_params(params: dict) -> dict:
 def define_slices(params: dict) -> dict:
     img_size = read_img_shape(params["original_img_path"])
     # TODO: find a more elegant way to deal with image of different dimensions
-    kernel_size = np.asarray([1] * (len(img_size) - 2) + [params["kernel"]["size"]] * 2)
+    kernel_size = [1] * (len(img_size) - 2) + [params["kernel"]["size"]] * 2
     return {"slices": slice_linear_conv_to_original(img_size, kernel_size)}
 
 
+# FIXME: revise to allow generation on GPU
 def generate_gaussian_deconvolution_observations(
     original_img_path: str,
     kernel_params: dict,
@@ -73,46 +74,169 @@ def generate_gaussian_deconvolution_observations(
     data_seed: int,
     obs_path: str,
     maximum: float = 1.0,
+    mode: str = "serial",
+    # device: str = "cpu",
 ):
-    gt_size = np.asarray(read_img_shape(original_img_path))
+    # data type and shapes
+    gt_shape = read_img_shape(original_img_path)
+    gt_size = np.asarray(gt_shape)
     dtype = read_dtype(original_img_path)
 
-    rng = np.random.default_rng(data_seed)
+    data_size = gt_size.copy()
+    # convolution affects only the last two dimensions (i.e., spatial dimensions)
+    data_size[-2:] += np.asarray(kernel_params["size"], dtype=int) - 1
 
+    # generate convolution kernel
     if kernel_params["type"] == "motion":
         kernel = generate_motion_kernel(
             kernel_params["size"],
             kernel_params["intensity"],
-            dtype,
-            rng,
+            dtype=dtype,
+            rng=np.random.default_rng(data_seed),
         )
     else:
         kernel = generate_gaussian_kernel(
             kernel_params["size"],
             kernel_params["std"],
-            dtype,
+            dtype=dtype,
         )
+    kernel = fit_kernel_shape(kernel, gt_size)
 
-    params_saved = {"kernel": kernel}
+    # define numpy rng and operators
+    match mode:
+        case "mpi":
+            from mpi4py import MPI
 
-    reshaped_kernel = fit_kernel_shape(kernel, gt_size)
+            from cards.operators.mpi_dft_convolution import MpiDftConvolution
 
-    obs_dims = gt_size.copy()
-    # convolution affects only the last two dimensions (i.e., spatial dimensions)
-    obs_dims[-2:] += np.asarray(kernel.shape, dtype=int) - 1
+            comm = MPI.COMM_WORLD
+            rank = comm.Get_rank()
+            comm_size = comm.Get_size()
 
-    convolution_handler = DftConvolution(gt_size, reshaped_kernel, obs_dims)
+            if rank == 0:
+                ss = np.random.SeedSequence(data_seed)
+                # spawn off nworkers child SeedSequences to pass to child processes.
+                child_seed = ss.spawn(comm_size)
+            else:
+                child_seed = None
+            seed = comm.scatter(child_seed, root=0)
 
-    generate_and_save_observations(
-        original_img_path,
-        obs_path,
-        convolution_handler,
+            # MPI.Compute_dims(size, 2)
+            grid_size = np.asarray([1] * (len(gt_shape) - 2) + [comm_size, 1])
+
+            convolution_operator = MpiDftConvolution(gt_size, kernel, comm, grid_size)
+
+        case "serial":
+            from cards.operators.dft_convolution import DftConvolution
+
+            seed = data_seed
+
+            convolution_operator = DftConvolution(gt_size, kernel, data_size)
+
+        case _:
+            raise ValueError(f"Unknown run mode: {mode}")
+
+    rng = np.random.default_rng(seed)
+
+    # load ground truth image
+    # FIXME: use DataManager instead to hide details?
+    match mode:
+        case "mpi":
+            # file from which the ground-truth image is loaded
+            with h5py.File(original_img_path, "r+", driver="mpio", comm=comm) as f:
+                dset = f["x"]
+                x = np.zeros(
+                    convolution_operator.direct_communicator.cartslicer.tile_size,
+                    dtype=dtype,
+                )
+                dset.read_direct(
+                    x,
+                    convolution_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile,
+                    (np.s_[:], np.s_[:]),
+                )
+                x = xp.asarray(x)
+
+        case "serial":
+            with h5py.File(
+                original_img_path,
+                "r+",
+            ) as f:
+                x = xp.asarray(f["x"][:])
+
+        case _:
+            raise ValueError(f"Unknown run mode: {mode}")
+
+    observations, normalized_img, extra_params = generate_observations(
+        x,
+        convolution_operator,
         apply_target_gaussian_noise,
-        data_seed,
-        params_saved,
+        rng,
         maximum,
         isnr=isnr,
     )
+
+    # save data
+    # FIXME: use DataManager instead to hide details
+    params_saved = {"kernel": kernel}
+    params_saved.update({"isnr": isnr})
+    params_saved.update(*extra_params)
+
+    match mode:
+        case "mpi":
+            with h5py.File(obs_path, "w", driver="mpio", comm=comm) as file:
+                dset_x = file.create_dataset("x", gt_size, dtype=normalized_img.dtype)
+                dset_x[
+                    convolution_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile
+                ] = (
+                    normalized_img
+                    if isinstance(normalized_img, np.ndarray)
+                    or np.isscalar(normalized_img)
+                    else normalized_img.get()
+                )
+
+                dset_y = file.create_dataset("y", data_size, dtype=observations.dtype)
+                dset_y[
+                    convolution_operator.adjoint_communicator.cartslicer.slice_global_buffer_to_tile
+                ] = (
+                    observations
+                    if isinstance(observations, np.ndarray) or np.isscalar(observations)
+                    else observations.get()
+                )
+
+            if rank == 0:
+                with h5py.File(obs_path, "r+") as file:
+                    file["seed_data"] = data_seed
+
+                    for key, value in params_saved.items():
+                        file[key] = (
+                            value
+                            if isinstance(value, np.ndarray) or np.isscalar(value)
+                            else value.get()
+                        )
+
+        case "serial":
+            with h5py.File(obs_path, "w") as file:
+                file["x"] = (
+                    normalized_img
+                    if isinstance(normalized_img, np.ndarray)
+                    or np.isscalar(normalized_img)
+                    else normalized_img.get()
+                )
+                file["y"] = (
+                    observations
+                    if isinstance(observations, np.ndarray) or np.isscalar(observations)
+                    else observations.get()
+                )
+                file["seed_data"] = data_seed
+
+                for key, value in params_saved.items():
+                    file[key] = (
+                        value
+                        if isinstance(value, np.ndarray) or np.isscalar(value)
+                        else value.get()
+                    )
+        case _:
+            raise ValueError(f"Unknown run mode: {mode}")
 
 
 def application_params_dir(params: dict) -> str:
@@ -193,10 +317,10 @@ def load_from_h5(
     """
     with h5py.File(filename, "r") as data_file:
         kernel = xp.asarray(data_file["kernel"])
-        sigma2 = data_file["sigma2"][()]  # type: ignore
-        gt_shape = data_file["x"].shape  # type: ignore
-        obs_shape = data_file["y"].shape  # type: ignore
-    return kernel, sigma2, gt_shape, obs_shape  # type: ignore
+        sigma2 = data_file["sigma2"][()]
+        gt_shape = data_file["x"].shape
+        obs_shape = data_file["y"].shape
+    return kernel, sigma2, gt_shape, obs_shape
 
 
 def compute_tv(
@@ -229,7 +353,7 @@ def compute_tv(
                 op.adjoint_communicator.cartslicer.tile_size, dtype=kernel.dtype
             )
             with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
-                f["y"].read_direct(  # type: ignore
+                f["y"].read_direct(
                     y,
                     op.adjoint_communicator.cartslicer.slice_global_buffer_to_tile,
                 )
@@ -240,6 +364,8 @@ def compute_tv(
             with h5py.File(obs_path, "r") as f:
                 y = xp.asarray(f["y"])
             state_shape = gt_shape
+            data_size = np.asarray(gt_shape) + np.asarray(kernel.shape, dtype=int) - 1
+            op = DftConvolution(np.asarray(gt_shape), kernel, data_size)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 
@@ -264,9 +390,7 @@ def compute_tv(
     match mode:
         case "mpi":
             model = DistributedGaussianDeconvolutionTvModel(
-                comm,
-                np.asarray(gt_shape),
-                grid_size,
+                op,
                 model_params,
                 X,
                 Z,
@@ -283,7 +407,7 @@ def compute_tv(
                     comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
                 )
         case "serial":
-            model = GaussianDeconvolutionTvModel(model_params, X, Z)
+            model = GaussianDeconvolutionTvModel(op, model_params, X, Z)
             Sampler = SerialSampler if device == "cpu" else GpuSampler
             sampler = Sampler(sampler_params, model, logger)
         case _:
@@ -326,41 +450,8 @@ def compute_pnp(
             comm = MPI.COMM_WORLD
             size = comm.Get_size()
             grid_size = np.asarray([1] * (len(gt_shape) - 2) + [size, 1])
+            tile_range = None
 
-            op = MpiDftConvolution(np.asarray(gt_shape), kernel, comm, grid_size)
-            y = np.empty(
-                op.adjoint_communicator.cartslicer.tile_size, dtype=kernel.dtype
-            )
-            with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
-                f["y"].read_direct(  # type: ignore
-                    y,
-                    op.adjoint_communicator.cartslicer.slice_global_buffer_to_tile,
-                )
-            if "gpu" in device:
-                y = xp.asarray(y)
-
-            state_shape = tuple(op.direct_communicator.cartslicer.tile_size)
-        case "serial":
-            with h5py.File(obs_path, "r") as f:
-                y = xp.asarray(f["y"])
-            state_shape = gt_shape
-        case _:
-            raise ValueError(f"Unknown run mode: {mode}")
-
-    model_params = GaussianDeconvolutionPnpParams(y, kernel, sigma2, reg_coef)
-
-    match device:
-        case "cpu":
-            raise NotImplementedError("PNP is not implemented for CPU mode.")
-        case "gpu":
-            X = GpuPnpULA(
-                state_shape, step_size_X, reg_coef, sigma2, lambda_, dtype=y.dtype
-            )
-        case _:
-            raise ValueError(f"Unknown device: {device}")
-
-    match mode:
-        case "mpi":
             match denoiser_params["type"]:
                 case "ddfb":
                     from cards.denoisers.mpi_ddfb import MpiDDFB
@@ -378,35 +469,36 @@ def compute_pnp(
                     denoiser = MpiDnCNN(
                         comm, grid_size, image_size=np.asarray(gt_shape)
                     )
+
                 case "drunet":
                     from cards.denoisers.mpi_drunet import MpiDRUNet
 
                     denoiser = MpiDRUNet(
                         comm, grid_size, image_size=np.asarray(gt_shape)
                     )
+                    tile_range = (
+                        denoiser.tail_conv.adjoint_communicator.cartslicer.tile_range
+                    )
+
                 case _:
                     raise ValueError(
                         f"Unknown denoiser type: {denoiser_params['type']}"
                     )
-            model = DistributedGaussianDeconvolutionPnpModel(
-                comm,
-                np.asarray(gt_shape),
-                grid_size,
-                model_params,
-                X,
-                denoiser,
+
+            op = MpiDftConvolution(
+                np.asarray(gt_shape), kernel, comm, grid_size, tile_range=tile_range
             )
-            if device == "cpu":
-                sampler = DistributedSampler(comm, sampler_params, model, logger)
-            else:
-                # TODO: revise / generalise default gpu assignment
-                sampler = MultiGpuSampler(
-                    comm,
-                    sampler_params,
-                    model,
-                    logger,
-                    comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
+            y = np.empty(
+                op.adjoint_communicator.cartslicer.tile_size, dtype=kernel.dtype
+            )
+            with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
+                f["y"].read_direct(
+                    y,
+                    op.adjoint_communicator.cartslicer.slice_global_buffer_to_tile,
                 )
+            if device == "gpu":
+                y = xp.asarray(y)
+            state_shape = tuple(op.direct_communicator.cartslicer.tile_size)
         case "serial":
             match denoiser_params["type"]:
                 case "ddfb":
@@ -429,7 +521,48 @@ def compute_pnp(
                     raise ValueError(
                         f"Unknown denoiser type: {denoiser_params['type']}"
                     )
-            model = GaussianDeconvolutionPnpModel(model_params, X, denoiser)
+
+            with h5py.File(obs_path, "r") as f:
+                y = xp.asarray(f["y"])
+            state_shape = gt_shape
+            data_size = np.asarray(gt_shape) + np.asarray(kernel.shape, dtype=int) - 1
+            op = DftConvolution(np.asarray(gt_shape), kernel, data_size)
+        case _:
+            raise ValueError(f"Unknown run mode: {mode}")
+
+    model_params = GaussianDeconvolutionPnpParams(y, kernel, sigma2, reg_coef)
+
+    match device:
+        case "cpu":
+            raise NotImplementedError("PNP is not implemented for CPU mode.")
+        case "gpu":
+            X = GpuPnpULA(
+                state_shape, step_size_X, reg_coef, sigma2, lambda_, dtype=y.dtype
+            )
+        case _:
+            raise ValueError(f"Unknown device: {device}")
+
+    match mode:
+        case "mpi":
+            model = DistributedGaussianDeconvolutionPnpModel(
+                op,
+                model_params,
+                X,
+                denoiser,
+            )
+
+            if device == "cpu":
+                sampler = DistributedSampler(comm, sampler_params, model, logger)
+            else:
+                sampler = MultiGpuSampler(
+                    comm,
+                    sampler_params,
+                    model,
+                    logger,
+                    comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
+                )
+        case "serial":
+            model = GaussianDeconvolutionPnpModel(op, model_params, X, denoiser)
             Sampler = SerialSampler if device == "cpu" else GpuSampler
             sampler = Sampler(sampler_params, model, logger)
         case _:

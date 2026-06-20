@@ -12,7 +12,7 @@
     "save_path_resumed": "",
     "logfile_path": "",
     "original_img_path": "../../data/128.h5",
-    "dynamic_range": 250,
+    "isnr": 25,
     "kernel": {
         "type": "motion",
         "size": 5,
@@ -20,13 +20,9 @@
         "seed": 1234
     },
     "reg_coef": 1,
-    "split_coef1": 10,
-    "split_coef2": 0.001,
     "denoiser_params": {
-        "type": "ddfb",
-        "n_layers": 4,
-        "n_features": 64,
-        "denoising_level": 0.05,
-        "L": 2
+        "type": "drunet",
+        "denoising_level": null,
+        "L": 7
     }
 }

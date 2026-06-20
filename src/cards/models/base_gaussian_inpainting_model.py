@@ -35,12 +35,15 @@ class BaseGaussianInpaintingModel(BaseModel):
 
         self.observations = params.observations
         self.mask = params.mask
+
+        # model hyperparameters
         self.reg_coeff = params.reg_coeff
         self.sigma2 = params.sigma2
 
         self.estimator_builder = MMSEBuilder(
             X.current_state.shape, dtype=X.current_state.dtype, name="X"
         )
+
         self.set_conditionals()
 
     @abstractmethod

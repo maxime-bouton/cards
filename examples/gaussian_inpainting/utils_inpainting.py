@@ -6,9 +6,7 @@ r"""Utility functions to set the Gaussian inpainting example script for the expe
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
 # Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
-# TODO: revise script to also accommodate gray scale images (for which n_channels = 1 is not explicitly present when using xxx.shape)
-# FIXME: bicubic interpolation to initialize sampler based with TV regularization as well?
-# see l. 264, and 269
+# FIXME: use DataManager instead to hide details on data loading
 
 import logging
 
@@ -39,11 +37,11 @@ from cards.transition_kernel.gpu_psgla import GpuPSGLA
 from cards.transition_kernel.psgla import PSGLA
 from cards.utils.path_builder import gaussian_str, inpainting_str, obs_dir
 from cards.utils.utils import extract_subset_from_dict
-from cards.utils.utils_img import load_img, read_dtype, read_img_shape
+from cards.utils.utils_img import read_dtype, read_img_shape  # load_img
 from cards.utils.utils_observations import (
     apply_target_gaussian_noise,
     fit_mask_shape,
-    generate_and_save_observations,
+    generate_observations,
 )
 
 
@@ -58,8 +56,7 @@ def interpolate_masked_image_cubic(
     masked_image: xp.ndarray,
     mask: xp.ndarray,
 ) -> xp.ndarray:
-    """
-    Interpolate masked values in an image using cubic spline interpolation.
+    r"""Interpolate masked values in an image using cubic spline interpolation.
     Transfers data to CPU for interpolation.
 
     Parameters
@@ -74,7 +71,6 @@ def interpolate_masked_image_cubic(
     xp.ndarray
         Interpolated image with the same shape as the input
     """
-
     # NOTE: ensure gray image and associated mask have at least 3 axis to reuse
     # the same code for gray and color images
     if len(masked_image.shape) < 3:
@@ -117,18 +113,7 @@ def interpolate_masked_image_cubic(
     return result
 
 
-def generate_interpolation(obs_path, mask):
-    y = load_img(obs_path, key="y")
-    interpolated_y = interpolate_masked_image_cubic(y, mask).clip(0, 1)
-
-    with h5py.File(obs_path, "a") as file:
-        file["interpolation"] = (
-            interpolated_y
-            if isinstance(interpolated_y, np.ndarray)
-            else interpolated_y.get()
-        )
-
-
+# FIXME: revise to allow generation on GPU
 def generate_inpainting_observations(
     original_img_path: str,
     mask_loss: float,
@@ -136,26 +121,179 @@ def generate_inpainting_observations(
     data_seed: int,
     obs_path: str,
     maximum: float = 1.0,
+    mode: str = "serial",
+    # device: str = "cpu",
 ):
-    gt_size = np.asarray(read_img_shape(original_img_path))
-    rng = np.random.default_rng(data_seed)
-    mask = rng.random(gt_size[-2:]) < (1 - mask_loss)
-    inpainting_params = {"mask": mask.copy()}
+    # data type and shapes
+    gt_shape = read_img_shape(original_img_path)
+    gt_size = xp.asarray(gt_shape, dtype=int)
+    dtype = read_dtype(original_img_path)
 
-    mask_extended = fit_mask_shape(xp.asarray(mask), gt_size)
+    # define numpy rng and cartesian slicer
+    match mode:
+        case "mpi":
+            from mpi4py import MPI
+
+            from cards.communicator.mpi_utils import get_ranknd
+            from cards.slicer.cartesian_comm_slicer import CartesianCommSlicer
+
+            comm = MPI.COMM_WORLD
+            rank = comm.Get_rank()
+            comm_size = comm.Get_size()
+
+            if rank == 0:
+                ss = np.random.SeedSequence(data_seed)
+                # spawn off nworkers child SeedSequences to pass to child processes.
+                child_seed = ss.spawn(comm_size)
+            else:
+                child_seed = None
+            seed = comm.scatter(child_seed, root=0)
+
+            # MPI.Compute_dims(size, 2)
+            grid_size = np.asarray([1] * (len(gt_shape) - 2) + [comm_size, 1])
+
+            # slicer to handle image and mask portions
+            ranknd = get_ranknd(rank, grid_size)
+
+            cartslicer = CartesianCommSlicer(
+                ranknd,
+                grid_size,
+                gt_size,
+                xp.zeros(len(grid_size), dtype=int),
+                xp.zeros(len(grid_size), dtype=int),
+            )
+            local_size = cartslicer.tile_size
+
+        case "serial":
+            seed = data_seed
+            local_size = gt_size
+
+        case _:
+            raise ValueError(f"Unknown run mode: {mode}")
+    rng = np.random.default_rng(seed)
+
+    # generate local mask and operator
+    sz = [local_size[k].item() for k in range(local_size.size - 2, local_size.size)]
+    mask = rng.random(sz) < (1 - mask_loss)
+    mask_extended = fit_mask_shape(xp.asarray(mask), local_size)
+
+    # load ground truth image
+    # FIXME: use DataManager instead to hide details?
+    match mode:
+        case "mpi":
+            # file from which the ground-truth image is loaded
+            with h5py.File(original_img_path, "r+", driver="mpio", comm=comm) as f:
+                dset = f["x"]
+                x = np.zeros(
+                    cartslicer.tile_size,
+                    dtype=dtype,
+                )
+                dset.read_direct(
+                    x,
+                    cartslicer.slice_global_buffer_to_tile,
+                    (np.s_[:], np.s_[:]),
+                )
+                x = xp.asarray(x)
+
+        case "serial":
+            with h5py.File(
+                original_img_path,
+                "r+",
+            ) as f:
+                x = xp.asarray(f["x"][:])
+
+        case _:
+            raise ValueError(f"Unknown run mode: {mode}")
+
     inpainting_operator = Masking(mask_extended)
-
-    generate_and_save_observations(
-        original_img_path,
-        obs_path,
+    observations, normalized_img, extra_params = generate_observations(
+        x,
         inpainting_operator,
         apply_target_gaussian_noise,
-        data_seed,
-        inpainting_params,
+        rng,
         maximum,
         isnr=isnr,
     )
-    generate_interpolation(obs_path, mask_extended)
+
+    # NOTE: in distributed setting, only local interpolation (not equivalent to serial interpolation)
+    interpolated_observations = interpolate_masked_image_cubic(
+        observations, mask_extended
+    ).clip(0, 1)
+
+    # save data
+    params_saved = {"mask": mask}
+    params_saved.update({"isnr": isnr})
+    params_saved.update(*extra_params)
+
+    match mode:
+        case "mpi":
+            # file from which the ground-truth image is loaded
+            with h5py.File(obs_path, "w", driver="mpio", comm=comm) as file:
+                dset_x = file.create_dataset("x", gt_size, dtype=normalized_img.dtype)
+                dset_x[cartslicer.slice_global_buffer_to_tile] = (
+                    normalized_img
+                    if isinstance(normalized_img, np.ndarray)
+                    or np.isscalar(normalized_img)
+                    else normalized_img.get()
+                )
+
+                dset_y = file.create_dataset("y", gt_size, dtype=observations.dtype)
+                dset_y[cartslicer.slice_global_buffer_to_tile] = (
+                    observations
+                    if isinstance(observations, np.ndarray) or np.isscalar(observations)
+                    else observations.get()
+                )
+
+                dset_interpolated_y = file.create_dataset(
+                    "interpolation", gt_size, dtype=interpolated_observations.dtype
+                )
+                dset_interpolated_y[cartslicer.slice_global_buffer_to_tile] = (
+                    interpolated_observations
+                    if isinstance(interpolated_observations, np.ndarray)
+                    or np.isscalar(interpolated_observations)
+                    else interpolated_observations.get()
+                )
+
+            if rank == 0:
+                with h5py.File(obs_path, "r+") as file:
+                    file["seed_data"] = data_seed
+
+                    for key, value in params_saved.items():
+                        file[key] = (
+                            value
+                            if isinstance(value, np.ndarray) or np.isscalar(value)
+                            else value.get()
+                        )
+
+        case "serial":
+            with h5py.File(obs_path, "w") as file:
+                file["x"] = (
+                    normalized_img
+                    if isinstance(normalized_img, np.ndarray)
+                    or np.isscalar(normalized_img)
+                    else normalized_img.get()
+                )
+                file["y"] = (
+                    observations
+                    if isinstance(observations, np.ndarray) or np.isscalar(observations)
+                    else observations.get()
+                )
+                file["interpolation"] = (
+                    interpolated_observations
+                    if isinstance(interpolated_observations, np.ndarray)
+                    or np.isscalar(interpolated_observations)
+                    else interpolated_observations.get()
+                )
+                file["seed_data"] = data_seed
+
+                for key, value in params_saved.items():
+                    file[key] = (
+                        value
+                        if isinstance(value, np.ndarray) or np.isscalar(value)
+                        else value.get()
+                    )
+        case _:
+            raise ValueError(f"Unknown run mode: {mode}")
 
 
 def application_params_dir(params: dict) -> str:
@@ -197,8 +335,8 @@ def compute_step_sizes_gaussian_inpainting_pnp(
 
 def load_from_h5(filename) -> tuple[float, tuple[int, ...]]:
     with h5py.File(filename, "r") as data_file:
-        sigma2 = data_file["sigma2"][()]  # type: ignore
-        gt_shape = data_file["x"].shape  # type: ignore
+        sigma2 = data_file["sigma2"][()]
+        gt_shape = data_file["x"].shape
     return sigma2, gt_shape
 
 
@@ -225,6 +363,7 @@ def compute_tv(
             rank = comm.Get_rank()
             # MPI.Compute_dims(size, 2)
             grid_size = np.asarray([1] * (len(gt_shape) - 2) + [size, 1])
+
             mpi_cart_comm = comm.Create_cart(grid_size)
             ranknd = np.asarray(mpi_cart_comm.Get_coords(rank))
 
@@ -238,13 +377,17 @@ def compute_tv(
             state_shape = tuple(cartslicer.tile_size)
 
             mask = np.empty(state_shape[-2:], dtype=int)
+
             dtype = read_dtype(obs_path, "y")
             y = np.empty(state_shape, dtype=dtype)
             interpolation = np.empty_like(y)
+
             with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
                 f["y"].read_direct(y, cartslicer.slice_global_buffer_to_tile)
+
                 # NOTE: mask is only 2D, slices accommodate up to 3D
                 f["mask"].read_direct(mask, cartslicer.slice_global_buffer_to_tile[-2:])
+
                 f["interpolation"].read_direct(
                     interpolation, cartslicer.slice_global_buffer_to_tile
                 )
@@ -351,6 +494,7 @@ def compute_pnp(
             rank = comm.Get_rank()
             # MPI.Compute_dims(size, 2)
             grid_size = np.asarray([1] * (len(gt_shape) - 2) + [size, 1])
+
             mpi_cart_comm = comm.Create_cart(grid_size)
             ranknd = np.asarray(mpi_cart_comm.Get_coords(rank))
 
@@ -364,13 +508,17 @@ def compute_pnp(
             state_shape = tuple(cartslicer.tile_size)
 
             mask = np.empty(state_shape[-2:], dtype=int)
+
             dtype = read_dtype(obs_path, "y")
             y = np.empty(state_shape, dtype=dtype)
             interpolation = np.empty_like(y)
+
             with h5py.File(obs_path, "r", driver="mpio", comm=comm) as f:
                 f["y"].read_direct(y, cartslicer.slice_global_buffer_to_tile)
+
                 # NOTE: mask is only 2D, slices accommodate up to 3D
                 f["mask"].read_direct(mask, cartslicer.slice_global_buffer_to_tile[-2:])
+
                 f["interpolation"].read_direct(
                     interpolation, cartslicer.slice_global_buffer_to_tile
                 )
@@ -423,6 +571,12 @@ def compute_pnp(
                     from cards.denoisers.mpi_dncnn import MpiDnCNN
 
                     denoiser = MpiDnCNN(
+                        comm, grid_size, image_size=np.asarray(gt_shape)
+                    )
+                case "drunet":
+                    from cards.denoisers.mpi_drunet import MpiDRUNet
+
+                    denoiser = MpiDRUNet(
                         comm, grid_size, image_size=np.asarray(gt_shape)
                     )
                 case _:

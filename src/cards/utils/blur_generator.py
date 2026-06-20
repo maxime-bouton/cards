@@ -4,6 +4,8 @@ import h5py
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
+# FIXME: add source/reference for the code (coming in part from an already existing repo...)
+
 
 class MotionBlurKernel:
     r"""

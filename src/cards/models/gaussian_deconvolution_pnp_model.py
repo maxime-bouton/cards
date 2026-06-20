@@ -12,7 +12,6 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
-from mpi4py import MPI
 
 from cards.backend import xp
 from cards.denoisers.base_denoiser import BaseDenoiser, BaseDistributedDenoiser
@@ -38,11 +37,12 @@ class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
     def __init__(
         self,
         params: GaussianDeconvolutionPnpParams,
+        convolution_operator: DftConvolution | MpiDftConvolution,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
     ):
         self.denoiser = denoiser
-        super().__init__(params, X)
+        super().__init__(params, convolution_operator, X)
 
     def set_conditionals(self):
         if type(self.X) is GpuPnpULA:
@@ -124,15 +124,16 @@ class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
 class GaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionPnpModel):
     def __init__(
         self,
+        convolution_operator: DftConvolution,
         params: GaussianDeconvolutionPnpParams,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
     ):
-        self.convolution_operator = DftConvolution(
-            np.asarray(X.current_state.shape), params.kernel, params.observations.shape
-        )
+        # self.convolution_operator = DftConvolution(
+        #     np.asarray(X.current_state.shape), params.kernel, params.observations.shape
+        # )
 
-        super().__init__(params, X, denoiser)
+        super().__init__(params, convolution_operator, X, denoiser)
 
 
 class DistributedGaussianDeconvolutionPnpModel(
@@ -141,23 +142,20 @@ class DistributedGaussianDeconvolutionPnpModel(
 ):
     def __init__(
         self,
-        comm: MPI.Comm,
-        full_size: np.ndarray,
-        grid_size: np.ndarray,
+        convolution_operator: MpiDftConvolution,
         params: GaussianDeconvolutionPnpParams,
         X: BaseTransitionKernel,
         denoiser: BaseDistributedDenoiser,
     ):
-        self.comm = comm
-        self.full_size = full_size
+        self.full_size = convolution_operator.image_size
 
-        self.convolution_operator = MpiDftConvolution(
-            self.full_size,
-            params.kernel,
-            self.comm,
-            grid_size,
-        )
-        super().__init__(params, X, denoiser)
+        # self.convolution_operator = MpiDftConvolution(
+        #     self.full_size,
+        #     params.kernel,
+        #     self.comm,
+        #     grid_size,
+        # )
+        super().__init__(params, convolution_operator, X, denoiser)
 
     def set_slices(self):
         """Describes which portion of the global buffer the current thread must handle."""

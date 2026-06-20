@@ -279,6 +279,7 @@ data/weights/dncnn/dncnn*.pth
 doc/autoapi/*
 doc/api/*
 doc/_build/*
+examples/*/run_*json
 
 # pixi environments
 .pixi

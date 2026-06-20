@@ -9,7 +9,6 @@ r"""Implementation of a Poisson deconvolution model using a TV prior to reproduc
 # TODO: documentation
 
 import numpy as np
-from mpi4py import MPI
 
 from cards.backend import xp
 from cards.functionals.prox import (
@@ -36,17 +35,19 @@ from cards.transition_kernel.psgla import PSGLA
 
 
 class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
-    gradient_operator: Gradient2d | MpiGradient2d
-
     def __init__(
         self,
         params: PoissonDeconvolutionParameters,
+        convolution_operator: DftConvolution | MpiDftConvolution,
+        gradient_operator: Gradient2d | MpiGradient2d,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
     ):
+        self.gradient_operator = gradient_operator
+
         self.gradX = xp.zeros_like(X.current_state)
-        super().__init__(params, X, Z1, Z2)
+        super().__init__(params, convolution_operator, X, Z1, Z2)
 
     def set_conditionals(self) -> None:
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
@@ -110,9 +111,11 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
         self.X.current_state = xp.asarray(states["X"])
         self.Z1.current_state = xp.asarray(states["Z1"])
         self.Z2.current_state = xp.asarray(states["Z2"])
+
         self.gradX = self.gradient_operator.forward(self.X.current_state)
         self.convX = self.convolution_operator.forward(self.X.current_state)
 
+    # TODO: revise typing here
     def update(self, rng: np.random.Generator):
         """update Gobal update of the model. Updates every kernel used by the model and computes annex variables.
 
@@ -124,6 +127,7 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
         self.X.mc_step(rng)
         self.gradX = self.gradient_operator.forward(self.X.current_state)
         self.convX = self.convolution_operator.forward(self.X.current_state)
+
         self.Z1.mc_step(rng)
         self.Z2.mc_step(rng)
 
@@ -147,17 +151,18 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
 class PoissonDeconvolutionTvModel(BasePoissonDeconvolutionTvModel):
     def __init__(
         self,
+        convolution_operator: DftConvolution,
         params: PoissonDeconvolutionParameters,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
     ):
-        self.gradient_operator = Gradient2d(np.array([*X.current_state.shape]))
-        self.convolution_operator = DftConvolution(
-            np.asarray(X.current_state.shape), params.kernel, params.observations.shape
-        )
+        gradient_operator = Gradient2d(np.array([*X.current_state.shape]))
+        # self.convolution_operator = DftConvolution(
+        #     np.asarray(X.current_state.shape), params.kernel, params.observations.shape
+        # )
 
-        super().__init__(params, X, Z1, Z2)
+        super().__init__(params, convolution_operator, gradient_operator, X, Z1, Z2)
 
 
 class DistributedPoissonDeconvolutionTvModel(
@@ -166,25 +171,26 @@ class DistributedPoissonDeconvolutionTvModel(
 ):
     def __init__(
         self,
-        comm: MPI.Comm,
-        full_size: np.ndarray,
-        grid_size: np.ndarray,
+        convolution_operator: MpiDftConvolution,
         params: PoissonDeconvolutionParameters,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
     ):
-        self.comm = comm
-        self.full_size = full_size
+        self.full_size = convolution_operator.image_size
 
-        self.gradient_operator = MpiGradient2d(self.full_size, grid_size, self.comm)
-        self.convolution_operator = MpiDftConvolution(
-            self.full_size,
-            params.kernel,
-            self.comm,
-            grid_size,
+        gradient_operator = MpiGradient2d(
+            convolution_operator.image_size,
+            convolution_operator.grid_size,
+            convolution_operator.comm,
         )
-        super().__init__(params, X, Z1, Z2)
+        # self.convolution_operator = MpiDftConvolution(
+        #     self.full_size,
+        #     params.kernel,
+        #     self.comm,
+        #     grid_size,
+        # )
+        super().__init__(params, convolution_operator, gradient_operator, X, Z1, Z2)
 
     def set_slices(self):
         """set_slices Describes which portion of the global buffer the current thread must handle.

@@ -33,7 +33,7 @@ def analyze_data(
     batch_size: int
         Size of the batches.
     burnin : int
-        Number of bacth to ignore to take into account the burn-in.
+        Number of batches to ignore as burn-in.
     save_path : str | Path
         Path to the directory where the sample has been saved.
     obs_path : str | Path
@@ -42,8 +42,6 @@ def analyze_data(
         Full path to the file on which we will write the metrics.
     slices : slice
         Select which portion of the observation must be compared to the original.
-    comm_size : int
-        Number of process, must be used only in a distributed setting.
     comm_size : int
         Number of process, must be used only in a distributed setting.
     """

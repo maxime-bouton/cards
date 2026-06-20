@@ -84,7 +84,9 @@ def generate_motion_kernel(
     from cards.utils.blur_generator import MotionBlurKernel
 
     if xp.__name__ == "numpy":
-        return MotionBlurKernel((kernel_width, kernel_width), intensity, rng).kernel
+        return MotionBlurKernel(
+            (kernel_width, kernel_width), intensity, dtype, rng=rng
+        ).kernel
     else:
         return xp.asarray(
             MotionBlurKernel(
@@ -161,20 +163,20 @@ def slice_linear_conv_to_original(
     return tuple(np.s_[k // 2 : i + k // 2] for k, i in zip(kernel_shape, img_shape))
 
 
-def estimate_sigma2_from_isnr(signal: xp.ndarray, isnr: float) -> float:
-    """Estimate the noise variance from the input signal and the desired iSNR.
+def compute_sigma2_from_isnr(signal: xp.ndarray, isnr: float) -> float:
+    """Estimate the noise variance from the input signal and the desired input SNR.
 
     Parameters
     ----------
     signal: xp.ndarray
         The input signal (numpy array).
     isnr: float
-        The desired iSNR (in dB).
+        The desired input SNR (in dB).
 
     Returns:
     -------
     float
-        The estimated noise variance.
+        Corresponding noise variance.
     """
     return float(xp.linalg.norm(signal) ** 2 / signal.size / (10 ** (isnr / 10)))
 
@@ -258,7 +260,7 @@ def apply_target_gaussian_noise(
     tuple[xp.ndarray, dict[str, float]]
         The noisy signal and a dictionary containing the estimated noise variance.
     """
-    sigma2 = estimate_sigma2_from_isnr(signal, isnr)
+    sigma2 = compute_sigma2_from_isnr(signal, isnr)
     return apply_gaussian_noise(signal, rng, sigma2), {"sigma2": sigma2}
 
 
@@ -271,7 +273,7 @@ def generate_and_save_observations(
     params_saved: dict,
     maximum: float = 1.0,
     **noise_args: float,
-):
+) -> None:
     """Generates and saves a deteriorated signal from the one given in entry.
 
     Parameters
@@ -291,7 +293,6 @@ def generate_and_save_observations(
     noise_args : dict, optional
         Dictionary containing noise specific parameters to be saved with the data.
     """
-
     img = load_img(original_img_path)
     normalized_img = normalize_ndarray(img, target_max=maximum)
 
@@ -328,3 +329,39 @@ def generate_and_save_observations(
                 if isinstance(value, np.ndarray) or np.isscalar(value)
                 else value.get()
             )
+
+
+def generate_observations(
+    img,
+    operator: LinearOperator,
+    apply_noise: Callable,
+    rng,
+    maximum: float = 1.0,
+    **noise_args: float,
+):
+    """Generates and saves a deteriorated signal from the one given in entry.
+
+    Parameters
+    ----------
+    img : ...
+        ...
+    observations_path : str
+        Path to the file where to save the generated data.
+    operator : LinearOperator
+        Determinist deterioration operator.
+    apply_noise : Callable
+        Function to apply noise to the transformed image.
+    rng : ...
+        ...
+    maximum : float, optional
+        Maximum value imposed for the ground truth image used to generate synthetic data.
+    noise_args : dict, optional
+        Dictionary containing noise specific parameters to be saved with the data.
+    """
+    normalized_img = normalize_ndarray(img, target_max=maximum)
+    transformed_img = operator.forward(normalized_img)
+
+    # retrieve potential noise parameters to be saved
+    observations, *extra_params = apply_noise(transformed_img, rng, **noise_args)
+
+    return observations, normalized_img, extra_params

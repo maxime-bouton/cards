@@ -27,11 +27,10 @@ class PoissonDeconvolutionParameters:
 
 
 class BasePoissonDeconvolutionModel(BaseModel):
-    convolution_operator: DftConvolution | MpiDftConvolution
-
     def __init__(
         self,
         params: PoissonDeconvolutionParameters,
+        convolution_operator: DftConvolution | MpiDftConvolution,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
@@ -39,19 +38,20 @@ class BasePoissonDeconvolutionModel(BaseModel):
         self.X = X
         self.Z1 = Z1
         self.Z2 = Z2
+        self.convolution_operator = convolution_operator
         super().__init__()
-        self.observations = params.observations
-        self.convolution_kernel = params.kernel
-        self.reg_coeff = params.reg_coeff
 
+        self.observations = params.observations
+
+        # model hyperparameters
+        self.reg_coeff = params.reg_coeff
         self.split_coef1 = params.split_coef1
         self.split_coef2 = params.split_coef2
-
         self.dynamic_range = params.dynamic_range
 
+        # internal buffers
         self.convX = xp.zeros_like(self.observations)
 
-        # self.estimator_builder = mmse_builder(X.current_state.shape)
         self.estimator_builder = MMSEBuilder(
             X.current_state.shape, dtype=X.current_state.dtype, name="X"
         )

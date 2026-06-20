@@ -300,7 +300,7 @@ class DataManager:
         Returns
         -------
         dict
-            Dictonary containing the local value of each variable.
+            Dictionary containing the local value of each variable.
         """
         data = {}
         if slices is None:

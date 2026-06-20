@@ -13,6 +13,20 @@ from cards.sampler.base_sampler import BaseSampler, SamplerParameters
 
 
 class SerialSampler(BaseSampler):
+    def __init__(self, params: SamplerParameters, model, logger, save_full_batch=False):
+        super().__init__(params, model, logger, save_full_batch)
+
+        if self._save_full_batch:
+            self.data_manager = DataManager(
+                self.batch_size,
+                self._save_full_batch,
+            )
+        else:
+            self.data_manager = DataManager()
+
+        self.step_start = perf_counter()
+        self.step_end = perf_counter()
+
     def _make_generator(self, seed: int) -> np.random.Generator:
         return np.random.default_rng(seed)
 
@@ -42,20 +56,6 @@ class SerialSampler(BaseSampler):
             )
             if self.data_manager._save_full_batch:
                 self.data_manager.save_batch(file)
-
-    def __init__(self, params: SamplerParameters, model, logger, save_full_batch=False):
-        super().__init__(params, model, logger, save_full_batch)
-
-        if self._save_full_batch:
-            self.data_manager = DataManager(
-                self.batch_size,
-                self._save_full_batch,
-            )
-        else:
-            self.data_manager = DataManager()
-
-        self.step_start = perf_counter()
-        self.step_end = perf_counter()
 
     def restart(self, file_name, batch_restart, new_save_path):
         r"""restart Resume the sampling at a given state. It may be used to start a second where a first run had been interrupted.
