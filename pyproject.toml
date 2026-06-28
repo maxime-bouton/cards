@@ -115,6 +115,9 @@ extra-paths = [
     "./examples/poisson_deconvolution",
 ]
 
+[tool.ty.src]
+exclude = ["archive"]
+
 [tool.pytest.ini_options]
 addopts = "-ra -q -vv"
 strict = true
