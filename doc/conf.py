@@ -53,7 +53,6 @@ autodoc_mock_imports = [
     "matplotlib",
     "mpi4py",
     "numba",
-    "numpy",
     "scipy",
     "skimage",
     "torch",
