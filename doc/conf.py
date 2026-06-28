@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 
 # -- Project information -----------------------------------------------------
 
-project = "cards"
+project = "CARDS"
 copyright = "2025, M. Bouton, S. Despierres, P.-A. Thouvenin and P. Chainais"
 author = "M. Bouton, S. Despierres, P.-A. Thouvenin and P. Chainais"
 version = release = "0.1.0"
@@ -36,7 +36,7 @@ exclude_patterns = []
 
 autodoc_typehints = "description"
 autosummary_generate = True
-autosummary_generate_overwrite = False
+autosummary_generate_overwrite = True
 
 autodoc_default_options = {
     "members": True,
