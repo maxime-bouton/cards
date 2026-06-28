@@ -43,6 +43,7 @@ autodoc_default_options = {
     "undoc-members": True,
     "private-members": True,
     "show-inheritance": True,
+    "exclude-members": "_abc_impl",
 }
 
 autodoc_mock_imports = [
