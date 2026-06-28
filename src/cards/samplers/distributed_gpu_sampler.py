@@ -18,10 +18,10 @@ from cards.samplers.base_sampler import BaseSampler, SamplerParameters
 class DistributedGpuSampler(BaseSampler):
     r"""MPI-based distributed GPU implementation of the MCMC sampling backbone.
 
-    This class orchestrates multi-GPU MCMC chains using `mpi4py`and CuPy. It derives
-    statistically independent PyTorch CUDA random streams per worker via deterministic
-    SHA-256 seed hashing, and utilizes parallel HDF5 (`mpio`) for collective and
-    efficient checkpoint I/O.
+    This class orchestrates multi-GPU MCMC chains using ``mpi4py``and ``CuPy``. It
+    derives statistically independent ``torch`` CUDA random streams per worker via
+    deterministic SHA-256 seed hashing, and utilizes parallel HDF5 (``mpio``) for
+    collective and efficient checkpoint I/O.
     """
 
     model: BaseDistributedModel
@@ -71,7 +71,7 @@ class DistributedGpuSampler(BaseSampler):
         return cp.cuda.get_elapsed_time(self._start_gpu, self._end_gpu) * 1e-3
 
     def _get_potential(self) -> float:
-        r"""Compute local GPU potential and execute a blocking collective `MPI.SUM`
+        r"""Compute local GPU potential and execute a blocking collective ``MPI.SUM``
         reduction."""
         local_potential = self.model.compute_potential()
         return cast(float, self.comm.reduce(local_potential, MPI.SUM, root=0))
@@ -109,7 +109,7 @@ class DistributedGpuSampler(BaseSampler):
                 self.io_manager.save_local_array(self._potential, "potential", file)
 
     def _load_checkpoint(self) -> None:
-        r"""Load sampler state collaboratively from disk via parallel HDF5 (`mpio`)."""
+        r"""Load sampler state collaboratively from disk via parallel HDF5 (``mpio``)."""
         with h5py.File(self.restart_path, "r", driver="mpio", comm=self.comm) as file:
             self.model.set_states(self.io_manager.load_states(file, self.model.vars))
             self.io_manager.load_rng_torch(self.rng, file, self.rank)

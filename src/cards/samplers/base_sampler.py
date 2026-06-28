@@ -39,7 +39,7 @@ class SamplerParameters:
         Index of the checkpoint file to restart from, by default ``0`` (i.e. none).
     start_ckpt_dir_path : Path | None, optional
         Path to the directory containing the checkpoint file to restart from, by default
-        `None` (i.e. same as ``ckpt_dir_path``).
+        ``None`` (i.e. same as ``ckpt_dir_path``).
     """
 
     ckpt_size: int
@@ -59,11 +59,11 @@ class BaseSampler(ABC):
     Parameters
     ----------
     params : SamplerParameters
-        Dataclass containing the sampling configuration (e.g., `ckpt_size`, `n_ckpts`).
+        Dataclass containing the sampling configuration (e.g., ``ckpt_size``, ``n_ckpts``).
     model : BaseModel
         Model encapsulating the MCMC algorithm to be run.
     logger : logging.Logger | None, optional
-        Logger object recording the progress of the sampler, by default `None`.
+        Logger object recording the progress of the sampler, by default ``None``.
 
     Attributes
     ----------

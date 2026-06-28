@@ -15,7 +15,7 @@ class SerialCpuSampler(BaseSampler):
 
     This class executes the MCMC loop synchronously on a single CPU core, utilizing
     NumPy for random number generation and standard Python high-resolution timers
-    (`perf_counter`) for step benchmarking.
+    (``perf_counter``) for step benchmarking.
     """
 
     rng: np.random.Generator

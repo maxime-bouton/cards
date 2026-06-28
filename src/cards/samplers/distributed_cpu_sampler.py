@@ -18,8 +18,8 @@ class DistributedCpuSampler(BaseSampler):
     r"""MPI-based distributed CPU implementation of the MCMC sampling backbone.
 
     This class orchestrates parallel MCMC chains across multiple CPU nodes or cores
-    using `mpi4py`. It guarantees statistically independent pseudo-random number streams
-    per worker via NumPy `SeedSequence` spawning, and utilizes parallel HDF5 (`mpio`)
+    using ``mpi4py``. It guarantees statistically independent pseudo-random number streams
+    per worker via NumPy ``SeedSequence`` spawning, and utilizes parallel HDF5 (``mpio``)
     for collective, high-throughput checkpoint I/O.
     """
 
@@ -41,7 +41,7 @@ class DistributedCpuSampler(BaseSampler):
         return self.comm.Get_rank()
 
     def _setup_rng(self) -> np.random.Generator:
-        r"""Scatter independent spawned `SeedSequence` streams from root to all MPI
+        r"""Scatter independent spawned ``SeedSequence`` streams from root to all MPI
         ranks."""
         # set random number generator on each process
         if self.rank == 0:
@@ -71,7 +71,7 @@ class DistributedCpuSampler(BaseSampler):
         return self._step_end - self._step_start
 
     def _get_potential(self) -> float:
-        r"""Compute local model potential and execute a blocking collective `MPI.SUM`
+        r"""Compute local model potential and execute a blocking collective ``MPI.SUM``
         reduction."""
         local_potential = self.model.compute_potential()
         return cast(float, self.comm.reduce(local_potential, MPI.SUM, root=0))
@@ -95,7 +95,7 @@ class DistributedCpuSampler(BaseSampler):
                 self.io_manager.save_local_array(self._potential, "potential", file)
 
     def _load_checkpoint(self) -> None:
-        r"""Load sampler state collaboratively from disk via parallel HDF5 (`mpio`)."""
+        r"""Load sampler state collaboratively from disk via parallel HDF5 (``mpio``)."""
         with h5py.File(self.restart_path, "r", driver="mpio", comm=self.comm) as file:
             self.model.set_states(self.io_manager.load_states(file, self.model.vars))
             self.io_manager.load_rng(self.rng, file, self.rank)
