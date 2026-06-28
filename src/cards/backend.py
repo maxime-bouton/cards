@@ -15,8 +15,8 @@ functions from it directly.
     # WRONG:
     from cards.backend import zeros
 
-Notes
------
+Note
+----
 Type checking is deliberately relaxed via :data:`typing.Any` to allow both CPU arrays
 (:class:`numpy.ndarray`) and GPU arrays (:class:`cupy.ndarray`) to pass static linter
 analysis without throwing class mismatches.
@@ -25,17 +25,17 @@ Examples
 --------
 >>> import cards.backend as xp
 >>> def foo(x: xp.ndarray) -> xp.ndarray:
-...     return xp.sqrt(x.sum())
+...     return xp.minimum(x.cumsum(), 4)
 ...
 >>> xp.set_backend("cupy")
->>> x = xp.array([2, 3, 4]) # cupy.ndarray
->>> foo(x)
-array(3.)
+>>> x = xp.array([2, 3, 4])     # cupy.ndarray
+>>> foo(x)                      # cupy.ndarray as well
+array([2, 4, 4])
 >>>
 >>> xp.set_backend("numpy")
->>> x = xp.array([2, 3, 4]) # numpy.ndarray
->>> foo(x)
-3.0
+>>> x = xp.array([2, 3, 4])     # numpy.ndarray
+>>> foo(x)                      # numpy.ndarray as well
+array([2, 4, 4])
 """
 
 import importlib

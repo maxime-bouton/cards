@@ -125,47 +125,38 @@ class BaseSampler(ABC):
     @abstractmethod
     def _setup_rank(self) -> int:
         r"""Determine and return the local worker rank."""
-        ...
 
     @abstractmethod
     def _setup_rng(self) -> np.random.Generator | torch.Generator:
         r"""Instantiate and return the random number generator."""
-        ...
 
     @abstractmethod
     def _setup_io_manager(self) -> IOManager:
         r"""Instantiate and return the IOManager."""
-        ...
 
     @abstractmethod
     def _start_timer(self) -> None:
         r"""Start the timer for the current MCMC step."""
-        ...
 
     @abstractmethod
     def _stop_timer(self) -> None:
         r"""Stop the timer for the current MCMC step."""
-        ...
 
     @abstractmethod
     def _get_elapsed_time(self) -> float:
         r"""Return the measured elapsed time of the last step in seconds."""
-        ...
 
     @abstractmethod
     def _get_potential(self) -> float:
         r"""Return the current (local) potential of the model."""
-        ...
 
     @abstractmethod
     def _save_checkpoint(self, ckpt_path: Path) -> None:
         r"""Trigger the IOManager to write the current checkpoint to disk."""
-        ...
 
     @abstractmethod
     def _load_checkpoint(self) -> None:
         r"""Load the sampler state from a previous checkpoint."""
-        ...
 
     def sample(self) -> None:
         r"""Main iteration loop of the MCMC algorithm.
