@@ -18,8 +18,8 @@ from cards.samplers.base_sampler import BaseSampler, SamplerParameters
 class DistributedGpuSampler(BaseSampler):
     r"""MPI-based distributed GPU implementation of the MCMC sampling backbone.
 
-    This class orchestrates multi-GPU MCMC chains using ``mpi4py``and ``CuPy``. It
-    derives statistically independent ``torch`` CUDA random streams per worker via
+    This class orchestrates multi-GPU MCMC chains using :mod:`mpi4py` and :mod:`CuPy`.
+    It derives statistically independent :mod:`torch` CUDA random streams per worker via
     deterministic SHA-256 seed hashing, and utilizes parallel HDF5 (``mpio``) for
     collective and efficient checkpoint I/O.
     """
@@ -71,7 +71,7 @@ class DistributedGpuSampler(BaseSampler):
         return cp.cuda.get_elapsed_time(self._start_gpu, self._end_gpu) * 1e-3
 
     def _get_potential(self) -> float:
-        r"""Compute local GPU potential and execute a blocking collective ``MPI.SUM``
+        r"""Compute local GPU potential and execute a blocking collective :func:`MPI.SUM`
         reduction."""
         local_potential = self.model.compute_potential()
         return cast(float, self.comm.reduce(local_potential, MPI.SUM, root=0))

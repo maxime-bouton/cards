@@ -16,39 +16,34 @@ from cards.models.base_model import BaseModel
 @dataclass
 class SamplerParameters:
     r"""Dataclass gathering all parameters required to run a MCMC sampler
-    :class:`~cards.samplers.base_sampler.BaseSampler`.
-
-    Attributes
-    ----------
-    ckpt_size: int
-        Number of samples per checkpoint. At the end of each checkpoint, batched
-        estimates are computed and saved to disk, along with the current chain state.
-    n_ckpts: int
-        Number of checkpoints to compute. The total number of samples is
-        ``ckpt_size * n_ckpts``.
-    ckpt_dir_path: Path
-        Path to the directory where the checkpoint files are saved.
-    ckpt_prefix: str
-        Root name under which checkpoint files will be saved while running the chain.
-        These can be used to restart the chain at an earlier state.
-    seed: int
-        Seed to initialize the random number generator.
-        Note that the seed is (deterministically) modified for each MPI worker to ensure
-        that different random sequences are generated on each worker.
-    start_ckpt_idx : int, optional
-        Index of the checkpoint file to restart from, by default ``0`` (i.e. none).
-    start_ckpt_dir_path : Path | None, optional
-        Path to the directory containing the checkpoint file to restart from, by default
-        ``None`` (i.e. same as ``ckpt_dir_path``).
-    """
+    :class:`~cards.samplers.base_sampler.BaseSampler`."""
 
     ckpt_size: int
+    r"""Number of samples per checkpoint. At the end of each checkpoint, batched
+    estimates are computed and saved to disk, along with the current chain state."""
+
     n_ckpts: int
+    r"""Number of checkpoints to compute. The total number of samples is
+    ``ckpt_size * n_ckpts``."""
+
     ckpt_dir_path: Path
+    r"""Path to the directory where the checkpoint files are saved."""
+
     ckpt_prefix: str
+    r"""Root name under which checkpoint files will be saved while running the chain.
+    These can be used to restart the chain at an earlier state."""
+
     seed: int
+    r"""Seed to initialize the random number generator.
+    Note that the seed is (deterministically) modified for each MPI worker to ensure
+    that different random sequences are generated on each worker."""
+
     start_ckpt_idx: int = 0
+    r"""Index of the checkpoint file to restart from."""
+
     start_ckpt_dir_path: Path | None = None
+    r"""Path to the directory containing the checkpoint file to restart from, by default
+    :data:`None` (i.e. same as :attr:`ckpt_dir_path`)."""
 
 
 class BaseSampler(ABC):
@@ -59,11 +54,12 @@ class BaseSampler(ABC):
     Parameters
     ----------
     params : SamplerParameters
-        Dataclass containing the sampling configuration (e.g., ``ckpt_size``, ``n_ckpts``).
+        Dataclass containing the sampling configuration (e.g., :attr:`ckpt_size`,
+        :attr:`n_ckpts`).
     model : BaseModel
         Model encapsulating the MCMC algorithm to be run.
     logger : logging.Logger | None, optional
-        Logger object recording the progress of the sampler, by default ``None``.
+        Logger object recording the progress of the sampler, by default :data:`None`.
 
     Attributes
     ----------

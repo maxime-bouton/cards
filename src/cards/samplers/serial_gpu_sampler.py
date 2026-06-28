@@ -16,8 +16,8 @@ class SerialGpuSampler(BaseSampler):
     r"""Serial GPU implementation of the MCMC sampling backbone.
 
     This class executes the MCMC loop synchronously on a single GPU core, utilizing
-    ``CuPy`` as backend for GPU computations and ``torch`` for random number generation.
-    It employs CUDA events for high-resolution timing of each MCMC step.
+    :mod:`CuPy` as backend for GPU computations and :mod:`torch` for random number
+    generation. It employs CUDA events for high-resolution timing of each MCMC step.
     """
 
     rng: torch.Generator

@@ -18,9 +18,9 @@ class DistributedCpuSampler(BaseSampler):
     r"""MPI-based distributed CPU implementation of the MCMC sampling backbone.
 
     This class orchestrates parallel MCMC chains across multiple CPU nodes or cores
-    using ``mpi4py``. It guarantees statistically independent pseudo-random number streams
-    per worker via NumPy ``SeedSequence`` spawning, and utilizes parallel HDF5 (``mpio``)
-    for collective, high-throughput checkpoint I/O.
+    using :mod:`mpi4py`. It guarantees statistically independent pseudo-random number
+    streams per worker via NumPy :class:`SeedSequence` spawning, and utilizes parallel
+    HDF5 (``mpio``) for collective and efficient checkpoint I/O.
     """
 
     model: BaseDistributedModel
@@ -41,8 +41,8 @@ class DistributedCpuSampler(BaseSampler):
         return self.comm.Get_rank()
 
     def _setup_rng(self) -> np.random.Generator:
-        r"""Scatter independent spawned ``SeedSequence`` streams from root to all MPI
-        ranks."""
+        r"""Scatter independent spawned :class:`SeedSequence` streams from root to all
+        MPI processes."""
         # set random number generator on each process
         if self.rank == 0:
             ss = np.random.SeedSequence(self.seed)
