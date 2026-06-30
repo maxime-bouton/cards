@@ -7,8 +7,8 @@ communications on a Cartesian grid of processes."""
 
 import numpy as np
 
-from cards.slicer.cartesian_tessellation import local_split_range_nd
-from cards.slicer.comm_slicer import CommSlicer
+from cards.slicers.cartesian_tessellation import local_split_range_nd
+from cards.slicers.comm_slicer import CommSlicer
 
 
 def compute_local_buffer_size(
