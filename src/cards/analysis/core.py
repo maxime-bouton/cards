@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-from cards.post_process.metrics import psnr, snr, ssim
+from cards.analysis.metrics import psnr, snr, ssim
 
 
 def analyze_data(
@@ -64,12 +64,12 @@ def analyze_data(
 
     valid_samples = 0
     for i in range(n_checkpoint):
-        with h5py.File(save_path / f"sample{i + 1}.h5", "r") as file:
+        with h5py.File(save_path / f"checkpoint_{i + 1}.h5", "r") as file:
             potential_list.append(file["potential"][:])
             time_list.append(file["computation_time"][:])
 
             if i >= burnin:
-                x_mmse += file["MMSE"][:]
+                x_mmse += file["X_mmse"][:]
                 valid_samples += 1
 
     if valid_samples > 0:
