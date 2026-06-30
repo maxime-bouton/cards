@@ -9,8 +9,8 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from cards.communicator.mpi_utils import get_ranknd
-from cards.slicer.cartesian_comm_slicer import CartesianCommSlicer
+from cards.communicators.mpi_utils import get_ranknd
+from cards.slicers.cartesian_comm_slicer import CartesianCommSlicer
 
 
 class BaseCartesianCommunicator(ABC):

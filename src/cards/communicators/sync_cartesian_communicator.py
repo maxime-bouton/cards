@@ -8,8 +8,8 @@ import weakref
 import numpy as np
 from mpi4py.MPI import PROC_NULL
 
-from cards.communicator.base_cartesian_communicator import BaseCartesianCommunicator
-from cards.communicator.mpi_utils import (
+from cards.communicators.base_cartesian_communicator import BaseCartesianCommunicator
+from cards.communicators.mpi_utils import (
     free_custom_mpi_types,
     mpi_create_subarray_type,
 )
