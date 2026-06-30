@@ -7,7 +7,7 @@ r"""Object that handles any reading/writing on disk with parallel memory access.
 # Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 # TODO: revise usefullness of all the methods included, possibly simplify implementation
-# TODO: add more h5py save options in the interface (rdcc_nbytes, compression, compression_opts, chunk sizes, ...)
+# TODO: add more h5py save options in the interface (rdcc_nbytes, compression, compression_opts, chunk local_sizes, ...)
 # NOTE: using h5py.read_direct / h5py.write_direct to avoid any copy of arrays
 
 from typing import Optional
@@ -16,30 +16,41 @@ import h5py
 import numpy as np
 import torch
 
-from cards.backend import xp
-from cards.data_manager.warmstart_rng import (
+from cards.io.warmstart_rng import (
     array_to_int,
     int_to_array,
     load_rng_np,
     load_rng_offset_torch,
     save_rng_np,
 )
-from cards.data_manager.warmstart_rng_mpi import load_rng_np_mpi, save_rng_np_mpi
+from cards.io.warmstart_rng_mpi import load_rng_np_mpi, save_rng_np_mpi
 
 
-class DataManager:
-    """Utility class to handle I/O writing to disk in HDF5 files, either in serial of distributed mode.
+class IOManager:
+    """Utility class to handle I/O writing to disk in HDF5 files, either in serial of
+    distributed mode.
+
+    Parameters
+    ----------
+    ckpt_size : int
+        Number of samples to collect before flushing results to disk.
+    local_sizes : Optional[dict], optional
+        In distributed mode, encodes the shape of the local tiles to be
+        saved to disk, by default None.
+    global_sizes : Optional[dict], optional
+        In distributed mode, dictionary containing the shape of the global variables collectively saved to disk. By default None.
+    local_slices : Optional[dict], optional
+        In distributed mode, dictionary of slicer objects to extract, for eahc variable of interest, the local tile to be saved to disk from
+        the local facet avaiable (i.e., buffer representing an array tile
+        with the associated ghost-cell). By default None.
 
     Attributes
     ----------
-    _save_full_batch : bool
-        Save mode whereby a batch of several consecutive samples shoud be
-        saved to disk, by default False.
-    full_batch :
-        Dictionary contaning, for each variable of interest, the batch of
-        samples to be saved to disk.
+    ckpt_size: int
+        Number of samples to collect before flushing results to disk.
+
     global_sizes : dict, optional
-            In distributed mode, dictionary containing the shape of the global variables collectively saved to disk. By default None.
+        In distributed mode, dictionary containing the shape of the global variables collectively saved to disk. By default None.
     local_slices : dict, optional
         In distributed mode, dictionary of slicer objects to extract, for eahc variable of interest, the local tile to be saved to disk from
         the local facet avaiable (i.e., buffer representing an array tile
@@ -48,77 +59,28 @@ class DataManager:
 
     def __init__(
         self,
-        batch_size: int = 1,
-        save_full_batch: bool = False,
-        sizes: Optional[dict] = None,
-        global_sizes: Optional[dict] = None,
-        local_slices: Optional[dict] = None,
+        ckpt_size: int | None = None,
+        local_sizes: dict | None = None,
+        global_sizes: dict | None = None,
+        local_slices: dict | None = None,
     ) -> None:
-        """DataManager constructor.
+        self.ckpt_size = ckpt_size
+        self.local_sizes = local_sizes
+        self.global_sizes = global_sizes
+        self.local_slices = local_slices
 
-        Parameters
-        ----------
-        batch_size : int, optional
-            Number of samples to collect before flushing results to disk, by
-            default 1.
-        save_full_batch : bool, optional
-            Save mode whereby a batch of several consecutive samples shoud be
-            saved to disk, by default False.
-        sizes : Optional[dict], optional
-            In distributed mode, encodes the shape of the local tiles to be
-            saved to disk, by default None.
-        global_sizes : Optional[dict], optional
-            In distributed mode, dictionary containing the shape of the global variables collectively saved to disk. By default None.
-        local_slices : Optional[dict], optional
-            In distributed mode, dictionary of slicer objects to extract, for eahc variable of interest, the local tile to be saved to disk from
-            the local facet avaiable (i.e., buffer representing an array tile
-            with the associated ghost-cell). By default None.
-        """
-        self._save_full_batch = save_full_batch
-        if save_full_batch:
-            self.full_batch = {}
-            self.global_sizes = {}
-            self.local_slices = None
+        # if self.local_sizes:
+        #     for key in self.local_sizes:
+        #         self.local_sizes[key] = tuple((ckpt_size, *self.local_sizes[key]))
 
-            if sizes is not None:
-                for key in sizes:
-                    self.full_batch[key] = xp.zeros((batch_size, *sizes[key]))
-                    self.global_sizes[key] = tuple((batch_size, *sizes[key]))
-            if global_sizes is not None:
-                for key in global_sizes:
-                    self.global_sizes[key] = tuple((batch_size, *global_sizes[key]))
+        # if self.global_sizes:
+        #     for key in self.global_sizes:
+        #         self.global_sizes[key] = tuple((ckpt_size, *self.global_sizes[key]))
 
-            if local_slices is not None:
-                self.local_slices = {}
-                for key in local_slices:
-                    # add one axis for the batch dimension
-                    self.local_slices[key] = np.s_[slice(None), *local_slices[key]]
-
-    def store_states(self, states, num_iter):
-        """Store a new state to the batch of samples for all the variables to
-        be saved to disk."""
-        for key in self.full_batch:
-            self.full_batch[key][num_iter, ...] = states[key]
-
-    def save_batch(self, file: h5py.File, from_gpu: bool = False):
-        """Save batch of samples to disk."""
-        for key in self.full_batch:
-            buffer_size = self.global_sizes[key]
-
-            # TODO: see if this "if"-statement can be simplified or removed
-            if self.local_slices is None:
-                local_slice = slice(None)
-            else:
-                local_slice = self.local_slices[key]
-
-            dset = file.create_dataset(
-                name="batch/" + key, shape=buffer_size, dtype=self.full_batch[key].dtype
-            )
-
-            if not from_gpu:
-                dset.write_direct(self.full_batch[key], dest_sel=local_slice)
-            else:
-                dset.write_direct(self.full_batch[key].get(), dest_sel=local_slice)
+        # if self.local_slices:
+        #     for key in self.local_slices:
+        #         # add one axis for the batch dimension
+        #         self.local_slices[key] = np.s_[slice(None), *self.local_slices[key]]
 
     def save_dict(
         self,
@@ -147,15 +109,17 @@ class DataManager:
         the ``h5py`` flag ``driver="mpio"``).
         """
         for key in data:
+            print(key, global_sizes, slices)
+            var = key.split("_")[0]
             if global_sizes is None:
                 buffer_size = data[key].shape
             else:
-                buffer_size = global_sizes[key]
+                buffer_size = global_sizes[var]
 
             if slices is None:
                 local_slice = slice(None)
             else:
-                local_slice = slices[key]
+                local_slice = slices[var]
             dset = file.create_dataset(
                 name=key, shape=buffer_size, dtype=data[key].dtype
             )
@@ -300,7 +264,7 @@ class DataManager:
         Returns
         -------
         dict
-            Dictionary containing the local value of each variable.
+            Dictonary containing the local value of each variable.
         """
         data = {}
         if slices is None:
@@ -430,3 +394,23 @@ class DataManager:
             offset = array_to_int(h5file["offset"][gpu_id, ...])
             rng.set_offset(offset)
         return
+
+    def load_states(self, file: h5py.File, vars: list[str]) -> dict:
+        r"""Load the state of the variables to be sampled from a .h5 file.
+
+        Parameters
+        ----------
+        file : h5py.File
+            Handle to a `.h5` file to load the state of the variables.
+        vars : list[str]
+            List of variable names to be loaded.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the state of the variables.
+        """
+        states = {}
+        for var in vars:
+            states[var] = file[var][:]
+        return states

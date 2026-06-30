@@ -11,7 +11,7 @@ import h5py
 import numpy as np
 import torch
 
-from cards.data_manager.warmstart_rng import (
+from cards.io.warmstart_rng import (
     array_to_int,
     extract_rng_state,
     int_to_array,
