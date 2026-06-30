@@ -12,20 +12,18 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
-from mpi4py import MPI
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDenoiser
+from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
 from cards.models.base_gaussian_inpainting_model import (
     BaseGaussianInpaintingModel,
     GaussianInpaintingParameters,
 )
 from cards.models.base_model import BaseDistributedModel
-from cards.transition_kernel.base_transition_kernel import (
-    BaseTransitionKernel,
-)
-from cards.transition_kernel.gpu_pnp_sgla import GpuPnpSGLA
-from cards.transition_kernel.gpu_pnp_ula import GpuPnpULA
+from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
+from cards.transition_kernels.gpu_pnp_sgla import GpuPnpSGLA
+from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
 
 
 @dataclass
@@ -35,12 +33,13 @@ class GaussianInpaintingPnpParameters(GaussianInpaintingParameters): ...
 class BaseGaussianInpaintingPnpModel(BaseGaussianInpaintingModel):
     def __init__(
         self,
+        estimators: list[BaseEstimatorBuilder],
         params: GaussianInpaintingPnpParameters,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
     ):
         self.denoiser = denoiser
-        super().__init__(params, X)
+        super().__init__(estimators, params, X)
 
     def set_conditionals(self):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
@@ -76,7 +75,7 @@ class BaseGaussianInpaintingPnpModel(BaseGaussianInpaintingModel):
         dict
             Dictionary containing the curent states of the variables.
         """
-        return {"X": self.X.get_state(), "MMSE": self.estimator_builder.estimator.get()}
+        return {"X": self.X.get_state()}
 
     def set_states(self, states: dict) -> None:
         """set_states
@@ -123,16 +122,15 @@ class DistributedGaussianInpaintingPnpModel(
 ):
     def __init__(
         self,
-        comm: MPI.Comm,
-        full_size: np.ndarray,
+        estimators: list[BaseEstimatorBuilder],
         params: GaussianInpaintingPnpParameters,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
+        full_size: np.ndarray,
     ):
-        self.comm = comm
         self.full_size = full_size
 
-        super().__init__(params, X, denoiser)
+        super().__init__(estimators, params, X, denoiser)
 
     def set_slices(self):
         """set_slices Describes which portion of the global buffer the current thread must handle.
@@ -143,7 +141,6 @@ class DistributedGaussianInpaintingPnpModel(
             Dictionary containing the slices of the global buffer that this thread will handle.
         """
         self.slices["X"] = self.denoiser.global_to_tile_slice
-        self.slices["MMSE"] = self.denoiser.global_to_tile_slice
 
     def set_global_sizes(self):
         """set_global_sizes Describe the gobla sizes of several global buffers.
@@ -154,8 +151,6 @@ class DistributedGaussianInpaintingPnpModel(
             Global sizes of the variable of interest.
         """
         self.global_sizes["X"] = np.asarray(self.full_size, dtype=int)
-        self.global_sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
 
     def set_local_sizes(self):
         self.local_sizes["X"] = self.X.current_state.shape
-        self.local_sizes["MMSE"] = self.X.current_state.shape

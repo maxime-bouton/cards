@@ -9,7 +9,7 @@ cards.slicer.cartesian_tessellation.
 import numpy as np
 import pytest
 
-import cards.slicer.cartesian_tessellation as ct
+import cards.slicers.cartesian_tessellation as ct
 
 
 @pytest.fixture

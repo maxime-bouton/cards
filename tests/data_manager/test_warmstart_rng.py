@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 import torch
 
-from cards.backend import xp
-from cards.data_manager.warmstart_rng import (
+import cards.backend as xp
+from cards.io.warmstart_rng import (
     extract_rng_state,
     load_rng_np,
     load_rng_offset_torch,

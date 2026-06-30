@@ -13,8 +13,9 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDenoiser, BaseDistributedDenoiser
+from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
 from cards.models.base_gaussian_deconvolution_model import (
     BaseGaussianDeconvolutionModel,
     GaussianDeconvolutionParams,
@@ -22,11 +23,11 @@ from cards.models.base_gaussian_deconvolution_model import (
 from cards.models.base_model import BaseDistributedModel
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.transition_kernel.base_transition_kernel import (
+from cards.transition_kernels.base_transition_kernel import (
     BaseTransitionKernel,
 )
-from cards.transition_kernel.gpu_pnp_sgla import GpuPnpSGLA
-from cards.transition_kernel.gpu_pnp_ula import GpuPnpULA
+from cards.transition_kernels.gpu_pnp_sgla import GpuPnpSGLA
+from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
 
 
 @dataclass
@@ -36,13 +37,14 @@ class GaussianDeconvolutionPnpParams(GaussianDeconvolutionParams): ...
 class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
     def __init__(
         self,
+        estimators: list[BaseEstimatorBuilder],
         params: GaussianDeconvolutionPnpParams,
         convolution_operator: DftConvolution | MpiDftConvolution,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
     ):
         self.denoiser = denoiser
-        super().__init__(params, convolution_operator, X)
+        super().__init__(estimators, params, convolution_operator, X)
 
     def set_conditionals(self):
         if type(self.X) is GpuPnpULA:
@@ -79,7 +81,7 @@ class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
         dict
             Dictionary containing the curent states of the variables.
         """
-        return {"X": self.X.get_state(), "MMSE": self.estimator_builder.estimator.get()}
+        return {"X": self.X.get_state()}
 
     def set_states(self, states):
         """Read the dictionary given in entry and set the variables of the model to the values contained in it.
@@ -121,19 +123,7 @@ class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
         return p
 
 
-class GaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionPnpModel):
-    def __init__(
-        self,
-        convolution_operator: DftConvolution,
-        params: GaussianDeconvolutionPnpParams,
-        X: BaseTransitionKernel,
-        denoiser: BaseDenoiser,
-    ):
-        # self.convolution_operator = DftConvolution(
-        #     np.asarray(X.current_state.shape), params.kernel, params.observations.shape
-        # )
-
-        super().__init__(params, convolution_operator, X, denoiser)
+class GaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionPnpModel): ...
 
 
 class DistributedGaussianDeconvolutionPnpModel(
@@ -142,31 +132,22 @@ class DistributedGaussianDeconvolutionPnpModel(
 ):
     def __init__(
         self,
-        convolution_operator: MpiDftConvolution,
+        estimators: list[BaseEstimatorBuilder],
         params: GaussianDeconvolutionPnpParams,
+        convolution_operator: MpiDftConvolution,
         X: BaseTransitionKernel,
         denoiser: BaseDistributedDenoiser,
     ):
         self.full_size = convolution_operator.image_size
-
-        # self.convolution_operator = MpiDftConvolution(
-        #     self.full_size,
-        #     params.kernel,
-        #     self.comm,
-        #     grid_size,
-        # )
-        super().__init__(params, convolution_operator, X, denoiser)
+        super().__init__(estimators, params, convolution_operator, X, denoiser)
 
     def set_slices(self):
         """Describes which portion of the global buffer the current thread must handle."""
         self.slices["X"] = self.denoiser.global_to_tile_slice
-        self.slices["MMSE"] = self.denoiser.global_to_tile_slice
 
     def set_global_sizes(self):
         """Describe the global sizes of several global buffers."""
         self.global_sizes["X"] = np.asarray(self.full_size, dtype=int)
-        self.global_sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
 
     def set_local_sizes(self):
         self.local_sizes["X"] = self.X.current_state.shape
-        self.local_sizes["MMSE"] = self.X.current_state.shape

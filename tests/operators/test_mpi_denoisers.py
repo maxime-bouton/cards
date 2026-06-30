@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.denoisers.mpi_ddfb import MpiDDFB
 from cards.denoisers.mpi_dncnn import MpiDnCNN
 from cards.denoisers.mpi_drunet import MpiDRUNet

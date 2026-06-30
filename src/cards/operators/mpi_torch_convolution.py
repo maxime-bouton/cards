@@ -6,8 +6,8 @@ import numpy as np
 import torch
 from mpi4py import MPI
 
-import cards.communicator.sync_cartesian_communicator as comms
-from cards.backend import xp
+import cards.backend as xp
+import cards.communicators.sync_cartesian_communicator as comms
 from cards.operators.linear_operator import LinearOperator
 from cards.utils.utils import torch2xp, xp2torch
 

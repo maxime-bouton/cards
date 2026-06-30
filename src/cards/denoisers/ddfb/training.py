@@ -123,8 +123,8 @@ class DenoisingDataset(Dataset):
     def __len__(self):
         return len(self.image_paths) * self.patches_per_image
 
-    def __getitem__(self, idx):
-        img_idx = idx // self.patches_per_image
+    def __getitem__(self, index):
+        img_idx = index // self.patches_per_image
         img_path = self.image_paths[img_idx]
 
         with Image.open(img_path).convert(self.conversion) as img:

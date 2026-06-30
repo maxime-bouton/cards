@@ -187,7 +187,7 @@ def upsample_upconv(
         uc = "uC"
     elif mode[0] == "4":
         uc = "vC"
-    mode = mode.replace(mode[0], uc)  # type: ignore
+    mode = mode.replace(mode[0], uc)
     up1 = conv(
         in_channels,
         out_channels,

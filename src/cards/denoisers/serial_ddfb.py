@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDenoiser
 from cards.denoisers.denoiser_loader import load_pretrained_ddfb
 from cards.utils.utils import torch2xp, xp2torch

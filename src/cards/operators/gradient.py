@@ -4,7 +4,7 @@ The computations can be done either on CPU or GPU depending on the settings.
 
 # TODO: documentation
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.operators.linear_operator import LinearOperator
 
 

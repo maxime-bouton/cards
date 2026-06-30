@@ -12,8 +12,9 @@ r"""Implementation of a Poisson deconvolution model using a PnP prior to reprodu
 import numpy as np
 import torch
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDenoiser, BaseDistributedDenoiser
+from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
 from cards.functionals.prox import KL, prox_KL, prox_nonegativity
 from cards.models.base_model import BaseDistributedModel
 from cards.models.base_poisson_deconvolution_model import (
@@ -22,18 +23,17 @@ from cards.models.base_poisson_deconvolution_model import (
 )
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.transition_kernel.base_transition_kernel import (
-    BaseTransitionKernel,
-)
-from cards.transition_kernel.gpu_pnp_sgla import GpuPnpSGLA
-from cards.transition_kernel.gpu_pnp_ula import GpuPnpULA
-from cards.transition_kernel.gpu_psgla import GpuPSGLA
-from cards.transition_kernel.psgla import PSGLA
+from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
+from cards.transition_kernels.gpu_pnp_sgla import GpuPnpSGLA
+from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
+from cards.transition_kernels.gpu_psgla import GpuPSGLA
+from cards.transition_kernels.psgla import PSGLA
 
 
 class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
     def __init__(
         self,
+        estimators: list[BaseEstimatorBuilder],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DftConvolution | MpiDftConvolution,
         X: BaseTransitionKernel,
@@ -42,7 +42,7 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
         denoiser: BaseDenoiser,
     ):
         self.denoiser = denoiser
-        super().__init__(params, convolution_operator, X, Z1, Z2)
+        super().__init__(estimators, params, convolution_operator, X, Z1, Z2)
 
     def set_conditionals(self) -> None:
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
@@ -105,7 +105,6 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
             "X": self.X.get_state(),
             "Z1": self.Z1.get_state(),
             "Z2": self.Z2.get_state(),
-            "MMSE": self.estimator_builder.estimator.get(),
         }
 
     def set_states(self, states: dict) -> None:
@@ -154,21 +153,7 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
         return p
 
 
-class PoissonDeconvolutionPnpModel(BasePoissonDeconvolutionPnpModel):
-    def __init__(
-        self,
-        convolution_operator: DftConvolution,
-        params: PoissonDeconvolutionParameters,
-        X: BaseTransitionKernel,
-        Z1: BaseTransitionKernel,
-        Z2: BaseTransitionKernel,
-        denoiser: BaseDenoiser,
-    ):
-        # self.convolution_operator = DftConvolution(
-        #     np.asarray(X.current_state.shape), params.kernel, params.observations.shape
-        # )
-
-        super().__init__(params, convolution_operator, X, Z1, Z2, denoiser)
+class PoissonDeconvolutionPnpModel(BasePoissonDeconvolutionPnpModel): ...
 
 
 class DistributedPoissonDeconvolutionPnpModel(
@@ -177,6 +162,7 @@ class DistributedPoissonDeconvolutionPnpModel(
 ):
     def __init__(
         self,
+        estimators: list[BaseEstimatorBuilder],
         convolution_operator: MpiDftConvolution,
         params: PoissonDeconvolutionParameters,
         X: BaseTransitionKernel,
@@ -186,13 +172,7 @@ class DistributedPoissonDeconvolutionPnpModel(
     ):
         self.full_size = convolution_operator.image_size
 
-        # self.convolution_operator = MpiDftConvolution(
-        #     self.full_size,
-        #     params.kernel,
-        #     self.comm,
-        #     grid_size,
-        # )
-        super().__init__(params, convolution_operator, X, Z1, Z2, denoiser)
+        super().__init__(estimators, params, convolution_operator, X, Z1, Z2, denoiser)
 
     def set_slices(self):
         """Describes which portion of the global buffer the current thread must handle.
@@ -207,7 +187,6 @@ class DistributedPoissonDeconvolutionPnpModel(
             self.convolution_operator.adjoint_communicator.cartslicer.slice_global_buffer_to_tile
         )
         self.slices["Z2"] = self.denoiser.global_to_tile_slice
-        self.slices["MMSE"] = self.denoiser.global_to_tile_slice
 
     def set_global_sizes(self):
         """Describes the gobal sizes of several global buffers.
@@ -223,10 +202,8 @@ class DistributedPoissonDeconvolutionPnpModel(
             dtype=int,
         )
         self.global_sizes["Z2"] = np.asarray(self.full_size, dtype=int)
-        self.global_sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
 
     def set_local_sizes(self):
         self.local_sizes["X"] = self.X.current_state.shape
         self.local_sizes["Z1"] = self.Z1.current_state.shape
         self.local_sizes["Z2"] = self.Z2.current_state.shape
-        self.local_sizes["MMSE"] = self.X.current_state.shape

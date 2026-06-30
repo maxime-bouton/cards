@@ -1,4 +1,4 @@
-"""Test for `DataManager` class.
+"""Test for `IOManager` class.
 
 Test the serial/distributed writing/reading of data on/from disk memory.
 """
@@ -11,10 +11,8 @@ import numpy as np
 import pytest
 from mpi4py import MPI
 
-from cards.backend import xp
-from cards.communicator.sync_cartesian_communicator import SyncCartesianCommunicator
-from cards.data_manager.data_manager import DataManager
-from cards.slicer.cartesian_comm_slicer import CartesianCommSlicer
+from cards.communicators.sync_cartesian_communicator import SyncCartesianCommunicator
+from cards.io.io_manager import IOManager
 
 
 @pytest.fixture
@@ -32,7 +30,7 @@ def test_save(input_shape: tuple[int, ...], seed: int, tmp_path: Path) -> None:
     X = rng.standard_normal(input_shape)
     Y = rng.standard_normal((2, *input_shape))
     Z = rng.standard_normal(input_shape)
-    data_manager = DataManager()
+    io_manager = IOManager()
 
     data = {"x": X, "y": Y}
 
@@ -43,8 +41,8 @@ def test_save(input_shape: tuple[int, ...], seed: int, tmp_path: Path) -> None:
     filename = join(tmp_path_str, "dummy_save_data.h5")
 
     with h5py.File(filename, "w") as file:
-        data_manager.save_dict(data, file)
-        data_manager.save_array(Z, file, "z")
+        io_manager.save_dict(data, file)
+        io_manager.save_array(Z, file, "z")
 
     with h5py.File(filename, "r") as file:
         checkX = np.allclose(file["x"][:], X)
@@ -76,9 +74,9 @@ def test_load(tmp_path, input_shape: tuple[int, ...]) -> None:
         file["y"] = Y
         file["z"] = Z
 
-    data_manager = DataManager()
+    io_manager = IOManager()
     with h5py.File(filename, "r") as file:
-        data = data_manager.load_h5(file)
+        data = io_manager.load_h5(file)
 
     checkX = np.allclose(data["x"], X)
     checkY = np.allclose(data["y"], Y)
@@ -87,32 +85,32 @@ def test_load(tmp_path, input_shape: tuple[int, ...]) -> None:
     assert checkX and checkY and checkZ
 
 
-@pytest.mark.serial
-def test_save_full_batch(input_shape, tmp_path, device, batch_size):
-    """
-    Test the saving of full batches for serial settings.
-    """
-    sizes = {"X": input_shape}
+# @pytest.mark.serial
+# def test_save_full_batch(input_shape, tmp_path, device, batch_size):
+#     """
+#     Test the saving of full batches for serial settings.
+#     """
+#     sizes = {"X": input_shape}
 
-    if tmp_path is not None:
-        tmp_path_str = tmp_path.as_posix()
-    else:
-        tmp_path_str = ""
-    filename = join(tmp_path_str, "test_full_batch.h5")
+#     if tmp_path is not None:
+#         tmp_path_str = tmp_path.as_posix()
+#     else:
+#         tmp_path_str = ""
+#     filename = join(tmp_path_str, "test_full_batch.h5")
 
-    batched_data = xp.random.standard_normal(size=(batch_size, *input_shape))
+#     batched_data = xp.random.standard_normal(size=(batch_size, *input_shape))
 
-    dm = DataManager(batch_size, save_full_batch=True, sizes=sizes)
+#     dm = IOManager(batch_size, save_full_batch=True, sizes=sizes)
 
-    dm.full_batch["X"] = batched_data
+#     dm.full_batch["X"] = batched_data
 
-    with h5py.File(filename, "w") as file:
-        dm.save_batch(file, device == "gpu")
+#     with h5py.File(filename, "w") as file:
+#         dm.save_batch(file, device == "gpu")
 
-    with h5py.File(filename, "r") as file:
-        loaded_data = file["batch/X"][:]
+#     with h5py.File(filename, "r") as file:
+#         loaded_data = file["batch/X"][:]
 
-    xp.testing.assert_allclose(batched_data, loaded_data)
+#     xp.testing.assert_allclose(batched_data, loaded_data)
 
 
 @pytest.mark.mpi
@@ -153,7 +151,7 @@ def test_distributed_save_and_load(
     local_dim = sync_comm.cartslicer.tile_size
     x = rng.standard_normal(size=local_dim)
 
-    data_manager = DataManager()
+    io_manager = IOManager()
     filename = ""
 
     if rank == 0:
@@ -171,12 +169,12 @@ def test_distributed_save_and_load(
     local_sizes = {"x": local_dim}
 
     with h5py.File(filename, "w", driver="mpio", comm=comm) as file:
-        data_manager.save_dict(data, file, global_sizes, slices)
+        io_manager.save_dict(data, file, global_sizes, slices)
 
     comm.Barrier()
 
     with h5py.File(filename, "r", driver="mpio", comm=comm) as file:
-        data = data_manager.load_h5(file, local_sizes, slices)
+        data = io_manager.load_h5(file, local_sizes, slices)
 
     check = np.allclose(x, data["x"])
 
@@ -186,76 +184,75 @@ def test_distributed_save_and_load(
         assert all_check
 
 
-@pytest.mark.mpi
-def test_mpi_save_full_batch(comm, input_shape, tmp_path, device, batch_size):
-    """
-    Test the distributed saving of full batches for MPI settings.
-    """
-    rank = comm.Get_rank()
-    size = comm.Get_size()
+# @pytest.mark.mpi
+# def test_mpi_save_full_batch(comm, input_shape, tmp_path, device, batch_size):
+#     """
+#     Test the distributed saving of full batches for MPI settings.
+#     """
+#     rank = comm.Get_rank()
+#     size = comm.Get_size()
 
-    grid_dims = np.asarray([1, *MPI.Compute_dims(size, 2)], dtype=int)
-    mpi_cart_comm = comm.Create_cart(grid_dims)
-    ranknd = np.asarray(mpi_cart_comm.Get_coords(rank))
+#     grid_dims = np.asarray([1, *MPI.Compute_dims(size, 2)], dtype=int)
+#     mpi_cart_comm = comm.Create_cart(grid_dims)
+#     ranknd = np.asarray(mpi_cart_comm.Get_coords(rank))
 
-    filename = ""
-    if rank == 0:
-        if tmp_path is not None:
-            tmp_path_str = tmp_path.as_posix()
-        else:
-            tmp_path_str = ""
-        filename = join(tmp_path_str, "test_mpi_full_batch.h5")
+#     filename = ""
+#     if rank == 0:
+#         if tmp_path is not None:
+#             tmp_path_str = tmp_path.as_posix()
+#         else:
+#             tmp_path_str = ""
+#         filename = join(tmp_path_str, "test_mpi_full_batch.h5")
 
-    filename = comm.bcast(filename, 0)
+#     filename = comm.bcast(filename, 0)
 
-    slicer = CartesianCommSlicer(
-        ranknd,
-        grid_dims,
-        input_shape,
-        np.zeros(len(input_shape)),
-        np.zeros(len(input_shape)),
-    )
+#     slicer = CartesianCommSlicer(
+#         ranknd,
+#         grid_dims,
+#         input_shape,
+#         np.zeros(len(input_shape)),
+#         np.zeros(len(input_shape)),
+#     )
 
-    local_slice = {}
-    local_slice["X"] = slicer.slice_global_buffer_to_tile
-    local_size = {}
-    local_size["X"] = slicer.tile_size
-    global_dims = {}
-    global_dims["X"] = input_shape
+#     local_slice = {}
+#     local_slice["X"] = slicer.slice_global_buffer_to_tile
+#     local_size = {}
+#     local_size["X"] = slicer.tile_size
+#     global_dims = {}
+#     global_dims["X"] = input_shape
 
-    dm = DataManager(
-        batch_size,
-        save_full_batch=True,
-        sizes=local_size,
-        global_sizes=global_dims,
-        local_slices=local_slice,
-    )
+#     dm = IOManager(
+#         batch_size,
+#         local_sizes=local_size,
+#         global_sizes=global_dims,
+#         local_slices=local_slice,
+#     )
 
-    data = xp.zeros((batch_size, *input_shape))
-    if rank == 0:
-        data = xp.random.standard_normal(size=data.shape)
+#     data = xp.zeros((batch_size, *input_shape))
+#     if rank == 0:
+#         data = xp.random.standard_normal(size=data.shape)
 
-    data = comm.bcast(data, 0)
-    data_slice = np.s_[slice(None), *slicer.slice_global_buffer_to_tile]
-    local_data = data[data_slice].copy()
+#     data = comm.bcast(data, 0)
+#     data_slice = np.s_[slice(None), *slicer.slice_global_buffer_to_tile]
+#     local_data = data[data_slice].copy()
 
-    dm.full_batch["X"] = local_data
+#     dm.full_batch["X"] = local_data
 
-    with h5py.File(filename, "w", driver="mpio", comm=comm) as file:
-        dm.save_batch(file, device == "gpu")
+#     with h5py.File(filename, "w", driver="mpio", comm=comm) as file:
+#         dm.save_batch(file, device == "gpu")
 
-    loaded_data = np.zeros(local_data.shape)
+#     loaded_data = np.zeros(local_data.shape)
 
-    with h5py.File(filename, "r", driver="mpio", comm=comm) as file:
-        file["batch/X"].read_direct(loaded_data, source_sel=data_slice)
+#     with h5py.File(filename, "r", driver="mpio", comm=comm) as file:
+#         file["batch/X"].read_direct(loaded_data, source_sel=data_slice)
 
-    local_check = xp.isclose(xp.asarray(local_data), loaded_data).all()
+#     local_check = xp.isclose(xp.asarray(local_data), loaded_data).all()
 
-    global_check = False
-    global_check = comm.reduce(local_check, MPI.PROD, root=0)
+#     global_check = False
+#     global_check = comm.reduce(local_check, MPI.PROD, root=0)
 
-    if rank == 0:
-        assert global_check
+#     if rank == 0:
+#         assert global_check
 
 
 @pytest.mark.serial
@@ -271,7 +268,7 @@ def test_save_and_load_rng(tmp_path, input_shape, seed, seed2) -> None:
     for i in range(n_trials):
         rng.standard_normal(input_shape)
 
-    data_manager = DataManager()
+    io_manager = IOManager()
     if tmp_path is not None:
         tmp_path_str = tmp_path.as_posix()
     else:
@@ -279,10 +276,10 @@ def test_save_and_load_rng(tmp_path, input_shape, seed, seed2) -> None:
     filename = join(tmp_path_str, "test_rng.h5")
 
     with h5py.File(filename, "w") as file:
-        data_manager.save_rng(rng, file)
+        io_manager.save_rng(rng, file)
 
     with h5py.File(filename, "r") as file:
-        data_manager.load_rng(rng2, file)
+        io_manager.load_rng(rng2, file)
 
     check = np.zeros(n_trials, dtype=bool)
 

@@ -104,9 +104,9 @@ def device(request: pytest.FixtureRequest) -> str:
 @pytest.fixture(scope="session", autouse=True)
 def backend_setup(device: str, rank: int) -> None:
     if device == "gpu":
-        from cards.backend import bm, xp
+        import cards.backend as xp
 
-        bm.set_backend("cupy")
+        xp.set_backend("cupy")
 
         nb_gpu = xp.cuda.runtime.getDeviceCount()
         gpu_id = rank % nb_gpu

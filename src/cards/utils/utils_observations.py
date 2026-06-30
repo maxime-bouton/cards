@@ -16,7 +16,7 @@ from typing import Callable, Sequence, Sized
 import h5py
 import numpy as np
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.operators.linear_operator import LinearOperator
 from cards.utils.utils import expanded_left_view
 from cards.utils.utils_img import load_img, normalize_ndarray

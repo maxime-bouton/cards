@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from mpi4py import MPI
 
-from cards.backend import xp
-from cards.communicator.shared_communicator import SharedCommunicator
+import cards.backend as xp
+from cards.communicators.shared_communicator import SharedCommunicator
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
 from cards.operators.mpi_gradient import MpiGradient2d
 from cards.utils.utils import expand_shape_left

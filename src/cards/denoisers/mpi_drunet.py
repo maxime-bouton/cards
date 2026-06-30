@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from mpi4py import MPI
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDistributedDenoiser
 from cards.denoisers.denoiser_loader import load_pretrained_drunet
 from cards.operators.mpi_torch_convolution import MpiTorchConvolution

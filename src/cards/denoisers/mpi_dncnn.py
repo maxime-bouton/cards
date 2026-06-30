@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 from mpi4py import MPI
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDistributedDenoiser
 from cards.denoisers.denoiser_loader import load_pretrained_dncnn
 from cards.operators.mpi_torch_convolution import MpiTorchConvolution
@@ -50,7 +50,7 @@ class MpiDnCNN(BaseDistributedDenoiser):
         self.edge_mpi_conv = MpiTorchConvolution(
             image_size,
             self.dncnn.model[0].kernel_size,
-            self.dncnn.model[0].padding,  # type: ignore
+            self.dncnn.model[0].padding,
             comm,
             grid_size,
             Cout=self.dncnn.model[0].out_channels,
@@ -68,7 +68,7 @@ class MpiDnCNN(BaseDistributedDenoiser):
         self.core_mpi_conv = MpiTorchConvolution(
             core_size,
             self.dncnn.model[0].kernel_size,
-            self.dncnn.model[0].padding,  # type: ignore
+            self.dncnn.model[0].padding,
             comm,
             grid_size,
             backward=True,

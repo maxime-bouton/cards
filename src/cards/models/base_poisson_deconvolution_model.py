@@ -5,15 +5,12 @@ r"""Base class to define Poisson deconvolution models leveraging approximate dat
 from abc import abstractmethod
 from dataclasses import dataclass
 
-from cards.backend import xp
-from cards.estimator.mmse_builder import MMSEBuilder
+import cards.backend as xp
+from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
 from cards.models.base_model import BaseModel
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.transition_kernel.base_transition_kernel import (
-    BaseGpuTransitionKernel,
-    BaseTransitionKernel,
-)
+from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
 @dataclass
@@ -29,6 +26,7 @@ class PoissonDeconvolutionParameters:
 class BasePoissonDeconvolutionModel(BaseModel):
     def __init__(
         self,
+        estimators: list[BaseEstimatorBuilder],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DftConvolution | MpiDftConvolution,
         X: BaseTransitionKernel,
@@ -39,7 +37,7 @@ class BasePoissonDeconvolutionModel(BaseModel):
         self.Z1 = Z1
         self.Z2 = Z2
         self.convolution_operator = convolution_operator
-        super().__init__()
+        super().__init__(estimators)
 
         self.observations = params.observations
 
@@ -52,21 +50,8 @@ class BasePoissonDeconvolutionModel(BaseModel):
         # internal buffers
         self.convX = xp.zeros_like(self.observations)
 
-        self.estimator_builder = MMSEBuilder(
-            X.current_state.shape, dtype=X.current_state.dtype, name="X"
-        )
-
         self.set_conditionals()
 
     @abstractmethod
     def set_conditionals(self):
         pass
-
-    def aggregate_states(self):
-        self.estimator_builder.aggregate_states(self.X.current_state)
-
-    def _get_estimator_builder_states(self) -> xp.ndarray:
-        # TODO: check if this instruction is absolutely needed
-        if isinstance(self.X, BaseGpuTransitionKernel):
-            return self.estimator_builder.estimator.get()
-        return self.estimator_builder.estimator

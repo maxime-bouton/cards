@@ -14,7 +14,10 @@ import h5py
 import numpy as np
 from scipy import interpolate
 
-from cards.backend import xp
+import cards.backend as xp
+from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.ci_builder import CIBuilder
+from cards.estimators.mmse_var_builder import MMSEVarBuilder
 from cards.models.gaussian_inpainting_pnp_model import (
     DistributedGaussianInpaintingPnpModel,
     GaussianInpaintingPnpModel,
@@ -26,15 +29,15 @@ from cards.models.gaussian_inpainting_tv_model import (
     GaussianInpaintingTvParameters,
 )
 from cards.operators.masking import Masking
-from cards.sampler.base_sampler import SamplerParameters
-from cards.sampler.distributed_sampler import DistributedSampler
-from cards.sampler.gpu_sampler import GpuSampler
-from cards.sampler.multi_gpu_sampler import MultiGpuSampler
-from cards.sampler.serial_sampler import SerialSampler
-from cards.slicer.cartesian_comm_slicer import CartesianCommSlicer
-from cards.transition_kernel.gpu_pnp_ula import GpuPnpULA
-from cards.transition_kernel.gpu_psgla import GpuPSGLA
-from cards.transition_kernel.psgla import PSGLA
+from cards.samplers.base_sampler import SamplerParameters
+from cards.samplers.distributed_cpu_sampler import DistributedCpuSampler
+from cards.samplers.distributed_gpu_sampler import DistributedGpuSampler
+from cards.samplers.serial_cpu_sampler import SerialCpuSampler
+from cards.samplers.serial_gpu_sampler import SerialGpuSampler
+from cards.slicers.cartesian_comm_slicer import CartesianCommSlicer
+from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
+from cards.transition_kernels.gpu_psgla import GpuPSGLA
+from cards.transition_kernels.psgla import PSGLA
 from cards.utils.path_builder import gaussian_str, inpainting_str, obs_dir
 from cards.utils.utils import extract_subset_from_dict
 from cards.utils.utils_img import read_dtype, read_img_shape  # load_img
@@ -134,8 +137,8 @@ def generate_inpainting_observations(
         case "mpi":
             from mpi4py import MPI
 
-            from cards.communicator.mpi_utils import get_ranknd
-            from cards.slicer.cartesian_comm_slicer import CartesianCommSlicer
+            from cards.communicators.mpi_utils import get_ranknd
+            from cards.slicers.cartesian_comm_slicer import CartesianCommSlicer
 
             comm = MPI.COMM_WORLD
             rank = comm.Get_rank()
@@ -428,33 +431,29 @@ def compute_tv(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
+    estimators: list[BaseEstimatorBuilder] = [
+        MMSEVarBuilder(X),
+        CIBuilder(X, all_samples=True),
+    ]
+
     match mode:
         case "mpi":
             model = DistributedGaussianInpaintingTvModel(
-                comm,
-                np.asarray(gt_shape),
-                grid_size,
+                estimators,
                 model_params,
                 X,
                 Z,
+                comm,
+                grid_size,
+                np.asarray(gt_shape),
             )
-            match device:
-                case "cpu":
-                    sampler = DistributedSampler(comm, sampler_params, model, logger)
-                case "gpu":
-                    # TODO: revise / generalise default gpu assignment
-                    sampler = MultiGpuSampler(
-                        comm,
-                        sampler_params,
-                        model,
-                        logger,
-                        comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
-                    )
-                case _:
-                    raise ValueError(f"Unknown device: {device}")
+            Sampler = (
+                DistributedCpuSampler if device == "cpu" else DistributedGpuSampler
+            )
+            sampler = Sampler(comm, sampler_params, model, logger)
         case "serial":
-            model = GaussianInpaintingTvModel(model_params, X, Z)
-            Sampler = SerialSampler if device == "cpu" else GpuSampler
+            model = GaussianInpaintingTvModel(estimators, model_params, X, Z)
+            Sampler = SerialCpuSampler if device == "cpu" else SerialGpuSampler
             sampler = Sampler(sampler_params, model, logger)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
@@ -554,6 +553,11 @@ def compute_pnp(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
+    estimators: list[BaseEstimatorBuilder] = [
+        MMSEVarBuilder(X),
+        CIBuilder(X, all_samples=True),
+    ]
+
     match mode:
         case "mpi":
             match denoiser_params["type"]:
@@ -584,26 +588,16 @@ def compute_pnp(
                         f"Unknown denoiser type: {denoiser_params['type']}"
                     )
             model = DistributedGaussianInpaintingPnpModel(
-                comm,
-                np.asarray(gt_shape),
+                estimators,
                 model_params,
                 X,
                 denoiser,
+                np.asarray(gt_shape),
             )
-            match device:
-                case "cpu":
-                    sampler = DistributedSampler(comm, sampler_params, model, logger)
-                case "gpu":
-                    # TODO: revise / generalise default gpu assignment
-                    sampler = MultiGpuSampler(
-                        comm,
-                        sampler_params,
-                        model,
-                        logger,
-                        comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
-                    )
-                case _:
-                    raise ValueError(f"Unknown device: {device}")
+            Sampler = (
+                DistributedCpuSampler if device == "cpu" else DistributedGpuSampler
+            )
+            sampler = Sampler(comm, sampler_params, model, logger)
         case "serial":
             match denoiser_params["type"]:
                 case "ddfb":
@@ -626,8 +620,8 @@ def compute_pnp(
                     raise ValueError(
                         f"Unknown denoiser type: {denoiser_params['type']}"
                     )
-            model = GaussianInpaintingPnpModel(model_params, X, denoiser)
-            Sampler = SerialSampler if device == "cpu" else GpuSampler
+            model = GaussianInpaintingPnpModel(estimators, model_params, X, denoiser)
+            Sampler = SerialCpuSampler if device == "cpu" else SerialGpuSampler
             sampler = Sampler(sampler_params, model, logger)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")

@@ -1,4 +1,4 @@
-"""Utility functions to create and format logger outputs."""
+r"""Utility functions to create and format logger outputs."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
@@ -107,7 +107,6 @@ class ProgressBar:
         percent = min(current / self.total, 1.0)
         filled = int(self.bar_len * percent)
         bar = "█" * filled + "░" * (self.bar_len - filled)
-
         pbar_line = f"{self.desc} |{bar}| {current}/{self.total} [{percent:>4.0%}]\n"
 
         sys.stdout.write(pbar_line)

@@ -3,7 +3,7 @@ r"""Abstract base class for denoiser networks."""
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from cards.backend import xp
+import cards.backend as xp
 
 
 class BaseDenoiser(ABC):

@@ -13,7 +13,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from cards.backend import xp
+import cards.backend as xp
+from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
 from cards.functionals.prox import l21_norm, prox_l21norm, prox_nonegativity
 from cards.models.base_gaussian_deconvolution_model import (
     BaseGaussianDeconvolutionModel,
@@ -24,8 +25,8 @@ from cards.operators.dft_convolution import DftConvolution
 from cards.operators.gradient import Gradient2d
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
 from cards.operators.mpi_gradient import MpiGradient2d
-from cards.transition_kernel.gpu_psgla import GpuPSGLA
-from cards.transition_kernel.psgla import PSGLA
+from cards.transition_kernels.gpu_psgla import GpuPSGLA
+from cards.transition_kernels.psgla import PSGLA
 
 
 @dataclass
@@ -36,6 +37,7 @@ class GaussianDeconvolutionTvParams(GaussianDeconvolutionParams):
 class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
     def __init__(
         self,
+        estimators: list[BaseEstimatorBuilder],
         params: GaussianDeconvolutionTvParams,
         convolution_operator: DftConvolution | MpiDftConvolution,
         gradient_operator: Gradient2d | MpiGradient2d,
@@ -47,7 +49,7 @@ class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         self.Z = Z
         self.split_coeff = params.split_coeff
         self.gradX = xp.zeros_like(X.current_state)
-        super().__init__(params, convolution_operator, X)
+        super().__init__(estimators, params, convolution_operator, X)
 
     def set_conditionals(self):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
@@ -78,11 +80,7 @@ class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         dict
             Dictionary containing the curent states of the variables.
         """
-        return {
-            "X": self.X.get_state(),
-            "Z": self.Z.get_state(),
-            "MMSE": self._get_estimator_builder_states(),
-        }
+        return {"X": self.X.get_state(), "Z": self.Z.get_state()}
 
     def set_states(self, states):
         """Read the dictionary given in entry and set the variables of the model to the values contained in it.
@@ -134,17 +132,22 @@ class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
 class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionTvModel):
     def __init__(
         self,
-        convolution_operator: DftConvolution,
+        estimators: list[BaseEstimatorBuilder],
         params: GaussianDeconvolutionTvParams,
+        convolution_operator: DftConvolution,
         X: PSGLA | GpuPSGLA,
         Z: PSGLA | GpuPSGLA,
     ):
         gradient_operator = Gradient2d(np.asarray(X.current_state.shape))
-        # self.convolution_operator = DftConvolution(
-        #     np.asarray(X.current_state.shape), params.kernel, params.observations.shape
-        # )
 
-        super().__init__(params, convolution_operator, gradient_operator, X, Z)
+        super().__init__(
+            estimators,
+            params,
+            convolution_operator,
+            gradient_operator,
+            X,
+            Z,
+        )
 
 
 class DistributedGaussianDeconvolutionTvModel(
@@ -153,8 +156,9 @@ class DistributedGaussianDeconvolutionTvModel(
 ):
     def __init__(
         self,
-        convolution_operator: MpiDftConvolution,
+        estimators: list[BaseEstimatorBuilder],
         params: GaussianDeconvolutionTvParams,
+        convolution_operator: MpiDftConvolution,
         X: PSGLA | GpuPSGLA,
         Z: PSGLA | GpuPSGLA,
     ):
@@ -165,13 +169,15 @@ class DistributedGaussianDeconvolutionTvModel(
             convolution_operator.grid_size,
             convolution_operator.comm,
         )
-        # convolution_operator = MpiDftConvolution(
-        #     self.full_size,
-        #     params.kernel,
-        #     self.comm,
-        #     grid_size,
-        # )
-        super().__init__(params, convolution_operator, gradient_operator, X, Z)
+
+        super().__init__(
+            estimators,
+            params,
+            convolution_operator,
+            gradient_operator,
+            X,
+            Z,
+        )
 
     def set_slices(self):
         """Describes which portion of the global buffer the current thread must handle."""
@@ -182,17 +188,12 @@ class DistributedGaussianDeconvolutionTvModel(
             np.s_[:],
             *self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile,
         )
-        self.slices["MMSE"] = (
-            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
-        )
 
     def set_global_sizes(self):
         """Describe the global sizes of several global buffers."""
         self.global_sizes["X"] = np.asarray(self.full_size, dtype=int)
         self.global_sizes["Z"] = np.asarray([2, *self.full_size], dtype=int)
-        self.global_sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
 
     def set_local_sizes(self):
         self.local_sizes["X"] = self.X.current_state.shape
         self.local_sizes["Z"] = self.Z.current_state.shape
-        self.local_sizes["MMSE"] = self.X.current_state.shape

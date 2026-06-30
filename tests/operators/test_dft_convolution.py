@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from mpi4py import MPI
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
 from cards.utils.utils import expand_shape_left

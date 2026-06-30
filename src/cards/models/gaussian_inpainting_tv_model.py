@@ -15,7 +15,8 @@ from dataclasses import dataclass
 import numpy as np
 from mpi4py import MPI
 
-from cards.backend import xp
+import cards.backend as xp
+from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
 from cards.functionals.prox import l21_norm, prox_l21norm, prox_nonegativity
 from cards.models.base_gaussian_inpainting_model import (
     BaseGaussianInpaintingModel,
@@ -24,11 +25,9 @@ from cards.models.base_gaussian_inpainting_model import (
 from cards.models.base_model import BaseDistributedModel
 from cards.operators.gradient import Gradient2d
 from cards.operators.mpi_gradient import MpiGradient2d
-from cards.transition_kernel.base_transition_kernel import (
-    BaseTransitionKernel,
-)
-from cards.transition_kernel.gpu_psgla import GpuPSGLA
-from cards.transition_kernel.psgla import PSGLA
+from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
+from cards.transition_kernels.gpu_psgla import GpuPSGLA
+from cards.transition_kernels.psgla import PSGLA
 
 
 @dataclass
@@ -41,6 +40,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
 
     def __init__(
         self,
+        estimators: list[BaseEstimatorBuilder],
         params: GaussianInpaintingTvParameters,
         X: BaseTransitionKernel,
         Z: BaseTransitionKernel,
@@ -48,7 +48,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
         self.Z = Z
         self.split_coeff = params.split_coeff
         self.gradX = xp.zeros_like(X.current_state)
-        super().__init__(params, X)
+        super().__init__(estimators, params, X)
 
     def set_conditionals(self) -> None:
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
@@ -78,11 +78,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
         dict
             Dictionary containing the curent states of the variables.
         """
-        return {
-            "X": self.X.get_state(),
-            "Z": self.Z.get_state(),
-            "MMSE": self._get_estimator_builder_states(),
-        }
+        return {"X": self.X.get_state(), "Z": self.Z.get_state()}
 
     def set_states(self, states: dict) -> None:
         """set_states
@@ -129,13 +125,14 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
 class GaussianInpaintingTvModel(BaseGaussianInpaintingTvModel):
     def __init__(
         self,
+        estimators: list[BaseEstimatorBuilder],
         params: GaussianInpaintingTvParameters,
         X: BaseTransitionKernel,
         Z: BaseTransitionKernel,
     ):
         self.gradient_operator = Gradient2d(np.array([*X.current_state.shape]))
 
-        super().__init__(params, X, Z)
+        super().__init__(estimators, params, X, Z)
 
 
 class DistributedGaussianInpaintingTvModel(
@@ -144,18 +141,19 @@ class DistributedGaussianInpaintingTvModel(
 ):
     def __init__(
         self,
-        comm: MPI.Comm,
-        full_size: np.ndarray,
-        grid_size: np.ndarray,
+        estimators: list[BaseEstimatorBuilder],
         params: GaussianInpaintingTvParameters,
         X: BaseTransitionKernel,
         Z: BaseTransitionKernel,
+        comm: MPI.Comm,
+        grid_size: np.ndarray,
+        full_size: np.ndarray,
     ):
         self.comm = comm
         self.full_size = full_size
 
         self.gradient_operator = MpiGradient2d(self.full_size, grid_size, self.comm)
-        super().__init__(params, X, Z)
+        super().__init__(estimators, params, X, Z)
 
     def set_slices(self):
         """set_slices Describes which portion of the global buffer the current thread must handle.
@@ -172,9 +170,6 @@ class DistributedGaussianInpaintingTvModel(
             np.s_[:],
             *self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile,
         )
-        self.slices["MMSE"] = (
-            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
-        )
 
     def set_global_sizes(self):
         """Describe the global sizes of several global buffers.
@@ -186,9 +181,7 @@ class DistributedGaussianInpaintingTvModel(
         """
         self.global_sizes["X"] = np.asarray(self.full_size, dtype=int)
         self.global_sizes["Z"] = np.asarray([2, *self.full_size], dtype=int)
-        self.global_sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
 
     def set_local_sizes(self):
         self.local_sizes["X"] = self.X.current_state.shape
         self.local_sizes["Z"] = self.Z.current_state.shape
-        self.local_sizes["MMSE"] = self.X.current_state.shape

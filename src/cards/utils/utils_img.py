@@ -12,7 +12,7 @@ import h5py
 import numpy as np
 from PIL import Image
 
-from cards.backend import xp
+import cards.backend as xp
 
 
 def load_img(

@@ -5,8 +5,8 @@ The computations can be done either on CPU or GPU depending on the settings.
 import numpy as np
 from mpi4py import MPI
 
-import cards.communicator.sync_cartesian_communicator as comms
-from cards.backend import xp
+import cards.backend as xp
+import cards.communicators.sync_cartesian_communicator as comms
 from cards.operators.linear_operator import LinearOperator
 
 

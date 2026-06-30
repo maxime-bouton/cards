@@ -7,8 +7,8 @@ The computations can be done either on CPU or GPU depending on the settings.
 import numpy as np
 from mpi4py import MPI
 
-from cards.backend import xp
-from cards.communicator.sync_cartesian_communicator import SyncCartesianCommunicator
+import cards.backend as xp
+from cards.communicators.sync_cartesian_communicator import SyncCartesianCommunicator
 
 
 class MpiGradient2d:

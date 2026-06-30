@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import torch
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.operators.mpi_torch_convolution import MpiTorchConvolution
 from cards.utils.utils import torch2xp, xp2torch
 

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from mpi4py import MPI
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.operators.gradient import Gradient2d
 from cards.operators.mpi_gradient import MpiGradient2d
 

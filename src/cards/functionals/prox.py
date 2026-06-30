@@ -1,6 +1,6 @@
 """Implementation of useful mathematical functions such as simple proximal operators._"""
 
-from cards.backend import xp
+import cards.backend as xp
 
 
 def prox_nonegativity(x):

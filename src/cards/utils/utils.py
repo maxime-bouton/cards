@@ -12,7 +12,7 @@ from typing import Any, Sequence
 
 import torch
 
-from cards.backend import xp
+import cards.backend as xp
 
 
 def extract_subset_from_dict(d: dict[str, Any], keys: Sequence[str]) -> dict[str, Any]:

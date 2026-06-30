@@ -13,13 +13,13 @@ import numpy as np
 import pytest
 from mpi4py.MPI import PROC_NULL
 
-import cards.communicator.sync_cartesian_communicator as sync_cart_comm
-from cards.slicer.cartesian_comm_slicer import (
+import cards.communicators.sync_cartesian_communicator as sync_cart_comm
+from cards.slicers.cartesian_comm_slicer import (
     CartesianCommSlicer,
     compute_local_buffer_size,
     # create_slice_async_send_recv,
 )
-from cards.slicer.cartesian_tessellation import local_split_range_nd
+from cards.slicers.cartesian_tessellation import local_split_range_nd
 
 
 @pytest.fixture

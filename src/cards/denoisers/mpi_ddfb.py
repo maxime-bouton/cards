@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 from mpi4py import MPI
 
-from cards.backend import xp
+import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDistributedDenoiser
 from cards.denoisers.ddfb.network_ddfb import DFBLayer
 from cards.denoisers.denoiser_loader import load_pretrained_ddfb

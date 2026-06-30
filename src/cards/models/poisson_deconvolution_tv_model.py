@@ -10,7 +10,8 @@ r"""Implementation of a Poisson deconvolution model using a TV prior to reproduc
 
 import numpy as np
 
-from cards.backend import xp
+import cards.backend as xp
+from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
 from cards.functionals.prox import (
     KL,
     l21_norm,
@@ -27,16 +28,15 @@ from cards.operators.dft_convolution import DftConvolution
 from cards.operators.gradient import Gradient2d
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
 from cards.operators.mpi_gradient import MpiGradient2d
-from cards.transition_kernel.base_transition_kernel import (
-    BaseTransitionKernel,
-)
-from cards.transition_kernel.gpu_psgla import GpuPSGLA
-from cards.transition_kernel.psgla import PSGLA
+from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
+from cards.transition_kernels.gpu_psgla import GpuPSGLA
+from cards.transition_kernels.psgla import PSGLA
 
 
 class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
     def __init__(
         self,
+        estimators: list[BaseEstimatorBuilder],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DftConvolution | MpiDftConvolution,
         gradient_operator: Gradient2d | MpiGradient2d,
@@ -47,7 +47,7 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
         self.gradient_operator = gradient_operator
 
         self.gradX = xp.zeros_like(X.current_state)
-        super().__init__(params, convolution_operator, X, Z1, Z2)
+        super().__init__(estimators, params, convolution_operator, X, Z1, Z2)
 
     def set_conditionals(self) -> None:
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
@@ -95,7 +95,6 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
             "X": self.X.get_state(),
             "Z1": self.Z1.get_state(),
             "Z2": self.Z2.get_state(),
-            "MMSE": self._get_estimator_builder_states(),
         }
 
     def set_states(self, states: dict) -> None:
@@ -151,18 +150,24 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
 class PoissonDeconvolutionTvModel(BasePoissonDeconvolutionTvModel):
     def __init__(
         self,
-        convolution_operator: DftConvolution,
+        estimators: list[BaseEstimatorBuilder],
         params: PoissonDeconvolutionParameters,
+        convolution_operator: DftConvolution,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
     ):
         gradient_operator = Gradient2d(np.array([*X.current_state.shape]))
-        # self.convolution_operator = DftConvolution(
-        #     np.asarray(X.current_state.shape), params.kernel, params.observations.shape
-        # )
 
-        super().__init__(params, convolution_operator, gradient_operator, X, Z1, Z2)
+        super().__init__(
+            estimators,
+            params,
+            convolution_operator,
+            gradient_operator,
+            X,
+            Z1,
+            Z2,
+        )
 
 
 class DistributedPoissonDeconvolutionTvModel(
@@ -171,8 +176,9 @@ class DistributedPoissonDeconvolutionTvModel(
 ):
     def __init__(
         self,
-        convolution_operator: MpiDftConvolution,
+        estimators: list[BaseEstimatorBuilder],
         params: PoissonDeconvolutionParameters,
+        convolution_operator: MpiDftConvolution,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
@@ -184,13 +190,16 @@ class DistributedPoissonDeconvolutionTvModel(
             convolution_operator.grid_size,
             convolution_operator.comm,
         )
-        # self.convolution_operator = MpiDftConvolution(
-        #     self.full_size,
-        #     params.kernel,
-        #     self.comm,
-        #     grid_size,
-        # )
-        super().__init__(params, convolution_operator, gradient_operator, X, Z1, Z2)
+
+        super().__init__(
+            estimators,
+            params,
+            convolution_operator,
+            gradient_operator,
+            X,
+            Z1,
+            Z2,
+        )
 
     def set_slices(self):
         """set_slices Describes which portion of the global buffer the current thread must handle.
@@ -210,9 +219,6 @@ class DistributedPoissonDeconvolutionTvModel(
             np.s_[:],
             *self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile,
         )
-        self.slices["MMSE"] = (
-            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
-        )
 
     def set_global_sizes(self):
         """set_global_sizes Describe the gobla sizes of several global buffers.
@@ -228,10 +234,8 @@ class DistributedPoissonDeconvolutionTvModel(
             dtype=int,
         )
         self.global_sizes["Z2"] = np.asarray([2, *self.full_size], dtype=int)
-        self.global_sizes["MMSE"] = np.asarray(self.full_size, dtype=int)
 
     def set_local_sizes(self):
         self.local_sizes["X"] = self.X.current_state.shape
         self.local_sizes["Z1"] = self.Z1.current_state.shape
         self.local_sizes["Z2"] = self.Z2.current_state.shape
-        self.local_sizes["MMSE"] = self.X.current_state.shape

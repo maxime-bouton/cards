@@ -17,10 +17,10 @@ from typing import Callable  # NoReturn
 
 import torch
 
-from cards.backend import bm
+import cards.backend as xp
+from cards.analysis.core import analyze_data
 from cards.logger import build_logger
-from cards.post_process.post_processing import analyze_data
-from cards.sampler.base_sampler import SamplerParameters
+from cards.samplers.base_sampler import SamplerParameters
 from cards.utils.path_builder import (
     generate_obs_dir_path,
     generate_save_dir_path,
@@ -33,11 +33,9 @@ def create_sampler_params(params: dict) -> SamplerParameters:
     sampler_params = SamplerParameters(
         params["checkpoint_size"],
         params["n_checkpoint"],
-        params["seed"],
-        "sample",
         params["save_path"],
-        params["save_all"],
-        params["compute_ci"],
+        "checkpoint_",
+        params["seed"],
         params["reloaded_checkpoint"],
         params.get("reloaded_path", ""),
     )
@@ -174,16 +172,16 @@ def run_main(
         log_file = "sampling.log"
 
     if gpu:
-        bm.set_backend("cupy")
+        xp.set_backend("cupy")
         # TODO: modify instruction to allow multiple MPI proceses to use the same GPU
-        gpu = bm.xp.cuda.Device(rank % bm.xp.cuda.runtime.getDeviceCount())
+        gpu = xp.xp.cuda.Device(rank % xp.xp.cuda.runtime.getDeviceCount())
         gpu.use()
 
         torch.cuda.set_device(gpu.id)
         torch.set_default_device("cuda")
         torch.backends.cudnn.deterministic = True
     else:
-        bm.set_backend("numpy")
+        xp.set_backend("numpy")
         torch.set_default_device("cpu")
 
     paths = build_paths(params, *build_obs_and_model_paths_fn(params), mode_str)

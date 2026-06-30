@@ -14,7 +14,9 @@ from pathlib import Path
 import h5py
 import numpy as np
 
-from cards.backend import xp
+import cards.backend as xp
+from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.mmse_var_builder import MMSEVarBuilder
 from cards.models.base_poisson_deconvolution_model import (
     PoissonDeconvolutionParameters,
 )
@@ -28,14 +30,14 @@ from cards.models.poisson_deconvolution_tv_model import (
 )
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.sampler.base_sampler import SamplerParameters
-from cards.sampler.distributed_sampler import DistributedSampler
-from cards.sampler.gpu_sampler import GpuSampler
-from cards.sampler.multi_gpu_sampler import MultiGpuSampler
-from cards.sampler.serial_sampler import SerialSampler
-from cards.transition_kernel.gpu_pnp_ula import GpuPnpULA
-from cards.transition_kernel.gpu_psgla import GpuPSGLA
-from cards.transition_kernel.psgla import PSGLA
+from cards.samplers.base_sampler import SamplerParameters
+from cards.samplers.distributed_cpu_sampler import DistributedCpuSampler
+from cards.samplers.distributed_gpu_sampler import DistributedGpuSampler
+from cards.samplers.serial_cpu_sampler import SerialCpuSampler
+from cards.samplers.serial_gpu_sampler import SerialGpuSampler
+from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
+from cards.transition_kernels.gpu_psgla import GpuPSGLA
+from cards.transition_kernels.psgla import PSGLA
 from cards.utils.path_builder import (
     deconvolution_str,
     obs_dir,
@@ -415,30 +417,26 @@ def compute_tv(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
+    estimators: list[BaseEstimatorBuilder] = [MMSEVarBuilder(X)]
+
     match mode:
         case "mpi":
             model = DistributedPoissonDeconvolutionTvModel(
-                op,
+                estimators,
                 model_params,
+                op,
                 X,
                 Z1,
                 Z2,
             )
 
-            if device == "cpu":
-                sampler = DistributedSampler(comm, sampler_params, model, logger)
-            else:
-                # TODO: revise / generalise default gpu assignment
-                sampler = MultiGpuSampler(
-                    comm,
-                    sampler_params,
-                    model,
-                    logger,
-                    gpu_id=comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
-                )
+            Sampler = (
+                DistributedCpuSampler if device == "cpu" else DistributedGpuSampler
+            )
+            sampler = Sampler(comm, sampler_params, model, logger)
         case "serial":
-            model = PoissonDeconvolutionTvModel(op, model_params, X, Z1, Z2)
-            Sampler = SerialSampler if device == "cpu" else GpuSampler
+            model = PoissonDeconvolutionTvModel(estimators, model_params, op, X, Z1, Z2)
+            Sampler = SerialCpuSampler if device == "cpu" else SerialGpuSampler
             sampler = Sampler(sampler_params, model, logger)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
@@ -584,9 +582,12 @@ def compute_pnp(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
+    estimators: list[BaseEstimatorBuilder] = [MMSEVarBuilder(X)]
+
     match mode:
         case "mpi":
             model = DistributedPoissonDeconvolutionPnpModel(
+                estimators,
                 op,
                 model_params,
                 X,
@@ -594,20 +595,22 @@ def compute_pnp(
                 Z2,
                 denoiser,
             )
-            if device == "cpu":
-                sampler = DistributedSampler(comm, sampler_params, model, logger)
-            else:
-                # TODO: revise / generalise default gpu assignment
-                sampler = MultiGpuSampler(
-                    comm,
-                    sampler_params,
-                    model,
-                    logger,
-                    comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
-                )
+
+            Sampler = (
+                DistributedCpuSampler if device == "cpu" else DistributedGpuSampler
+            )
+            sampler = Sampler(comm, sampler_params, model, logger)
         case "serial":
-            model = PoissonDeconvolutionPnpModel(op, model_params, X, Z1, Z2, denoiser)
-            Sampler = SerialSampler if device == "cpu" else GpuSampler
+            model = PoissonDeconvolutionPnpModel(
+                estimators,
+                model_params,
+                op,
+                X,
+                Z1,
+                Z2,
+                denoiser,
+            )
+            Sampler = SerialCpuSampler if device == "cpu" else SerialGpuSampler
             sampler = Sampler(sampler_params, model, logger)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
