@@ -77,7 +77,7 @@ pre-commit = ">=4.6.0,<5"
 conda-build = ">=26.5.0,<27"
 anaconda-client = ">=1.14.1,<2"
 ruff = ">=0.15.20,<0.16"
-ty = ">=0.0.54,<0.0.55"
+ty = ">=0.0.55,<0.0.56"
 
 [tool.pixi.package]
 name = { workspace = true }
@@ -125,4 +125,14 @@ testpaths = ["tests"]
 
 # tasks
 [tool.pixi.tasks]
-doc = { cmd = "sphinx-autobuild doc doc/_build/html --watch src", default-environment = "full" }
+doc = { cmd = "rm -rf doc/_build doc/api && sphinx-autobuild doc doc/_build/html --watch src", default-environment = "full" }
+tests = { cmd = """
+pytest tests
+pytest tests --device gpu
+mpirun -np 2 pytest tests --mode mpi
+mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 pytest tests --mode mpi --device gpu
+""", default-environment = "full" }
+tests_cpu = { cmd = """
+pytest tests
+mpirun -np 2 pytest tests --mode mpi
+""", default-environment = "test" }
