@@ -10,8 +10,8 @@ r"""Abstract GPU implementation of the Plug-and-Play Unadjusted Langevin
 
 import torch
 
-from cards.backend import xp
-from cards.transition_kernel.base_transition_kernel import BaseGpuTransitionKernel
+import cards.backend as xp
+from cards.transition_kernels.base_transition_kernel import BaseGpuTransitionKernel
 
 
 class GpuPnpULA(BaseGpuTransitionKernel):

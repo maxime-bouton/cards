@@ -12,8 +12,8 @@ from typing import Optional
 
 import torch
 
-from cards.backend import xp
-from cards.transition_kernel.base_transition_kernel import BaseGpuTransitionKernel
+import cards.backend as xp
+from cards.transition_kernels.base_transition_kernel import BaseGpuTransitionKernel
 
 
 class GpuPnpSGLA(BaseGpuTransitionKernel):

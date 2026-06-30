@@ -1,4 +1,4 @@
-r"""Abstract CPU implementation for the Proximal Stochastic Gradient Langevin
+r"""Abstract GPU implementation of the Proximal Stochastic Gradient Langevin
 Algorithm (PSGLA) :cite:p:`Salim2020`.
 """
 
@@ -7,19 +7,17 @@ Algorithm (PSGLA) :cite:p:`Salim2020`.
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
 # Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
-#
-# adpated from: https://gitlab.cristal.univ-lille.fr/pthouven/dsgs
-
-# TODO: fuse with GpuPSGLA if possible
 
 from typing import Optional
 
-from cards.backend import xp
-from cards.transition_kernel.base_transition_kernel import BaseTransitionKernel
+import torch
+
+import cards.backend as xp
+from cards.transition_kernels.base_transition_kernel import BaseGpuTransitionKernel
 
 
-class PSGLA(BaseTransitionKernel):
-    r"""Abstract CPU implementation of the Proximal Stochastic Gradient Langevin
+class GpuPSGLA(BaseGpuTransitionKernel):
+    r"""Generic GPU implementation of the Proximal Stochastic Gradient Langevin
     Algorithm (PSGLA) :cite:p:`Salim2020`, with target distribution
 
     .. math::
@@ -42,7 +40,7 @@ class PSGLA(BaseTransitionKernel):
         dtype: Optional[xp.dtype] = None,
         initial_value: Optional[xp.ndarray] = None,
     ) -> None:
-        r"""PSGLA constructor.
+        r"""Constructor of the GpuPSGLA class.
 
         Parameters
         ----------
@@ -52,12 +50,10 @@ class PSGLA(BaseTransitionKernel):
             Step-size value used in the transition.
         dtype : cards.backend.xp.dtype | None, optional
             Parameter type, by default None.
-        initial_value: cards.backend.xp.ndarray | None, optional
+        initial_value : cards.backend.xp.ndarray | None, optional
             Initial state value, by default None.
         """
-        super(PSGLA, self).__init__(
-            state_shape, dtype=dtype, initial_value=initial_value
-        )
+        super().__init__(state_shape, dtype=dtype, initial_value=initial_value)
         self.step_size = step_size
 
     # NOTE: prox and grad should be defined by the user
@@ -75,10 +71,21 @@ class PSGLA(BaseTransitionKernel):
         """
         raise ValueError("Gradient function not defined.")
 
-    def mc_step(self, rng: xp.random.Generator) -> None:
+    def mc_step(self, rng: torch.Generator) -> None:
         self.current_state = self.prox(
             self.current_state
             + (2 * self.step_size) ** 0.5
-            * rng.standard_normal(self.current_state.shape, dtype=self.dtype)
+            * xp.from_dlpack(
+                torch.normal(
+                    mean=0,
+                    std=1,
+                    size=self.current_state.shape,
+                    generator=rng,
+                    device=rng.device,
+                )
+                # TODO: proper dtype handling in the torch.normal call
+                # https://docs.pytorch.org/docs/stable/generated/torch.set_default_dtype.html#torch.set_default_dtype
+                # dtype=self.current_state.dtype,
+            )
             - self.step_size * self.grad(self.current_state)
         )

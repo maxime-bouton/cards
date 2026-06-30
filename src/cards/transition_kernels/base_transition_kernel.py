@@ -9,7 +9,7 @@ r"""Abstract class to implement probability transition kernels."""
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from cards.backend import xp
+import cards.backend as xp
 
 
 class BaseTransitionKernel(ABC):
