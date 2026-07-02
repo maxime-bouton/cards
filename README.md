@@ -80,6 +80,18 @@ Detailed examples provided in this repository focus on the resolution of high-di
 # https://huggingface.co/deepinv/drunet/tree/main
 # https://huggingface.co/deepinv/dncnn/tree/main -->
 
+
+## Example usage
+
+To run some examples, use the following instructions:
+
+```bash
+cd examples
+python launcher.py --run
+```
+
+The settings variables of `examples/launcher.py` can be commented in/out to run different subsets of experiments.
+
 ## Contributing
 
 Short guidelines on conventions adopted to set-up, test and document the library are detailed below.
@@ -103,18 +115,6 @@ pixi install --environment full
 pixi shell --environment full
 # eval "$(pixi shell-hook --environment full)"
 ```
-
-- Provided examples can be run as follows
-
-```bash
-pixi shell -e full
-cd examples/gaussian_deconvolution
-python -m main --config config_2048_tv.json --mode serial --device cpu
-# mpirun -n 2 python -m mpi4py main.py --config config.json --mode mpi --device cpu
-python -m main --config config_2048_pnp.json --mode serial --device gpu
-# mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py main.py --config config_2048_pnp.json --mode mpi --device gpu
-```
-
 </details>
 
 <details>
@@ -123,7 +123,7 @@ python -m main --config config_2048_pnp.json --mode serial --device gpu
 
 ### Testing
 
-Before any commit or pull request to the master branch, verify all tests pass under the different configuration considered (serial and distirbuted mode, running on CPU or GPU). See [`tests/conftest.py`](tests/conftestpy) for further details.
+Before any commit or pull request to the master branch, verify all tests pass under the different configuration considered (serial and distributed mode, running on CPU or GPU). See [`tests/conftest.py`](tests/conftest.py) for further details.
 
 ```bash
 pixi shell -e full
@@ -141,33 +141,33 @@ python -m pytest --mode serial --device cpu
 python -m pytest --mode serial --device gpu
 
 # running all MPI tests on CPU
-mpiexec -n 2 python -m mpi4py -m pytest --mode mpi --device cpu
+mpirun -n 2 pytest --mode mpi --device cpu
 
 # running all MPI tests on GPU
-mpiexec -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m pytest --mode mpi --device gpu
+mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -n 2 pytest --mode mpi --device gpu
 ```
 
 </details>
 
+## Citation
+
+If you use this code or rely on our methodology in your research, please cite our paper:
+
+> M. Bouton, P.-A. Thouvenin, A. Repetti, and P. Chainais, "A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems," *IEEE Transactions on Computational Imaging*, vol. 12, pp. 839-849, 2026. [DOI: 10.1109/TCI.2026.3685151](https://doi.org/10.1109/TCI.2026.3685151).
+
+```bibtex
+@ARTICLE{11482855,
+  author={Bouton, Maxime and Thouvenin, Pierre-Antoine and Repetti, Audrey and Chainais, Pierre},
+  journal={IEEE Transactions on Computational Imaging},
+  title={A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems},
+  year={2026},
+  volume={12},
+  number={},
+  pages={839-849},
+  doi={10.1109/TCI.2026.3685151}
+}
+```
+
 ## License
 
 The project is licensed under the [GPL-3.0 license](LICENSE).
-
-## Citation
-
-If you reuse this code, please cite the [associated paper](<>).
-
-```bib
-@article{Bouton2026,
-  arxivid      = {2511.00870},
-  author       = {Maxime Bouton and Pierre-Antoine Thouvenin and Audrey Repetti and Pierre Chainais},
-  code         = {https://github.com/maxime-bouton/cards},
-  date         = {2026-04},
-  eprinttype   = {arxiv},
-  journaltitle = {{IEEE Trans. Comput. Imag.}},
-  month        = apr,
-  note         = {to appear},
-  title        = {A Distributed {P}lug-and-{P}lay {MCMC} Algorithm for High-Dimensional Inverse Problems},
-  url          = {https://hal.science/hal-05326314},
-}
-```
