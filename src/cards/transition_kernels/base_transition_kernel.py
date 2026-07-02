@@ -63,6 +63,7 @@ class BaseTransitionKernel(ABC):
         return self.current_state
 
 
+# TODO (minor): delegate .get to io_manager
 class BaseGpuTransitionKernel(BaseTransitionKernel):
     def get_state(self) -> xp.ndarray | None:
         r"""Return current state of the parameter."""

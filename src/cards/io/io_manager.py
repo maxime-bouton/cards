@@ -109,7 +109,6 @@ class IOManager:
         the ``h5py`` flag ``driver="mpio"``).
         """
         for key in data:
-            print(key, global_sizes, slices)
             var = key.split("_")[0]
             if global_sizes is None:
                 buffer_size = data[key].shape

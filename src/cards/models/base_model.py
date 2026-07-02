@@ -162,7 +162,7 @@ class BaseDistributedModel(BaseModel):
     and local memory buffers.
 
     .. warning::
-        Inheriting classes **must** call :meth:`super().__init__(estimators)` at the
+        Inheriting classes **must** call :meth:`super().__init__` at the
         very end of their own :meth:`__init__` method.
 
         The parent constructor automatically calls the abstract setup methods

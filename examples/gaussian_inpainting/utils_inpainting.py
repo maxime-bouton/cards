@@ -90,7 +90,7 @@ def interpolate_masked_image_cubic(
             continue
 
         # TODO: simplify below, channel_cpu and mask_cpu should not be needed
-        if xp.__name__ == "cupy":
+        if xp.get_backend() == "cupy":
             channel_cpu = channel_gpu.get()
             mask_cpu = mask_gpu.get()
         else:
@@ -555,7 +555,7 @@ def compute_pnp(
 
     estimators: list[BaseEstimatorBuilder] = [
         MMSEVarBuilder(X),
-        CIBuilder(X, all_samples=True),
+        CIBuilder(X, all_samples=False),
     ]
 
     match mode:

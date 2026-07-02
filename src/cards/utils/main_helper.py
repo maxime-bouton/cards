@@ -174,7 +174,7 @@ def run_main(
     if gpu:
         xp.set_backend("cupy")
         # TODO: modify instruction to allow multiple MPI proceses to use the same GPU
-        gpu = xp.xp.cuda.Device(rank % xp.xp.cuda.runtime.getDeviceCount())
+        gpu = xp.cuda.Device(rank % xp.cuda.runtime.getDeviceCount())
         gpu.use()
 
         torch.cuda.set_device(gpu.id)

@@ -52,6 +52,11 @@ if TYPE_CHECKING:
 _xp = importlib.import_module("numpy")
 
 
+def get_backend() -> str:
+    r"""Return the name of the currently active backend ('numpy' or 'cupy')."""
+    return _xp.__name__
+
+
 def set_backend(new_backend: str) -> None:
     r"""Globally switch the backend engine for the entire library.
 
