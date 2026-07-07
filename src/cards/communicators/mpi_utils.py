@@ -1,4 +1,9 @@
-"""Utility functions to creating MPI subarray datatypes."""
+r"""Utility functions to create MPI subarray datatypes.
+
+This package module provides elementary functionalities to create and
+deallocate MPI datatype underlying communications over Cartesian grids of
+workers in arbitray dimensions.
+"""
 
 # author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
 
@@ -34,8 +39,7 @@ def mpi_create_subarray_type(
     comm_subsizes,
     dtype=np.float64,
 ):
-    r"""Source, destination types and ranks to update facet borders (for
-    `double` format data).
+    r"""Source, destination types and ranks to update facet borders.
 
     Set-up destination and source data types and process ranks to communicate
     facet borders within an nD Cartesian communicator. Diagonal communications

@@ -1,5 +1,7 @@
-"""Abstract communicator class to exchange sub-arrays within a Cartesian grid
-of processes with an arbitrary number of axes."""
+r"""Abstract communicator class to exchange sub-arrays within a Cartesian grid
+of processes with an arbitrary number of axes.
+The class underlies all the computations conducted within the distributed operators implemented in :mod:`~card`.operators`.
+"""
 
 # author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
 
@@ -14,8 +16,7 @@ from cards.slicers.cartesian_comm_slicer import CartesianCommSlicer
 
 
 class BaseCartesianCommunicator(ABC):
-    r"""Base communicator object underlying the distributed operations
-    leveraged within the samplers.
+    r"""Abstract communicator class to exchange sub-arrays within a Cartesian grid of processes with an arbitrary number of axes.
 
     Attributes
     ----------

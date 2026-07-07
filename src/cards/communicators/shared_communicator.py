@@ -1,4 +1,6 @@
-"Class that mutualize communication on a shared buffer for linear operator (direct operation only)"
+r"""Class triggering communications over a Cartesian pattern shared by a collection of distributed operators.
+Entries are received once on a single shared buffer, from which each operator retrieves the required entries for distributed computations.
+"""
 
 # TODO: add comments and documentation
 
