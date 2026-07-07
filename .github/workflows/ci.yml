@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  cpu-tests:
+    runs-on: ubuntu-latest
+
+    # using a matrix runs both serial and mpi tests in parallel
+    strategy:
+      fail-fast: false # if `serial` fails, let `mpi` finish to get full logs
+      matrix:
+        mode: [serial, mpi]
+
+    steps:
+      # checks out the repository under $GITHUB_WORKSPACE
+      # so the job can access it
+      - name: checkout
+        uses: actions/checkout@v7
+
+      # this action is heavily optimized for speed and handles caching automatically
+      - name: setup-pixi
+        uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          cache: true
+
+      - name: install mpi
+        if: matrix.mode == 'mpi'
+        run: sudo apt-get update && sudo apt-get install -y openmpi-bin libopenmpi-dev
+
+      - name: run serial CPU tests
+        if: matrix.mode == 'serial'
+        run: pixi run --environment test pytest tests
+
+      - name: run MPI CPU tests
+        if: matrix.mode == 'mpi'
+        run: pixi run --environment test mpirun -np 2 pytest tests --mode mpi
