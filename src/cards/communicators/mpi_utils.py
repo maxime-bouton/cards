@@ -12,7 +12,7 @@ import numpy as np
 from mpi4py import MPI
 
 
-def get_ranknd(rank, grid_size):
+def get_ranknd(rank: int, grid_size: np.ndarray) -> np.ndarray:
     """Generate the nD rank of a process from its linear rank.
 
     Generate the nD rank of a process from its linear rank within a Cartesian grid of processes of shape ``grid_size``.
@@ -33,12 +33,12 @@ def get_ranknd(rank, grid_size):
 
 
 def mpi_create_subarray_type(
-    array_size,
-    comm_rank,
-    comm_starts,
-    comm_subsizes,
+    array_size: np.ndarray,
+    comm_rank: np.ndarray,
+    comm_starts: np.ndarray,
+    comm_subsizes: np.ndarray,
     dtype=np.float64,
-):
+) -> list[MPI.Datatype]:
     r"""Source, destination types and ranks to update facet borders.
 
     Set-up destination and source data types and process ranks to communicate
@@ -50,9 +50,6 @@ def mpi_create_subarray_type(
     ----------
     array_size : numpy.ndarray[int]
         Size of the array from which a subarray needs to be extracted.
-    comm_size : numpy.ndarray[int]
-        Size of the communication ("overlap size") with contiguous workers
-        along each dimension.
     comm_rank : numpy.ndarray[int]
         List of process ranks with which the current process needs to communicate. Contains the value ``MPI_PROC_NULL`` for any invalid communication.
     comm_starts : numpy.ndarray[int]
@@ -65,7 +62,7 @@ def mpi_create_subarray_type(
 
     Returns
     -------
-    resizedsubarray : list[MPI subarray]
+    resizedsubarray : list(MPI.Datatype)
         Custom MPI subarray type describing the subarray to be communicated to another process (see `mpi4py.MPI.Datatype.Create_subarray <https://mpi4py.github.io/usrman/reference/mpi4py.MPI.Datatype.html?highlight=create%20subarray#mpi4py.MPI.Datatype.Create_subarray>`_).
 
     Note
@@ -119,15 +116,15 @@ def mpi_create_subarray_type(
 
 def free_custom_mpi_types(
     resizedsendsubarray: list[MPI.Datatype], resizedrecvsubarray: list[MPI.Datatype]
-):
+) -> None:
     r"""Freeing custom MPI types.
 
     Parameters
     ----------
-    resizedsendsubarray : list of MPI.Datatype, of size ``d``
+    resizedsendsubarray : list[MPI.Datatype], of size ``d``
         Custom MPI subarray type describing the data sent by the current
         process, as returned by ``MPI.Datatype.Create_subarray``.
-    resizedrecvsubarray : list of MPI.Datatype, of size ``d``
+    resizedrecvsubarray : list[MPI.Datatype], of size ``d``
         Custom MPI subarray type describing the data received by the current
         process, as returned by ``MPI.Datatype.Create_subarray``.
     """
@@ -138,4 +135,3 @@ def free_custom_mpi_types(
             resizedsendsubarray[comm_id].Free()
         if resizedrecvsubarray[comm_id] is not None:
             resizedrecvsubarray[comm_id].Free()
-    pass
