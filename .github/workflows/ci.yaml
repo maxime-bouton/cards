@@ -32,6 +32,21 @@ jobs:
         if: matrix.mode == 'mpi'
         run: sudo apt-get update && sudo apt-get install -y openmpi-bin libopenmpi-dev
 
+      - name: cache drunet weights
+        id: weights-cache                  # give this step an id so we can reference it later
+        uses: actions/cache@v4
+        with:
+          path: data/weights/drunet/
+          key: drunet-weights-v1           # bump to v2 if the data on the server changes
+
+      # download only if the cache was completely empty
+      - name: download drunet weights
+        if: steps.weights-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p data/weights/drunet
+          wget https://github.com/cszn/KAIR/releases/download/v1.0/drunet_color.pth
+          mv drunet_color.pth data/weights/drunet/drunet_nch3.pth
+
       - name: run serial CPU tests
         if: matrix.mode == 'serial'
         run: pixi run --environment test pytest tests
