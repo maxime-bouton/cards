@@ -6,6 +6,7 @@ workers in arbitray dimensions.
 """
 
 # author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
+# TODO: check typing (xp.ndarray or np.ndarray)
 
 import mpi4py.util.dtlib as mpilib
 import numpy as np
@@ -115,18 +116,25 @@ def mpi_create_subarray_type(
 
 
 def free_custom_mpi_types(
-    resizedsendsubarray: list[MPI.Datatype], resizedrecvsubarray: list[MPI.Datatype]
+    resizedsendsubarray: list[MPI.Datatype | None],
+    resizedrecvsubarray: list[MPI.Datatype | None],
 ) -> None:
-    r"""Freeing custom MPI types.
+    r"""Freeing list of custom MPI.Datatype.
 
     Parameters
     ----------
-    resizedsendsubarray : list[MPI.Datatype], of size ``d``
+    resizedsendsubarray : list[MPI.Datatype | None], of size ``d``
         Custom MPI subarray type describing the data sent by the current
         process, as returned by ``MPI.Datatype.Create_subarray``.
-    resizedrecvsubarray : list[MPI.Datatype], of size ``d``
+    resizedrecvsubarray : list[MPI.Datatype| None], of size ``d``
         Custom MPI subarray type describing the data received by the current
         process, as returned by ``MPI.Datatype.Create_subarray``.
+
+    Note
+    ----
+    `None` values in the input list indicate correpond to communications to be
+    skipped (e.g., invalid axis for communication in  Cartesian grid of
+    workers).
     """
     ncomms = len(resizedsendsubarray)
 

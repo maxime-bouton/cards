@@ -1,7 +1,10 @@
-"""Communicator class for synchronous communications on a Cartesian grid of
-MPI processes in arbitrary dimension."""
+r"""Communicator class for synchronous communications on a Cartesian grid of
+MPI processes in arbitrary dimension.
+"""
 
 # author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
+
+# TODO: check typing (xp.ndarray or np.ndarray)
 
 import weakref
 
@@ -15,7 +18,7 @@ from cards.communicators.mpi_utils import (
 )
 
 
-def send_rank(ranknd, grid_size, backward=True, circular=False):
+def send_rank(ranknd, grid_size, backward: bool = True, circular: bool = False):
     r"""Identify rank of destination worker for a given communication (sync. comm.).
 
     Identify the linear rank of the destination worker for a given communication (synchronous communications only).
@@ -85,6 +88,32 @@ def send_rank(ranknd, grid_size, backward=True, circular=False):
 class SyncCartesianCommunicator(BaseCartesianCommunicator):
     r"""Cartesian communicator for synchronous (non-circular) communications.
 
+    Parameters
+    ----------
+    comm : mpi4py.MPI.Comm
+        Underlying MPI communicator.
+    grid_size : numpy.ndarray[int]
+        Shape of the communication grid along each axis of the problem, as
+        returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
+    buffer_size : numpy.ndarray[int], of size ``d``
+        Size of the ``d`` dimensional buffer decomposed over the Cartesian grid of workers considered. The number of elements handled by the
+        current process is computed by an instance of the
+        :class:`cards.slicer.cartesian_comm_slicer.CartesianCommSlicer`
+        class.
+    send_size : numpy.ndarray[int], of size ``d``
+        Size of the buffer to be sent to a neighbor worker.
+    recv_size : numpy.ndarray[int], of size ``d``
+        Size of the buffer to be received on the current worker.
+    dtype : numpy.dtype, optional
+        Type of the buffer over which the communicator is defined (required
+        to define sub-arrays), by default np.float64. For now, restricted
+        to a ``np.dtype``.
+    backward : bool, optional
+        Direction of the overlap in the Cartesian grid along all the
+        dimensions (forward or backward overlap), by default True.
+    tile_range : numpy.ndarray[int] or None, optional
+        Index of the elements from the global array exclusively handled by the current process, defining a subarray. By default None, so that it is directly specified by the object itself, dividing the global array evenly across the different workers.
+
     Attributes
     ----------
     ndims_comm : int
@@ -105,6 +134,11 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
         communications.
     _finalizer : weakref.finalize
         Finalizer object to deallocate the resources assigned to
+
+    Methods
+    -------
+    removed()
+        Check whether the object has been finalized.
     """
 
     def __init__(
@@ -117,35 +151,7 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
         dtype=np.float64,
         backward=True,
         tile_range=None,
-    ):
-        """Initializer of any SyncCartesianCommunicator object.
-
-        Parameters
-        ----------
-        comm : mpi4py.MPI.Comm
-            Underlying MPI communicator.
-        grid_size : numpy.ndarray[int]
-            Shape of the communication grid along each axis of the problem, as
-            returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
-        buffer_size : numpy.ndarray[int], of size ``d``
-            Size of the ``d`` dimensional buffer decomposed over the Cartesian grid of workers considered. The number of elements handled by the
-            current process is computed by an instance of the
-            :class:`cards.slicer.cartesian_comm_slicer.CartesianCommSlicer`
-            class.
-        send_size : numpy.ndarray[int], of size ``d``
-            Size of the buffer to be sent to a neighbor worker.
-        recv_size : numpy.ndarray[int], of size ``d``
-            Size of the buffer to be received on the current worker.
-        dtype : numpy.dtype, optional
-            Type of the buffer over which the communicator is defined (required
-            to define sub-arrays), by default np.float64. For now, restricted
-            to a ``np.dtype``.
-        backward : bool, optional
-            Direction of the overlap in the Cartesian grid along all the
-            dimensions (forward or backward overlap), by default True.
-        tile_range : numpy.ndarray[int] or None, optional
-            Index of the elements from the global array exclusively handled by the current process, defining a subarray. By default None, so that it is directly specified by the object itself, dividing the global array evenly across the different workers.
-        """
+    ) -> None:
         super(SyncCartesianCommunicator, self).__init__(
             comm,
             grid_size,
@@ -167,8 +173,8 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
             self.resizedrecvsubarray,
         )
 
-    def _setup_communications(self):
-        """Setup all auxiliary variables and types to define
+    def _setup_communications(self) -> None:
+        r"""Setup all auxiliary variables and types to define
         the communications with MPI.
         """
         # NOTE: entries in cartslicer.send_size and cartslicer.recv_size are
@@ -202,8 +208,8 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
 
     # NOTE: directly maintain the array to be updated within the communicator?
     # TODO: add error if local_array.dtype different from self.dtype
-    def update_borders(self, local_array):
-        """Update the borders of a local array using the communication scheme
+    def update_borders(self, local_array) -> None:
+        r"""Update the borders of a local array using the communication scheme
         defined in the communicator.
 
         Parameters
@@ -225,13 +231,12 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
                 recvbuf=[local_array, 1, self.resizedrecvsubarray[d]],
                 source=self.src[d],
             )
-        return
 
-    def remove(self):
+    def remove(self) -> None:
         """Trigger object finalizer (clean-up)."""
         return self._finalizer()
 
     @property
     def removed(self):
-        """Check whether the object has been finalized."""
+        r"""Check whether the object has been finalized."""
         return not self._finalizer.alive

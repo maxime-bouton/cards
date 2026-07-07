@@ -9,6 +9,9 @@ import cards.backend as xp
 import cards.communicators.sync_cartesian_communicator as comms
 from cards.operators.linear_operator import LinearOperator
 
+# TODO: check slices, does not currently rely on the slicer included in the communicator
+# TODO: check type of some auxiliary parameters (xp.ndarray or np.ndarray, ...)
+
 
 def fft_conv(x: xp.ndarray, fft_h: xp.ndarray, shape) -> xp.ndarray:
     r"""FFT-based nd convolution.
