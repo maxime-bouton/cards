@@ -73,11 +73,11 @@ wily = ">=1.25.0, <2"
 
 [tool.pixi.feature.dev.dependencies]
 isort = ">=8.0.1,<9"
-pre-commit = ">=4.6.0,<5"
 conda-build = ">=26.5.0,<27"
 anaconda-client = ">=1.14.1,<2"
 ruff = ">=0.15.20,<0.16"
 ty = ">=0.0.56,<0.0.57"
+prek = ">=0.4.8,<0.5"
 
 [tool.pixi.package]
 name = { workspace = true }
