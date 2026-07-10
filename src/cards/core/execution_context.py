@@ -37,6 +37,8 @@ class ExecutionContext:
         MPI rank of the current worker. 0 if "serial".
     comm_size : int
         Total number of MPI workers. 1 if "serial".
+    is_master : bool
+        Whether the current worker is the master (rank 0). True if "serial".
     """
 
     def __init__(
@@ -89,6 +91,10 @@ class ExecutionContext:
     @property
     def comm_size(self) -> int:
         return self._comm_size
+
+    @property
+    def is_master(self) -> bool:
+        return self._rank == 0
 
     def _setup_environment(self) -> None:
         """Initializes MPI and Torch/Cupy backends."""
