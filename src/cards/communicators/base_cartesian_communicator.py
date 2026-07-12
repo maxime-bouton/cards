@@ -3,8 +3,6 @@ of processes with an arbitrary number of axes.
 The class underlies all the computations conducted within the distributed operators implemented in :mod:`~card`.operators`.
 """
 
-# author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
-
 # TODO: keep Tuple[int, ...] for all shapes, convert to numpy arrays only internally (and temporarily)
 # TODO: check typing (xp.ndarray or np.ndarray)
 
@@ -23,28 +21,24 @@ class BaseCartesianCommunicator(ABC):
     Parameters
     ----------
     comm : mpi4py.MPI.Comm
-        Underlying MPI communicator.
+        MPI communicator.
     grid_size : numpy.ndarray[int]
-        Shape of the communication grid along each axis of the problem, as
-        returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
+        Shape of the communication grid along each axis, as returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
     buffer_size : numpy.ndarray[int], of size ``d``
         Shape of the ``d``-dimensional buffer decomposed over the Cartesian grid of workers considered. The number of elements handled by the
         current process is computed by an instance of the
         :class:`cards.slicer.cartesian_comm_slicer.CartesianCommSlicer`
         class.
     send_size : numpy.ndarray[int], of size ``d``
-        Size of the buffer to be sent to a neighbor worker.
+        Extent of the ghost cell to be sent to contiguous facets along each axis of the Cartesian grid.
     recv_size : numpy.ndarray[int], of size ``d``
-        Size of the buffer to be received on the current worker.
+        Extent of the ghost cell to be received from contiguous facets along each axis of the Cartesian grid.
     dtype : numpy.dtype, optional
-        Type of the buffer over which the communicator is defined (required
-        to define sub-arrays), by default np.float64. For now, restricted
-        to a ``np.dtype``.
+        Type of the buffer over which the communicator is defined, by default np.float64. The `dtype` is required to define sub-arrays using `MPI.Datatype`.
     backward : bool, optional
-        Direction of the overlap in the Cartesian grid along all the
-        dimensions (forward or backward overlap), by default True.
+        Direction of the overlap between contiguous facets along each axis of the Cartesian grid (forward or backward overlap), by default `True`.
     tile_range : numpy.ndarray[int] or None, optional
-        Index of the elements from the global array exclusively handled by the current process, defining a subarray. By default None, so that it is directly specified by the object itself, dividing the global array evenly across the different workers.
+        Index of the elements from the global array exclusively handled by the current process, defining a subarray. By default `None`, corresponding to an even tessellation of an array across the workers.
 
     Attributes
     ----------
@@ -58,16 +52,13 @@ class BaseCartesianCommunicator(ABC):
         current process is computed by an instance of the
         :class:`cards.slicer.cartesian_comm_slicer.CartesianCommSlicer` class.
     send_size : numpy.ndarray[int], of size ``d``
-        Size of the buffer to be sent to a neighbor worker.
+        Extent of the ghost cell to be sent to contiguous facets along each axis of the Cartesian grid.
     recv_size : numpy.ndarray[int], of size ``d``
-        Size of the buffer to be received on the current worker.
+        Extent of the ghost cell to be received from contiguous facets along each axis of the Cartesian grid.
     dtype : numpy.dtype, optional
-        Type of the buffer over which the communicator is defined (required
-        to define sub-arrays), by default np.float64. For now, restricted
-        to a ``np.dtype``.
+        Type of the buffer over which the communicator is defined, by default np.float64. The `dtype` is required to define sub-arrays using `MPI.Datatype`.
     backward : bool, optional
-        Direction of the overlap in the Cartesian grid along all the
-        dimensions (forward or backward overlap), by default True.
+        Direction of the overlap between contiguous facets along each axis of the Cartesian grid (forward or backward overlap), by default True.
     ndims : int
         Number of axes of the arrays to be exchanged.
     rank : int
@@ -81,9 +72,9 @@ class BaseCartesianCommunicator(ABC):
     Raises
     ------
     ValueError
-        `grid_size` and `buffer_size` must contain the same number of element (same number of dimensions).
+        `grid_size` and `buffer_size` must contain the same number of axes.
     ValueError
-        `send_size` and `recv_size` must contain the same number of element (same number of dimensions).
+        `send_size` and `recv_size` must contain the same number of axes.
 
     Methods
     -------
@@ -117,13 +108,13 @@ class BaseCartesianCommunicator(ABC):
 
         if not self.grid_size.size == buffer_size.size:
             raise ValueError(
-                "`grid_size` and `buffer_size` must contain the same number of element (same number of dimensions)."
+                "`grid_size` and `buffer_size` must contain the same number of axes."
             )
         self.buffer_size = buffer_size
 
         if not send_size.size == recv_size.size:
             raise ValueError(
-                "`send_size` and `recv_size` must contain the same number of element (same number of dimensions)."
+                "`send_size` and `recv_size` must contain the same number of axes."
             )
         self.send_size = send_size
         self.recv_size = recv_size

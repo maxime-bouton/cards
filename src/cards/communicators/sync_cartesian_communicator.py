@@ -2,8 +2,6 @@ r"""Communicator class for synchronous communications on a Cartesian grid of
 MPI processes in arbitrary dimension.
 """
 
-# author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
-
 # TODO: check typing (xp.ndarray or np.ndarray)
 
 import weakref

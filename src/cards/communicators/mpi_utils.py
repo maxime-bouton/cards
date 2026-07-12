@@ -5,7 +5,6 @@ deallocate MPI datatype underlying communications over Cartesian grids of
 workers in arbitray dimensions.
 """
 
-# author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
 # TODO: check typing (xp.ndarray or np.ndarray)
 
 import mpi4py.util.dtlib as mpilib
@@ -38,7 +37,7 @@ def mpi_create_subarray_type(
     comm_rank: np.ndarray,
     comm_starts: np.ndarray,
     comm_subsizes: np.ndarray,
-    dtype=np.float64,
+    dtype: np.dtype = np.float64,
 ) -> list[MPI.Datatype]:
     r"""Source, destination types and ranks to update facet borders.
 
