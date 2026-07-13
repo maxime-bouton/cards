@@ -7,16 +7,15 @@ deconvolution and inpainting.
 Base Classes
 ------------
 :class:`~cards.models.base_model.BaseModel`
-    Abstract model class defining the interface for all statistical models to be used
-    within a :class:`~cards.samplers.base_sampler.BaseSampler` for solving inverse
-    problems.
+    Abstract model class defining the interface for all statistical models to
+    be used within a :class:`~cards.samplers.base_sampler.BaseSampler` for
+    solving inverse problems.
 :class:`~cards.models.base_model.BaseDistributedModel`
     Extends :class:`~cards.models.base_model.BaseModel` to support distributed
     computation using MPI.
 
 Concrete Models
 ---------------
-
 Gaussian Deconvolution (PnP)
     Gaussian deconvolution regularized via Plug-and-Play (PnP) denoising priors.
 

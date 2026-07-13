@@ -23,7 +23,7 @@ class BaseCartesianCommunicator(ABC):
     comm : mpi4py.MPI.Comm
         MPI communicator.
     grid_size : numpy.ndarray[int]
-        Shape of the communication grid along each axis, as returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
+        Number of processes along each axis of the Cartesian grid, as returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
     buffer_size : numpy.ndarray[int], of size ``d``
         Shape of the ``d``-dimensional buffer decomposed over the Cartesian grid of workers considered. The number of elements handled by the
         current process is computed by an instance of the

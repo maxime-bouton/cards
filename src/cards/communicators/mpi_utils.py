@@ -22,12 +22,12 @@ def get_ranknd(rank: int, grid_size: np.ndarray) -> np.ndarray:
     rank : int
         Linear rank of a process.
     grid_size : numpy.ndarray[int]
-        Shape of the Cartesian grid of processes.
+        Number of processes along each axis of the Cartesian grid.
 
     Returns
     -------
     numpy.ndarray[int]
-        nD rank of the process.
+        Multi-dimensional rank of the current process in the Cartesian grid.
     """
     return np.array(np.unravel_index(rank, grid_size), dtype="i")
 

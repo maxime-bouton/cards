@@ -112,7 +112,7 @@ def test_fail_negative_send_recv_size(image_size, send_size, recv_size):
             recv_size,
             backward=True,
         )
-    assert "All entries in send_size should be positive." in str(excinfo.value)
+    assert "All entries in `send_size` should be positive." in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
         CartesianCommSlicer(
@@ -123,7 +123,7 @@ def test_fail_negative_send_recv_size(image_size, send_size, recv_size):
             np.array([-1, 2], dtype="i"),
             backward=True,
         )
-    assert "All entries in recv_size should be positive." in str(excinfo.value)
+    assert "All entries in `recv_size` should be positive." in str(excinfo.value)
 
 
 def test_fail_large_overlap_send(image_size, recv_size):
@@ -141,7 +141,7 @@ def test_fail_large_overlap_send(image_size, recv_size):
             recv_size,
             backward=True,
         )
-    assert "All entries in tile_size should be greater than send_size" in str(
+    assert "All entries in `tile_size` should be greater than `send_size`" in str(
         excinfo.value
     )
 

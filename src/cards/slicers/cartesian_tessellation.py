@@ -1,29 +1,27 @@
-"""Utility functions to compute the indices of each subarray involved in a
-Cartesian domain decomposition."""
-
-# author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
+r"""Utility functions to tessellate tensors and define ghost cells over a
+Cartesian grid of preocesses.
+"""
 
 # TODO: simplify implementation of splitting instructions
 
 import numpy as np
 
 
-def get_neighbour(ranknd, grid_size, disp):
-    """Linear rank of a neighbour of the current MPI process.
+def get_neighbour(ranknd: np.ndarray, grid_size: np.ndarray, disp: np.ndarray) -> int:
+    r"""Linear rank of a neighbour of the current MPI process.
 
-    Returns the 1D rank of the neighbour of the current MPI process,
-    corresponding to a pre-defined displacement vector `disp` in the nD
-    Cartesian grid.
+    Returns the linear rank of the neighbour of the current MPI process,
+    corresponding to a pre-defined displacement vector `disp` in the Cartesian
+    grid.
 
     Parameters
     ----------
     ranknd : numpy.ndarray[int]
-        nD rank of the current process
+        Multi-dimensional rank of the current process in the Cartesian grid.
     grid_size : numpy.ndarray[int]
-        Size of the Cartesian process grid (number of processes along each
-        dimension)
+        Number of processes along each axis of the Cartesian grid.
     disp : numpy.ndarray[int]
-        Displacement vector to obtain the rank of a neighbour process.
+        Displacement vector to obtain the rank of a neighbour process in the Cartesian grid.
 
     Returns
     -------
@@ -49,7 +47,7 @@ def split_range(
     N : int
         Total number of segments.
     overlap : int, optional
-        Defines overlap size between segments (if any). Defaults to 0.
+        Overlap size between consecutive segments (if any). Defaults to 0.
     backward : bool, optional
         Direction of the overlap, if any (backward or forward). Defaults to
         True.
@@ -108,10 +106,10 @@ def local_split_range(
     index : int
         Rank of the current process.
     overlap : int, optional
-        Overlap size between consecutive segments (if any), by default 0.
+        Overlap size between consecutive segments, by default 0.
     backward : bool, optional
-        Direction of the overlap, if any (backward or forward), by default
-        True.
+        Direction of the overlap between consecutive segments (backward
+        or forward), by default True.
 
     Returns
     -------
@@ -159,7 +157,7 @@ def local_split_range(
 def local_split_range_nd(
     nchunks: int,
     N: int,
-    index: np.ndrray,
+    index: np.ndarray,
     overlap: int | None = None,
     backward: bool = True,
 ) -> np.ndarray:
@@ -176,12 +174,14 @@ def local_split_range_nd(
     N : numpy.ndarray[int]
         Total number of indices along each dimension.
     index : numpy.ndarray[int]
-        Rank of the current process along each dimension.
+        Multi-dimensional rank of the current process in the Cartesian grid
+        of processes.
     overlap : numpy.ndarray[int], optional
         Overlap size between consecutive segments along each dimension, by
         default None.
     backward : bool, optional
-        Direction of the overlap (forward or backward), by default True.
+        Direction of the overlap between consecutive segments (backward
+        or forward), by default True.
 
     Returns
     -------
@@ -230,7 +230,7 @@ def local_split_range_nd(
     return rg
 
 
-def split_range_interleaved(nchunks: int, N):
+def split_range_interleaved(nchunks: int, N: int) -> list[slice]:
     r"""Tessellates :math:`\{ 0, \dotsc , N-1 \}` into interleaved subsets.
 
     Tessellates :math:`\{ 0, \dotsc , N-1 \}` into subsets of interleaved
@@ -265,7 +265,7 @@ def split_range_interleaved(nchunks: int, N):
     return [np.s_[k:N:nchunks] for k in range(nchunks)]
 
 
-def local_split_range_interleaved(nchunks, N, index):
+def local_split_range_interleaved(nchunks: int, N: int, index: int) -> slice:
     r"""Tessellates :math:`\{ 0, \dotsc , N-1 \}` into interleaved
     subsets.
 

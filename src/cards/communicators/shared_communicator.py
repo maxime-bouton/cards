@@ -100,14 +100,14 @@ class SharedCommunicator:
             )
         self.shared_buffer = xp.zeros(self._shared_comm.cartslicer.facet_size)
 
-    def update_buffer(self, buffer: xp.ndarray):
+    def update_buffer(self, buffer: xp.ndarray) -> None:
         r"""Communicate the borders of an input array tessellated across
         different workers prior to locally evaluate the correspoding portion of the operators' output."""
         assert (np.asarray(buffer.shape) == self._shared_comm.cartslicer.tile_size).all
         self.shared_buffer[self._shared_comm.cartslicer.slice_facet_to_tile] = buffer
         self._shared_comm.update_borders(self.shared_buffer)
 
-    def apply_operator(self, key: str, *args):
+    def apply_operator(self, key: str, *args) -> None:
         r"""Evaluate the output of a single operator onto the underlying input buffer."""
         return self.operators[key].forward_no_comm(
             self.shared_buffer[self._slice[key]], *args
