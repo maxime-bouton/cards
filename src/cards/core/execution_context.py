@@ -42,7 +42,9 @@ class ExecutionContext:
     """
 
     def __init__(
-        self, mode: Literal["serial", "mpi"], device: Literal["cpu", "gpu"]
+        self,
+        mode: Literal["serial", "mpi"],
+        device: Literal["cpu", "gpu"],
     ) -> None:
 
         if mode not in ("serial", "mpi"):
@@ -97,8 +99,7 @@ class ExecutionContext:
         return self._rank == 0
 
     def _setup_environment(self) -> None:
-        """Initializes MPI and Torch/Cupy backends."""
-
+        """Initialize MPI and Torch/Cupy backends."""
         if self.is_mpi:
             from mpi4py import MPI
 

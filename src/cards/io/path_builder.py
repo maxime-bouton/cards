@@ -38,19 +38,19 @@ def dict_to_str(params: dict, ignore_keys: list | None = None) -> str:
 class PathBuilder:
     def __init__(
         self,
-        config: dict,
-        context: ExecutionContext,
+        cfg: dict,
+        ctx: ExecutionContext,
         fn_obs_rel_path: Callable[[dict], Path | str] | None = None,
         fn_ckpt_rel_path: Callable[[dict], Path | str] | None = None,
     ) -> None:
-        self.config = config
-        self.context = context
+        self.cfg = cfg
+        self.ctx = ctx
         self.fn_obs_rel_path = fn_obs_rel_path
         self.fn_ckpt_rel_path = fn_ckpt_rel_path
 
-        self.app = self.config.get("application", {})
+        self.app = self.cfg.get("application", {})
 
-        self.io = self.config.get("io", {})
+        self.io = self.cfg.get("io", {})
 
     def get_obs_dir(self) -> Path:
         json_obs_path = self.io.get("obs_dir_path", "")
@@ -63,7 +63,7 @@ class PathBuilder:
         path = Path(root_dir) / self.app.get("type", DEFAULT_PROBLEM_NAME)
 
         if self.fn_obs_rel_path:
-            path /= self.fn_obs_rel_path(self.config)
+            path /= self.fn_obs_rel_path(self.cfg)
 
         return path
 
@@ -74,18 +74,18 @@ class PathBuilder:
     def get_ckpt_dir(self) -> Path:
         json_ckpt_path = self.io.get("ckpt_dir_path", "")
         if json_ckpt_path != "":
-            return Path(json_ckpt_path) / str(self.context)
+            return Path(json_ckpt_path) / str(self.ctx)
 
         path = self.get_obs_dir() / self.app.get("name", DEFAULT_APPLICATION_NAME)
 
         if self.fn_ckpt_rel_path:
-            path /= self.fn_ckpt_rel_path(self.config)
+            path /= self.fn_ckpt_rel_path(self.cfg)
 
-        sampler = self.config["sampler"]
+        sampler = self.cfg["sampler"]
         ckpt_size = sampler["ckpt_size"]
         seed = sampler["seed"]
 
-        return path / f"ckpt_size{ckpt_size}_seed{seed}" / str(self.context)
+        return path / f"ckpt_size{ckpt_size}_seed{seed}" / str(self.ctx)
 
     def get_log_path(self) -> Path:
         json_log_path = self.io.get("log_file_path", "")
@@ -93,6 +93,6 @@ class PathBuilder:
             return Path(json_log_path)
 
         log_stem = self.io.get("log_file_prefix", DEFAULT_LOG_PREFIX)
-        if self.context.is_mpi:
-            log_stem += f"_{self.context.rank}"
+        if self.ctx.is_mpi:
+            log_stem += f"_{self.ctx.rank}"
         return self.get_ckpt_dir() / f"{log_stem}.log"
