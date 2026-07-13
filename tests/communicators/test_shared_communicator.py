@@ -12,7 +12,7 @@ from cards.utils.utils import expand_shape_left
 
 
 @pytest.fixture
-def kernel_shape() -> tuple[int, ...]:
+def kernel_shape():
     return (5, 3)
 
 
@@ -25,7 +25,7 @@ def grid_ndim(request: pytest.FixtureRequest) -> int:
 def grid_shape(
     comm: MPI.Comm,
     grid_ndim: int,
-    input_shape: tuple[int, ...],
+    input_shape,  #: tuple[int, ...],
 ) -> tuple[int, ...]:
     return expand_shape_left(
         MPI.Compute_dims(comm.Get_size(), grid_ndim),
@@ -36,9 +36,9 @@ def grid_shape(
 @pytest.mark.mpi
 def test_shared_comm(
     comm: MPI.Comm,
-    grid_shape: tuple[int, ...],
-    input_shape: tuple[int, ...],
-    kernel_shape: tuple[int, ...],
+    grid_shape,  #: tuple[int, ...],
+    input_shape,  #: tuple[int, ...],
+    kernel_shape,  #: tuple[int, ...],
     seed: int,
 ) -> None:
     """
@@ -68,7 +68,7 @@ def test_shared_comm(
         {"grad": grad_op, "conv": conv_op},
     )
 
-    local_slice = shared_comm.shared_comm.cartslicer.slice_global_buffer_to_tile
+    local_slice = shared_comm.direct_communicator.cartslicer.slice_global_buffer_to_tile
     local_X = full_x[local_slice]
 
     # apply operators with dedicated communicators

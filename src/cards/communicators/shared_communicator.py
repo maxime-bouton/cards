@@ -78,7 +78,7 @@ class SharedCommunicator:
                 self._max_recv_size, self.operators[key].get_recv_size()
             )
 
-        self._shared_comm = SyncCartesianCommunicator(
+        self.direct_communicator = SyncCartesianCommunicator(
             comm,
             grid_size,
             buffer_size,
@@ -92,20 +92,24 @@ class SharedCommunicator:
             self._slice[key] = tuple(
                 [
                     np.s_[
-                        : self._shared_comm.cartslicer.tile_size[d]
-                        + self.recv_size[key][d]
+                        : self.direct_communicator.cartslicer.tile_size[d]
+                        + self.operators[key].get_recv_size()[d]
                     ]
                     for d in range(len(buffer_size))
                 ]
             )
-        self.shared_buffer = xp.zeros(self._shared_comm.cartslicer.facet_size)
+        self.shared_buffer = xp.zeros(self.direct_communicator.cartslicer.facet_size)
 
     def update_buffer(self, buffer: xp.ndarray) -> None:
         r"""Communicate the borders of an input array tessellated across
         different workers prior to locally evaluate the correspoding portion of the operators' output."""
-        assert (np.asarray(buffer.shape) == self._shared_comm.cartslicer.tile_size).all
-        self.shared_buffer[self._shared_comm.cartslicer.slice_facet_to_tile] = buffer
-        self._shared_comm.update_borders(self.shared_buffer)
+        assert (
+            np.asarray(buffer.shape) == self.direct_communicator.cartslicer.tile_size
+        ).all
+        self.shared_buffer[self.direct_communicator.cartslicer.slice_facet_to_tile] = (
+            buffer
+        )
+        self.direct_communicator.update_borders(self.shared_buffer)
 
     def apply_operator(self, key: str, *args) -> None:
         r"""Evaluate the output of a single operator onto the underlying input buffer."""
