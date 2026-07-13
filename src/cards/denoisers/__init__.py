@@ -16,15 +16,15 @@ Concrete Implementations
 ------------------------
 :class:`~cards.denoisers.serial_ddfb.SerialDDFB`
 
-:class:`~cards.denoisers.mpi_ddfb.MpiDDFB`
+:class:`~cards.denoisers.mpi_ddfb.DistributedDDFB`
 
 :class:`~cards.denoisers.serial_drunet.SerialDRUNet`
 
-:class:`~cards.denoisers.mpi_drunet.MpiDRUNet`
+:class:`~cards.denoisers.mpi_drunet.DistributedDRUNet`
 
 :class:`~cards.denoisers.serial_dncnn.SerialDnCNN`
 
-:class:`~cards.denoisers.mpi_dncnn.MpiDnCNN`
+:class:`~cards.denoisers.mpi_dncnn.DistributedDnCNN`
 
 Examples
 --------
@@ -32,9 +32,9 @@ Examples
 """
 
 from .base_denoiser import BaseDenoiser, BaseDistributedDenoiser
-from .mpi_ddfb import MpiDDFB
-from .mpi_dncnn import MpiDnCNN
-from .mpi_drunet import MpiDRUNet
+from .mpi_ddfb import DistributedDDFB
+from .mpi_dncnn import DistributedDnCNN
+from .mpi_drunet import DistributedDRUNet
 from .serial_ddfb import SerialDDFB
 from .serial_dncnn import SerialDnCNN
 from .serial_drunet import SerialDRUNet
@@ -42,9 +42,9 @@ from .serial_drunet import SerialDRUNet
 __all__ = [
     "BaseDenoiser",
     "BaseDistributedDenoiser",
-    "MpiDDFB",
-    "MpiDnCNN",
-    "MpiDRUNet",
+    "DistributedDDFB",
+    "DistributedDnCNN",
+    "DistributedDRUNet",
     "SerialDDFB",
     "SerialDnCNN",
     "SerialDRUNet",

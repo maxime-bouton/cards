@@ -13,7 +13,7 @@ from cards.operators.mpi_torch_convolution import MpiTorchConvolution
 # FIXME: rename all internal convolution operators to make it clear they are private
 
 
-class MpiDnCNN(BaseDistributedDenoiser):
+class DistributedDnCNN(BaseDistributedDenoiser):
     r"""Distributed implementation of the DnCNN :cite:p:`Zhang2017` network.
 
     Parameters

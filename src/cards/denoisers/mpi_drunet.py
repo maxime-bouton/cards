@@ -16,7 +16,7 @@ from cards.utils.utils import torch2xp, xp2torch
 # FIXME: rename all internal convolution operators to make it clear they are private
 
 
-class MpiDRUNet(BaseDistributedDenoiser):
+class DistributedDRUNet(BaseDistributedDenoiser):
     r"""Distributed implementation of the DRUNet :cite:p:`Zhang2021` network.
 
     Parameters

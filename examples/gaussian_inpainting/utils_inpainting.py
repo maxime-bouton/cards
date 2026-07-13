@@ -562,9 +562,9 @@ def compute_pnp(
         case "mpi":
             match denoiser_params["type"]:
                 case "ddfb":
-                    from cards.denoisers.mpi_ddfb import MpiDDFB
+                    from cards.denoisers.mpi_ddfb import DistributedDDFB
 
-                    denoiser = MpiDDFB(
+                    denoiser = DistributedDDFB(
                         comm,
                         grid_size,
                         image_size=np.asarray(gt_shape),
@@ -572,15 +572,15 @@ def compute_pnp(
                         n_features=denoiser_params["n_features"],
                     )
                 case "dncnn":
-                    from cards.denoisers.mpi_dncnn import MpiDnCNN
+                    from cards.denoisers.mpi_dncnn import DistributedDnCNN
 
-                    denoiser = MpiDnCNN(
+                    denoiser = DistributedDnCNN(
                         comm, grid_size, image_size=np.asarray(gt_shape)
                     )
                 case "drunet":
-                    from cards.denoisers.mpi_drunet import MpiDRUNet
+                    from cards.denoisers.mpi_drunet import DistributedDRUNet
 
-                    denoiser = MpiDRUNet(
+                    denoiser = DistributedDRUNet(
                         comm, grid_size, image_size=np.asarray(gt_shape)
                     )
                 case _:

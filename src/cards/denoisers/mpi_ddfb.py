@@ -15,7 +15,7 @@ from cards.operators.mpi_torch_convolution import MpiTorchConvolution
 # FIXME: rename all internal convolution operators to make it clear they are private
 
 
-class MpiDDFB(BaseDistributedDenoiser):
+class DistributedDDFB(BaseDistributedDenoiser):
     r"""Distributed implementation for the Deep Dual Forward-Backward (DDFB)
     denoiser :cite:p:`Repetti2022eusipco`.
 

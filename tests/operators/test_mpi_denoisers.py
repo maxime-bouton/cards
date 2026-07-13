@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 
 import cards.backend as xp
-from cards.denoisers.mpi_ddfb import MpiDDFB
-from cards.denoisers.mpi_dncnn import MpiDnCNN
-from cards.denoisers.mpi_drunet import MpiDRUNet
+from cards.denoisers.mpi_ddfb import DistributedDDFB
+from cards.denoisers.mpi_dncnn import DistributedDnCNN
+from cards.denoisers.mpi_drunet import DistributedDRUNet
 from cards.denoisers.serial_ddfb import SerialDDFB
 from cards.denoisers.serial_dncnn import SerialDnCNN
 from cards.denoisers.serial_drunet import SerialDRUNet
@@ -42,7 +42,7 @@ def test_mpi_ddfb(seed, input_size, comm, grid_size):
         n_features=64,
     )
 
-    mpi_ddfb = MpiDDFB(
+    mpi_ddfb = DistributedDDFB(
         comm,
         grid_size,
         image_size=input_size,
@@ -64,7 +64,7 @@ def test_mpi_dncnn(seed, input_size, comm, grid_size):
 
     serial_dncnn = SerialDnCNN(image_size=input_size)
 
-    mpi_dncnn = MpiDnCNN(comm, grid_size, image_size=input_size)
+    mpi_dncnn = DistributedDnCNN(comm, grid_size, image_size=input_size)
 
     y_serial = serial_dncnn(x, 0.03)[mpi_dncnn.global_to_tile_slice]
     y_mpi = mpi_dncnn(x[mpi_dncnn.global_to_tile_slice], 0.03)
@@ -86,7 +86,7 @@ def test_mpi_drunet(seed, input_size, comm, grid_size):
 
     serial_drunet = SerialDRUNet(image_size=input_size)
 
-    mpi_drunet = MpiDRUNet(comm, grid_size, image_size=input_size)
+    mpi_drunet = DistributedDRUNet(comm, grid_size, image_size=input_size)
 
     y_serial = serial_drunet(x, 0.03)[mpi_drunet.global_to_tile_slice]
     y_mpi = mpi_drunet(x[mpi_drunet.global_to_tile_slice], 0.03)
