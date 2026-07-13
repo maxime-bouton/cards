@@ -15,16 +15,18 @@ Base Classes
 Concrete Implementations
 ------------------------
 :class:`~cards.denoisers.serial_ddfb.SerialDDFB`
-
-:class:`~cards.denoisers.mpi_ddfb.DistributedDDFB`
-
+    Serial DDFB network :cite:p:`Repetti2022eusipco`.
+:class:`~cards.denoisers.distributed_ddfb.DistributedDDFB`
+    Distributed implementation for the Deep Dual Forward-Backward (DDFB)
+    denoiser :cite:p:`Repetti2022eusipco`.
 :class:`~cards.denoisers.serial_drunet.SerialDRUNet`
-
-:class:`~cards.denoisers.mpi_drunet.DistributedDRUNet`
-
+    Serial DRUNet network :cite:p:`Zhang2021`.
+:class:`~cards.denoisers.distributed_drunet.DistributedDRUNet`
+    Distributed implementation of the DRUNet :cite:p:`Zhang2021` network.
 :class:`~cards.denoisers.serial_dncnn.SerialDnCNN`
-
-:class:`~cards.denoisers.mpi_dncnn.DistributedDnCNN`
+    Serial DnCNN network :cite:p:`Zhang2017`.
+:class:`~cards.denoisers.distributed_dncnn.DistributedDnCNN`
+    Distributed implementation of the DnCNN :cite:p:`Zhang2017` network.
 
 Examples
 --------
@@ -32,9 +34,9 @@ Examples
 """
 
 from .base_denoiser import BaseDenoiser, BaseDistributedDenoiser
-from .mpi_ddfb import DistributedDDFB
-from .mpi_dncnn import DistributedDnCNN
-from .mpi_drunet import DistributedDRUNet
+from .distributed_ddfb import DistributedDDFB
+from .distributed_dncnn import DistributedDnCNN
+from .distributed_drunet import DistributedDRUNet
 from .serial_ddfb import SerialDDFB
 from .serial_dncnn import SerialDnCNN
 from .serial_drunet import SerialDRUNet

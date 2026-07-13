@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 
 import cards.backend as xp
-from cards.denoisers.mpi_ddfb import DistributedDDFB
-from cards.denoisers.mpi_dncnn import DistributedDnCNN
-from cards.denoisers.mpi_drunet import DistributedDRUNet
+from cards.denoisers.distributed_ddfb import DistributedDDFB
+from cards.denoisers.distributed_dncnn import DistributedDnCNN
+from cards.denoisers.distributed_drunet import DistributedDRUNet
 from cards.denoisers.serial_ddfb import SerialDDFB
 from cards.denoisers.serial_dncnn import SerialDnCNN
 from cards.denoisers.serial_drunet import SerialDRUNet
@@ -31,7 +31,7 @@ def input_size(input_shape) -> np.ndarray:
 
 
 @pytest.mark.mpi
-def test_mpi_ddfb(seed, input_size, comm, grid_size):
+def test_distributed_ddfb(seed, input_size, comm, grid_size):
     r"""Verify that the distributed DDFB yields results identical to the serial DDFB."""
     rng = xp.random.default_rng(seed)
     x = rng.random(input_size).astype(xp.float32)
@@ -42,7 +42,7 @@ def test_mpi_ddfb(seed, input_size, comm, grid_size):
         n_features=64,
     )
 
-    mpi_ddfb = DistributedDDFB(
+    distributed_ddfb = DistributedDDFB(
         comm,
         grid_size,
         image_size=input_size,
@@ -50,30 +50,30 @@ def test_mpi_ddfb(seed, input_size, comm, grid_size):
         n_features=64,
     )
 
-    y_serial = serial_ddfb(x, 0.03)[mpi_ddfb.global_to_tile_slice]
-    y_mpi = mpi_ddfb(x[mpi_ddfb.global_to_tile_slice], 0.03)
+    y_serial = serial_ddfb(x, 0.03)[distributed_ddfb.global_to_tile_slice]
+    y_mpi = distributed_ddfb(x[distributed_ddfb.global_to_tile_slice], 0.03)
 
     xp.testing.assert_allclose(y_serial, y_mpi, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.mpi
-def test_mpi_dncnn(seed, input_size, comm, grid_size):
+def test_distributed_dncnn(seed, input_size, comm, grid_size):
     r"""Verify that the distributed DnCNN yields results identical to the serial DnCNN."""
     rng = xp.random.default_rng(seed)
     x = rng.random(input_size).astype(xp.float32)
 
     serial_dncnn = SerialDnCNN(image_size=input_size)
 
-    mpi_dncnn = DistributedDnCNN(comm, grid_size, image_size=input_size)
+    distributed_dncnn = DistributedDnCNN(comm, grid_size, image_size=input_size)
 
-    y_serial = serial_dncnn(x, 0.03)[mpi_dncnn.global_to_tile_slice]
-    y_mpi = mpi_dncnn(x[mpi_dncnn.global_to_tile_slice], 0.03)
+    y_serial = serial_dncnn(x, 0.03)[distributed_dncnn.global_to_tile_slice]
+    y_mpi = distributed_dncnn(x[distributed_dncnn.global_to_tile_slice], 0.03)
 
     xp.testing.assert_allclose(y_serial, y_mpi, rtol=1e-5, atol=1e-5)
 
 
 @pytest.mark.mpi
-def test_mpi_drunet(seed, input_size, comm, grid_size):
+def test_distributed_drunet(seed, input_size, comm, grid_size):
     r"""Verify that the distributed DRUNet yields results identical to the serial DRUNet.
 
     Warning
@@ -86,9 +86,9 @@ def test_mpi_drunet(seed, input_size, comm, grid_size):
 
     serial_drunet = SerialDRUNet(image_size=input_size)
 
-    mpi_drunet = DistributedDRUNet(comm, grid_size, image_size=input_size)
+    distributed_drunet = DistributedDRUNet(comm, grid_size, image_size=input_size)
 
-    y_serial = serial_drunet(x, 0.03)[mpi_drunet.global_to_tile_slice]
-    y_mpi = mpi_drunet(x[mpi_drunet.global_to_tile_slice], 0.03)
+    y_serial = serial_drunet(x, 0.03)[distributed_drunet.global_to_tile_slice]
+    y_mpi = distributed_drunet(x[distributed_drunet.global_to_tile_slice], 0.03)
 
     xp.testing.assert_allclose(y_serial, y_mpi, rtol=1e-5, atol=1e-5)

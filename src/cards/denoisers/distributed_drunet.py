@@ -102,32 +102,32 @@ class DistributedDRUNet(BaseDistributedDenoiser):
 
         self.conv1 = MpiTorchConvolution(
             size1,
-            self.drunet.m_down1[0].res[0].kernel_size,  # type: ignore
-            self.drunet.m_down1[0].res[0].padding,  # type: ignore
+            self.drunet.m_down1[0].res[0].kernel_size,
+            self.drunet.m_down1[0].res[0].padding,
             comm,
             grid_size,
         )
 
         self.conv2 = MpiTorchConvolution(
             size2,
-            self.drunet.m_down2[0].res[0].kernel_size,  # type: ignore
-            self.drunet.m_down2[0].res[0].padding,  # type: ignore
+            self.drunet.m_down2[0].res[0].kernel_size,
+            self.drunet.m_down2[0].res[0].padding,
             comm,
             grid_size,
         )
 
         self.conv3 = MpiTorchConvolution(
             size3,
-            self.drunet.m_down3[0].res[0].kernel_size,  # type: ignore
-            self.drunet.m_down3[0].res[0].padding,  # type: ignore
+            self.drunet.m_down3[0].res[0].kernel_size,
+            self.drunet.m_down3[0].res[0].padding,
             comm,
             grid_size,
         )
 
         self.conv4 = MpiTorchConvolution(
             size4,
-            self.drunet.m_body[0].res[0].kernel_size,  # type: ignore
-            self.drunet.m_body[0].res[0].padding,  # type: ignore
+            self.drunet.m_body[0].res[0].kernel_size,
+            self.drunet.m_body[0].res[0].padding,
             comm,
             grid_size,
         )
@@ -137,19 +137,19 @@ class DistributedDRUNet(BaseDistributedDenoiser):
 
         self.head_conv = MpiTorchConvolution(
             size_in,
-            self.drunet.m_head.kernel_size,  # type: ignore
-            self.drunet.m_head.padding,  # type: ignore
+            self.drunet.m_head.kernel_size,
+            self.drunet.m_head.padding,
             comm,
             grid_size,
-            Cout=self.drunet.m_head.out_channels,  # type: ignore
+            Cout=self.drunet.m_head.out_channels,
             backward=True,
             tile_range=tile_range,
         )
 
         self.tail_conv = MpiTorchConvolution(
             size1,
-            self.drunet.m_tail.kernel_size,  # type: ignore
-            self.drunet.m_tail.padding,  # type: ignore
+            self.drunet.m_tail.kernel_size,
+            self.drunet.m_tail.padding,
             comm,
             grid_size,
             Cout=image_size[-3],
@@ -221,3 +221,12 @@ class DistributedDRUNet(BaseDistributedDenoiser):
     @property
     def tile_range(self) -> np.ndarray | None:
         return self.tail_conv.adjoint_communicator.cartslicer.tile_range
+
+    # FIXME: check implementation of the two methods below (if ever useful)
+    @property
+    def get_recv_size(self) -> xp.ndarray:
+        return self.tail_conv.adjoint_communicator.cartslicer.recv_size
+
+    @property
+    def get_send_size(self) -> xp.ndarray:
+        return self.tail_conv.adjoint_communicator.cartslicer.send_size
