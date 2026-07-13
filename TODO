@@ -2,31 +2,6 @@
 
 ## Towards v0
 
-- [x] identify installation instructions from local `.conda` package file
-  -  `conda install <PATH_TO_PACKAGE>.conda` ([reference](https://www.anaconda.com/docs/getting-started/working-with-conda/packages/install-packages))
-  -  in pixi, see [reference](https://pixi.sh/latest/reference/cli/pixi/global/install/)
-  `pixi global install --path xxxx.conda`
-  real install: https://pixi.sh/latest/integration/extensions/pixi_inject/
-  `pixi global install pixi-inject`
-  `pixi inject --environment default --package my-package-0.1.0-py313h8aa417a_0.conda`
-- [x] testing creation anaconda channel (for publishing)
-    - [conda tutorial](https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/create-custom-channels.html)
-    - https://docs.conda.io/projects/conda-build/en/latest/user-guide/tutorials/build-pkgs.html
-    - https://www.anaconda.com/docs/tools/anaconda-org/maintainer-guide/getting-started
-    ```bash
-        conda install anaconda-client conda-build
-        anaconda login
-        anaconda upload </PATH/TO/PACKAGE_NAME>.tar.bz2
-        anaconda upload </PATH/TO/PACKAGE_NAME>.conda
-    ```
-    - https://www.anaconda.com/docs/tools/anaconda-org/maintainer-guide/hosted-packages
-- [x] testing build instruction in a simplified configuration
-  - [specific build documentation](https://prefix-dev.github.io/pixi-build-backends/)
-
-- [x] Restructure README, separating base user installation from dev instructions
-- [x] add MPIDRUNet in examples on current branch (check https://gitlab.cristal.univ-lille.fr/parallelmcmc/cards/-/blob/pnp/example/poisson_deconvolution/utils_poisson_deconvolution.py?ref_type=heads), `pnp` branch
-- [x] Fix MPI tests issues for distributed denoisers (currently failing with odd number for DRUNet)
-    - failure expected: implementation only working for now if pstial dimensions divisible by 8
 - [x] Clarify instructions/interface to create slices (`global_to_tile_slice`, `local_to_global`)
 - Double check all code base with Maxime
     - [ ] checking sampling examples, rerun representative experiments
@@ -37,25 +12,6 @@
 - [ ] Redefine CartesianSlicer to make `send_size` and `recv_size` optional (when 0, no overlap to take into account)
 - [ ] Revise handling of `dtype` in sampler / transition kernels (not fully enforced between `torch` and `cupy`, difference in default precision (`flost64` for `cupy`, against `flost32` for `torch`))
 - [ ] Add testing CI instruction to build the package under different configurations?
-
--  documentation & missing features from `pnp`
-   - [x] README (setup information, dev information to sphinx / auxiliary panel "contributing")
-   - [x] add note to disable ci `[skip ci]` in commit message, or `git push -o ci.skip`
-   - [x] transition_kernels
-   - [ ] slicers
-   - [ ] sampler
-   - [ ] data-manager
-   - operators
-    - [ ] measurement operators
-    - [ ] denoisers
-   - [ ] models
-   - [ ] functionals
-   - [ ] estimators
-   - [ ] communicator
-
-- distributed data generation
-    - [ ] make sure the lambda are aware of the distributed context
-    - [ ] reuse objects / operators between main script and data generation
 
 ## Towards v1.0 (Januray 2026 and later)
 
@@ -76,18 +32,3 @@
   - [ ] build support for 'win-64' 'osx-64' 'osx-arm64' for the dependencies considered (per-platform requirements in `pyproject.toml`)
   - [ ] adding new GPU backend for Apple plateforms : [mlx](https://github.com/ml-explore/mlx), see example here
   - [ ] investigate [onnx](https://github.com/onnx/onnx) for network weights
-
-- Documentation
-  - [ ] getting started (doc sphinx), install, tuto
-  - setup / versioning
-  - [ ] documentation deployment with [Github pages](https://www.sphinx-doc.org/en/master/tutorial/deploying.html)
-  - [ ] badges: generate custom badges, see [https://pypi.org/project/badges-gitlab/](https://pypi.org/project/badges-gitlab/) or [https://github.com/sgaunet/gobadger](https://github.com/sgaunet/gobadger)
-  - [ ] revise writing for the tutorial + display in the sphinx documentation
-  - enhance documentation: https://realpython.com/documenting-python-code/#docstring-formats
-  - [ ] proper typing, possibly with [`mypy`](https://mypy.readthedocs.io/en/stable/existing_code.html) or `pyright`, or [ty](https://github.com/astral-sh/ty), more recent
-   - Refs:
-    - https://docs.python.org/3/library/typing.html
-    - https://mypy.readthedocs.io/en/stable/cheat_sheet_py3.html
-    - Example setup: https://mypy.readthedocs.io/en/stable/config_file.html#config-file
-  - [ ] complete pipeline for versioninig with [`bumpver`](https://github.com/mbarkhau/bumpver), see also https://realpython.com/pypi-publish-python-package/
-  - [ ] generate changelogs with [`towncrier`](https://towncrier.readthedocs.io/en/stable/index.html)

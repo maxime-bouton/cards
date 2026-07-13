@@ -34,6 +34,13 @@ Before any commit or pull request to the master branch, verify all tests pass un
 
             pixi shell -e full
 
+            # run all tests (CPU + GPU)
+            pixi run tests
+
+            # run all CPU tests using pre-defined pixi command
+            pixi run tests_cpu
+
+            ## details
             # display available markers
             pytest --markers
 
