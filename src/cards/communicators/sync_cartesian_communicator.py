@@ -132,11 +132,6 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
         communications.
     _finalizer : weakref.finalize
         Finalizer object to deallocate the resources assigned to custom subarray data-types.
-
-    Methods
-    -------
-    removed()
-        Check whether the object has been finalized.
     """
 
     def __init__(
@@ -231,6 +226,7 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
             )
 
     def remove(self) -> None:
+        r"""Trigger finalizer to properly deallocate memory."""
         return self._finalizer()
 
     @property

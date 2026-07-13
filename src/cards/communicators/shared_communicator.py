@@ -48,14 +48,6 @@ class SharedCommunicator:
         Dictionary of slices corresponding to each operator. Each slice allows
         a portion of the shared buffer to be retrieved for the corresponding
         operator.
-
-    Methods
-    -------
-    update_buffer(buffer)
-        Trigger communications to update the temporary buffer for local
-        computation of the operators.
-    apply_operator(key, *args)
-        Apply the operator index by `key` to the appropriate portion of the shared inoput buffer.
     """
 
     def __init__(

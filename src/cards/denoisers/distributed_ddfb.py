@@ -45,11 +45,6 @@ class DistributedDDFB(BaseDistributedDenoiser):
         Internal distributed convolution operator implemented in torch.
     ddfb : DDFB
         Local DDFB denoiser.
-
-    Methods
-    -------
-    forward_no_comm()
-        Apply the DDFB denoiser without communication for the first layer.
     """
 
     def __init__(

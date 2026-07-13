@@ -42,13 +42,6 @@ class DistributedDRUNet(BaseDistributedDenoiser):
     drunet : DRUNet
         Internal DRUNet denoiser.
 
-    Methods
-    -------
-    state_shape()
-        Returns the shape of the local output image tile handled by the current process.
-    tile_range()
-        Returns the start and end index of the output image tile handled by the current worker.
-
     Warning
     -------
     The current distributed implementation only works for images whose
@@ -216,10 +209,12 @@ class DistributedDRUNet(BaseDistributedDenoiser):
 
     @property
     def state_shape(self) -> np.ndarray:
+        r"""Returns the shape of the local output image tile handled by the current process."""
         return self.tail_conv.adjoint_communicator.cartslicer.tile_size
 
     @property
     def tile_range(self) -> np.ndarray | None:
+        r"""Returns the start and end index of the output image tile handled by the current worker."""
         return self.tail_conv.adjoint_communicator.cartslicer.tile_range
 
     # FIXME: check implementation of the two methods below (if ever useful)

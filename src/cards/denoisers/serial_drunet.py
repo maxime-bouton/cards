@@ -56,25 +56,6 @@ class SerialDRUNet(BaseDenoiser):
         torch_dtype: xp.dtype | None = None,
         cp_dtype: torch.dtype | None = None,
     ) -> xp.ndarray:
-        r"""Apply the serial denoiser.
-
-        Parameters
-        ----------
-        input_image: xp.ndarray
-            Input image tile.
-        sigma: float
-            Denoiser parameter (noise standard deviation).
-        torch_dtype : torch.dtype or None, optional
-            Numerical precision to be used for computations with `torch`. Default is `None`.
-        cp_dtype : xp.dtype or None, optional
-            Numerical precision to be used for computations with `xp` (`numpy`
-            or `cupy`). Default is `None`.
-
-        Returns
-        -------
-        xp.ndarray
-            Denoised image.
-        """
         # TODO: add error or warning when the number of channels in the input does not fit that of the denoiser
         with torch.no_grad():
             return torch2xp(

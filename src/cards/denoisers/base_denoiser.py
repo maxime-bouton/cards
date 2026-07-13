@@ -3,6 +3,8 @@ r"""Abstract base classes for image denoising neural networks."""
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+import torch
+
 import cards.backend as xp
 
 
@@ -18,15 +20,6 @@ class BaseDenoiser(ABC):
     ----------
     weights_path : str
         Path to the folder containing the pre-trained denoiser weights.
-
-    Methods
-    -------
-    __call__(self, input_image: xp.ndarray, sigma: float)
-       Apply the denoiser to an input image.
-    get_recv_size()
-        Returns the extent of the ghost cells to be received from neighbour processes along each axis of the Cartesian grid.
-    get_send_size()
-        Returns the extent of the ghost cells to be sent to neighbour processes along each axis of the Cartesian grid.
     """
 
     def __init__(
@@ -36,32 +29,36 @@ class BaseDenoiser(ABC):
         self.weights_path = weights_path
 
     @abstractmethod
-    def __call__(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
-        r"""Apply the denoiser to the input image.
+    def __call__(
+        self,
+        input_image: xp.ndarray,
+        sigma: float,
+        torch_dtype: xp.dtype | None = None,
+        cp_dtype: torch.dtype | None = None,
+    ) -> xp.ndarray:
+        r"""Apply the serial denoiser.
 
         Parameters
         ----------
         input_image: xp.ndarray
-            Input image to be denoised.
+            Input image tile.
         sigma: float
-            Denoiser parameter (typically Gaussian noise standard deviation).
+            Denoiser parameter (noise standard deviation).
+        torch_dtype : torch.dtype or None, optional
+            Numerical precision to be used for computations with `torch`. Default is `None`.
+        cp_dtype : xp.dtype or None, optional
+            Numerical precision to be used for computations with `xp` (`numpy`
+            or `cupy`). Default is `None`.
 
         Returns
         -------
         xp.ndarray
             Denoised image.
         """
-        pass
 
 
 class BaseDistributedDenoiser(BaseDenoiser, ABC):
-    r"""Generic abatrsct class for distributed image denoising neural-networks.
-
-    Methods
-    -------
-    global_to_tile_slice()
-        Returns slices to extract the image tile handled by the current worker from the internal buffer including ghost cells.
-    """
+    r"""Generic abatrsct class for distributed image denoising neural-networks."""
 
     @property
     @abstractmethod
@@ -71,9 +68,9 @@ class BaseDistributedDenoiser(BaseDenoiser, ABC):
     @property
     @abstractmethod
     def get_recv_size(self) -> xp.ndarray:
-        r""" "Returns the extent of the ghost cells to be received from neighbour processes along each axis of the Cartesian grid."""
+        r"""Returns the extent of the ghost cells to be received from neighbour processes along each axis of the Cartesian grid."""
 
     @property
     @abstractmethod
     def get_send_size(self) -> xp.ndarray:
-        r""" "Returns the extent of the ghost cells to be sent to neighbour processes along each axis of the Cartesian grid."""
+        r"""Returns the extent of the ghost cells to be sent to neighbour processes along each axis of the Cartesian grid."""
