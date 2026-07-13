@@ -3,8 +3,6 @@ r"""Save state of random number generators in numpy
 ``.h5`` file using ``h5py``.
 """
 
-# author: pthouvenin (pierre-antoine.thouvenin@centralelille.fr)
-
 import sys
 
 import h5py
@@ -12,7 +10,7 @@ import numpy as np
 import torch
 
 
-def int_to_array(n: int) -> np.ndarray[np.uint8]:
+def int_to_array(n: int) -> np.ndarray:
     r"""Convert a built-on Python ``int`` to an array which can be saved in
     hdf5.
 
@@ -23,7 +21,7 @@ def int_to_array(n: int) -> np.ndarray[np.uint8]:
 
     Returns
     -------
-    n_array
+    n_array : np.ndarray[np.uint8]
         Output array conversion.
 
     Note
@@ -43,7 +41,7 @@ def int_to_array(n: int) -> np.ndarray[np.uint8]:
     return int_array
 
 
-def array_to_int(n_array: np.ndarray[np.uint8]) -> int:
+def array_to_int(n_array: np.ndarray) -> int:
     r"""Convert a numpy array of ``np.uint8`` back to a built-in Python ``int``.
 
     Inverse operation of :func:`cards.data_manager.warmstart_rng.int_to_array`.
@@ -63,7 +61,7 @@ def array_to_int(n_array: np.ndarray[np.uint8]) -> int:
 
 def extract_rng_state(
     rng: np.random.Generator,
-) -> (np.ndarray[np.uint8], np.ndarray[np.uint8]):
+) -> (np.ndarray, np.ndarray):
     r"""Extract the state of a random number generator in the form of two
     ``numpy.ndarray`` objects.
 
@@ -81,11 +79,11 @@ def extract_rng_state(
 
     Note
     ----
-        - Requires ``numpy>=2.0``.
-        - The ``state`` and ``inc`` fields of a ``numpy.random.Generator`` object
-        are very large integers, and thus need to be converted to the
-        hexadecimal format (and later to an array of ``int``) to be saved into
-        a ``.h5`` file.
+    - Requires ``numpy>=2.0``.
+    - The ``state`` and ``inc`` fields of a ``numpy.random.Generator`` object
+    are very large integers, and thus need to be converted to the
+    hexadecimal format (and later to an array of ``int``) to be saved into
+    a ``.h5`` file.
     """
     # * state and inc are very large integers, and thus need to be
     # converted to hex format (later to an array of ints) to be saved in an
@@ -97,8 +95,8 @@ def extract_rng_state(
 
 def restore_rng_state(
     rng: np.random.Generator,
-    loaded_state_array: np.ndarray[np.uint8],
-    loaded_inc_array: np.ndarray[np.uint8],
+    loaded_state_array: np.ndarray,
+    loaded_inc_array: np.ndarray,
 ) -> None:
     r"""Set the state of a random number generator using the 32 bytes
     increment and state arrays stored in ``loaded_inc_array`` and

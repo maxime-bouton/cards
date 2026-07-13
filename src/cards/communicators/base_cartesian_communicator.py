@@ -55,8 +55,8 @@ class BaseCartesianCommunicator(ABC):
         Extent of the ghost cell to be sent to contiguous facets along each axis of the Cartesian grid.
     recv_size : numpy.ndarray[int], of size ``d``
         Extent of the ghost cell to be received from contiguous facets along each axis of the Cartesian grid.
-    dtype : numpy.dtype, optional
-        Type of the buffer over which the communicator is defined, by default np.float64. The `dtype` is required to define sub-arrays using `MPI.Datatype`.
+    dtype : type, optional
+        Type of the buffer over which the communicator is defined, by default np.float64. The ``dtype`` is required to define sub-arrays using `MPI.Datatype`.
     backward : bool, optional
         Direction of the overlap between contiguous facets along each axis of the Cartesian grid (forward or backward overlap), by default True.
     ndims : int
@@ -97,7 +97,7 @@ class BaseCartesianCommunicator(ABC):
         buffer_size: np.ndarray,
         send_size: np.ndarray,
         recv_size: np.ndarray,
-        dtype: np.dtype = np.float64,
+        dtype: type = np.float64,
         backward: bool = True,
         tile_range: np.ndarray | None = None,
     ) -> None:
@@ -159,4 +159,4 @@ class BaseCartesianCommunicator(ABC):
 
     @abstractmethod
     def remove(self) -> None:  # pragma: no cover
-        r"""Base function to clean up auxiliary quantities when the object can be safely deleted."""
+        r"""Trigger object finalizer to clean up auxiliary quantities when the object can be safely deleted."""

@@ -37,7 +37,7 @@ def mpi_create_subarray_type(
     comm_rank: np.ndarray,
     comm_starts: np.ndarray,
     comm_subsizes: np.ndarray,
-    dtype: np.dtype = np.float64,
+    dtype: type = np.float64,
 ) -> list[MPI.Datatype]:
     r"""Source, destination types and ranks to update facet borders.
 
@@ -56,7 +56,7 @@ def mpi_create_subarray_type(
         nD index of the starting point of the subarray to be extracted.
     comm_subsizes : numpy.ndarray[int]
         Shape of the subarray to be extracted.
-    dtype : numpy.dtype, optional
+    dtype : type, optional
         Type of the buffer over which the communicator is defined (required
         to define sub-arrays), by default np.float64.
 

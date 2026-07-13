@@ -10,8 +10,8 @@ Base Class
 Concrete Implementations
 ------------------------
 :class:`~cards.communicators.sync_cartesian_communicator.SyncCartesianCommunicator`
-    Communicator class for synchronous communications on a Cartesian grid of
-MPI processes in arbitrary dimension.
+    Communicator class for synchronous communications on a Cartesian grid of MPI processes in arbitrary dimension.
+
 :class:`~cards.communicators.shared_communicator.SharedCommunicator`
     Class triggering communications over a Cartesian pattern shared by a collection of distributed operators.
 
