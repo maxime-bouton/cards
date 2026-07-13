@@ -33,21 +33,21 @@ Examples
 >>> #TODO: add example usage of the models here
 """
 
-# from .base_denoiser import BaseDenoiser, BaseDistributedDenoiser
-# from .distributed_ddfb import DistributedDDFB
-# from .distributed_dncnn import DistributedDnCNN
-# from .distributed_drunet import DistributedDRUNet
-# from .serial_ddfb import SerialDDFB
-# from .serial_dncnn import SerialDnCNN
-# from .serial_drunet import SerialDRUNet
+from .base_denoiser import BaseDenoiser, BaseDistributedDenoiser
+from .distributed_ddfb import DistributedDDFB
+from .distributed_dncnn import DistributedDnCNN
+from .distributed_drunet import DistributedDRUNet
+from .serial_ddfb import SerialDDFB
+from .serial_dncnn import SerialDnCNN
+from .serial_drunet import SerialDRUNet
 
-# __all__ = [
-#     "BaseDenoiser",
-#     "BaseDistributedDenoiser",
-#     "DistributedDDFB",
-#     "DistributedDnCNN",
-#     "DistributedDRUNet",
-#     "SerialDDFB",
-#     "SerialDnCNN",
-#     "SerialDRUNet",
-# ]
+__all__ = [
+    "BaseDenoiser",
+    "BaseDistributedDenoiser",
+    "DistributedDDFB",
+    "DistributedDnCNN",
+    "DistributedDRUNet",
+    "SerialDDFB",
+    "SerialDnCNN",
+    "SerialDRUNet",
+]
