@@ -33,8 +33,8 @@ class BaseCartesianCommunicator(ABC):
         Extent of the ghost cell to be sent to contiguous facets along each axis of the Cartesian grid.
     recv_size : numpy.ndarray[int], of size ``d``
         Extent of the ghost cell to be received from contiguous facets along each axis of the Cartesian grid.
-    dtype : numpy.dtype, optional
-        Type of the buffer over which the communicator is defined, by default np.float64. The `dtype` is required to define sub-arrays using `MPI.Datatype`.
+    dtype : type, optional
+        Type of the buffer over which the communicator is defined, by default np.float64. The `type` is required to define sub-arrays using `MPI.Datatype`.
     backward : bool, optional
         Direction of the overlap between contiguous facets along each axis of the Cartesian grid (forward or backward overlap), by default `True`.
     tile_range : numpy.ndarray[int] or None, optional
@@ -121,6 +121,7 @@ class BaseCartesianCommunicator(ABC):
 
         self.ndims = grid_size.size
         self.rank = self.comm.Get_rank()
+        self.ranknd = get_ranknd(self.rank, self.grid_size)
         # self.circular_boundaries = False
         # self.cartcomm = comm.Create_cart(
         #     dims=self.grid_size,
@@ -128,7 +129,6 @@ class BaseCartesianCommunicator(ABC):
         #     reorder=False,
         # )
         # self.ranknd = np.array(self.cartcomm.Get_coords(self.rank), dtype="i")
-        self.ranknd = get_ranknd(self.rank, self.grid_size)
 
         self.cartslicer = CartesianCommSlicer(
             self.ranknd,

@@ -9,7 +9,6 @@ r"""Utility functions to load and normalize images."""
 from pathlib import Path
 
 import h5py
-import numpy as np
 from PIL import Image
 
 import cards.backend as xp
@@ -74,7 +73,7 @@ def read_img_shape(path: str | Path, key: str = "x") -> tuple[int, ...]:
             return (h, w, channels)
 
 
-def read_dtype(path: str | Path, key: str = "x") -> np.dtype:
+def read_dtype(path: str | Path, key: str = "x") -> type:
     r"""Read the dtype of a variable from a `.h5` file.
 
     Parameters
@@ -86,8 +85,8 @@ def read_dtype(path: str | Path, key: str = "x") -> np.dtype:
 
     Returns
     -------
-    np.dtype
-        The python-compatible numpy dtype of the image.
+    type
+        The python-compatible numpy type of the image.
     """
     if Path(path).suffix == ".h5":
         with h5py.File(path) as file:

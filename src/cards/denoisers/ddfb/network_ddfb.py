@@ -9,7 +9,7 @@ from cards.utils.numeric_method import power_method
 
 
 class DFBLayer(Module):
-    """
+    r"""
     A single Dual Forward-Backward layer optimized for minimal memory footprint.
 
     Parameters
@@ -56,7 +56,7 @@ class DFBLayer(Module):
 
 
 class DDFB(Module):
-    """
+    r"""
     Deep Dual Forward-Backward (DDFB) model.
 
     Parameters

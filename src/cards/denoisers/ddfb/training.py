@@ -16,7 +16,7 @@ from torchvision import transforms
 
 
 def calculate_snr(clean_images, noisy_or_denoised_images):
-    """
+    r"""
     Calculate the Signal-to-Noise Ratio (SNR) between clean and noisy/denoised images.
 
     Parameters
@@ -45,7 +45,7 @@ def calculate_snr(clean_images, noisy_or_denoised_images):
 
 
 def setup_logger(log_dir, log_filename):
-    """
+    r"""
     Set up logger that writes to both console and file.
 
     Parameters
@@ -84,7 +84,7 @@ def setup_logger(log_dir, log_filename):
 
 
 class DenoisingDataset(Dataset):
-    """
+    r"""
     Dataset class for image denoising, extracts random patches from input images.
 
     Parameters
@@ -155,7 +155,7 @@ def add_noise(
     max_sigma=0.1,
     same_noise_level=True,
 ):
-    """
+    r"""
     Add Gaussian noise to images.
 
     Parameters
@@ -200,7 +200,7 @@ def add_noise(
 
 
 def evaluate(model, val_loader, criterion, device, same_noise_level, sigma=None):
-    """
+    r"""
     Evaluate the model on validation data.
 
     Parameters
@@ -274,7 +274,7 @@ def train(
     device,
     logger,
 ):
-    """
+    r"""
     Train the DDFB model.
 
     Parameters
@@ -420,7 +420,7 @@ def train(
 
 
 def initialize_ddfb_model(model):
-    """
+    r"""
     Apply improved initialization to DDFB model's convolutional layers.
 
     Parameters

@@ -10,8 +10,39 @@ from cards.denoisers.base_denoiser import BaseDistributedDenoiser
 from cards.denoisers.denoiser_loader import load_pretrained_dncnn
 from cards.operators.mpi_torch_convolution import MpiTorchConvolution
 
+# FIXME: rename all internal convolution operators to make it clear they are private
+
 
 class MpiDnCNN(BaseDistributedDenoiser):
+    r"""Distributed implementation of the DnCNN :cite:p:`Zhang2017` network.
+
+    Parameters
+    ----------
+    comm : mpi4py.MPI.Comm
+        Underlying MPI communicator.
+    grid_size : xp.ndarray[int]
+        Number of workers along each of the ``d`` dimensions of the
+        communicator grid.
+    image_size: xp.ndarray
+        Input image shape.
+    weights_path : str, optional
+        Path to the folder containing the pre-trained denoiser weights.
+
+    Attributes
+    ----------
+    core_mpi_conv : MpiTorchConvolution
+        Distributed convolution operator implemented in torch, corresponding to the inner layers of the network.
+    edge_mpi_conv : MpiTorchConvolution
+        Distributed convolution operator implemented in torch, corresponding to the first and the last layer of the network.
+    dncnn : DnCNN
+        Local DnCNN denoiser.
+
+    Methods
+    -------
+    forward_no_comm()
+        Apply the DnCNN denoiser without communication for the first layer.
+    """
+
     def __init__(
         self,
         comm: MPI.Comm,
@@ -19,20 +50,6 @@ class MpiDnCNN(BaseDistributedDenoiser):
         image_size: xp.ndarray,
         weights_path=Path(__file__).parents[3] / "data/weights/dncnn",
     ):
-        r"""Distributed implementation of the DnCNN :cite:p:`Zhang2017` network.
-
-        Parameters
-        ----------
-        comm : mpi4py.MPI.Comm
-            Underlying MPI communicator.
-        grid_size : xp.ndarray[int]
-            Number of workers along each of the ``d`` dimensions of the
-            communicator grid.
-        image_size: xp.ndarray
-            Input image shape.
-        weights_path : str, optional
-            Path to the folder containing the pre-trained denoiser weights.
-        """
         super(BaseDistributedDenoiser, self).__init__(weights_path)
         if image_size.size < 3:
             # NOTE: accommodate gray scale images (implicitly, number of channes is 1)

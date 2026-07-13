@@ -7,12 +7,16 @@ workers in arbitray dimensions.
 
 # TODO: check typing (xp.ndarray or np.ndarray)
 
+from typing import Any
+
 import mpi4py.util.dtlib as mpilib
 import numpy as np
 from mpi4py import MPI
 
 
-def get_ranknd(rank: int, grid_size: np.ndarray) -> np.ndarray:
+def get_ranknd(
+    rank: int, grid_size: np.typing.NDArray[np.integer[Any]]
+) -> np.typing.NDArray[np.integer[Any]]:
     """Generate the nD rank of a process from its linear rank.
 
     Generate the nD rank of a process from its linear rank within a Cartesian grid of processes of shape ``grid_size``.

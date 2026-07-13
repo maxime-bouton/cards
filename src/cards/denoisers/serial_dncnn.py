@@ -12,20 +12,31 @@ from cards.utils.utils import torch2xp, xp2torch
 
 
 class SerialDnCNN(BaseDenoiser):
+    r"""Serial DnCNN network :cite:p:`Zhang2017`.
+
+    Parameters
+    ----------
+    image_size: xp.ndarray
+        Input image shape.
+    weights_path : str, optional
+        Path to the folder containing the pre-trained denoiser weights.
+
+    Attributes
+    ----------
+    dncnn : DnCNN
+        DnCNN denoiser.
+
+    Methods
+    -------
+    __call__()
+        Apply the serial denoiser to an input image.
+    """
+
     def __init__(
         self,
         image_size: np.ndarray,
         weights_path=Path(__file__).parents[3] / "data/weights/dncnn",
     ):
-        r"""Serial DnCNN network :cite:p:`Zhang2017`.
-
-        Parameters
-        ----------
-        image_size: xp.ndarray
-            Input image shape.
-        weights_path : str, optional
-            Path to the folder containing the pre-trained denoiser weights.
-        """
         super(SerialDnCNN, self).__init__(weights_path)
         if image_size.size < 3:
             # NOTE: accommodate gray scale images (implicitly, number of channes is 1)

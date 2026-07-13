@@ -24,7 +24,7 @@ class MotionBlurKernel:
         self,
         size=(100, 100),
         intensity=0.0,
-        dtype: np.dtype | None = None,
+        dtype: type | None = None,
         rng: np.random.Generator | None = None,
     ):
         if not isinstance(size, tuple) or len(size) != 2:

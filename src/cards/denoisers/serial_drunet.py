@@ -12,20 +12,31 @@ from cards.utils.utils import torch2xp, xp2torch
 
 
 class SerialDRUNet(BaseDenoiser):
+    r"""Serial DRUNet network :cite:p:`Zhang2021`.
+
+    Parameters
+    ----------
+    image_size: xp.ndarray
+        Input image shape.
+    weights_path : str, optional
+        Path to the folder containing the pre-trained denoiser weights.
+
+    Attributes
+    ----------
+    drunet : DRUNet
+        DRUNet denoiser.
+
+    Methods
+    -------
+    __call__()
+        Apply the serial denoiser to an input image.
+    """
+
     def __init__(
         self,
         image_size: np.ndarray,
         weights_path=Path(__file__).parents[3] / "data/weights/drunet",
     ):
-        r"""Serial DRUNet network :cite:p:`Zhang2021`.
-
-        Parameters
-        ----------
-        image_size: xp.ndarray
-            Input image shape.
-        weights_path : str, optional
-            Path to the folder containing the pre-trained denoiser weights.
-        """
         super(SerialDRUNet, self).__init__(weights_path)
         if image_size.size < 3:
             # NOTE: accommodate gray scale images (implicitly, number of channes is 1)

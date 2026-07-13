@@ -12,6 +12,30 @@ from cards.utils.utils import torch2xp, xp2torch
 
 
 class SerialDDFB(BaseDenoiser):
+    r"""Serial DDFB network :cite:p:`Repetti2022eusipco`.
+
+    Parameters
+    ----------
+    image_size: xp.ndarray
+        Input image shape.
+    n_layers: int
+        Number of DDFB layers.
+    n_features: int
+        Number of channels in the dual space of the convolution operators.
+    weights_path : str, optional
+        Path to the folder containing the pre-trained denoiser weights.
+
+    Attributes
+    ----------
+    ddfb : DDFB
+        DDFB denoiser.
+
+    Methods
+    -------
+    __call__()
+        Apply the serial denoiser to an input image.
+    """
+
     def __init__(
         self,
         image_size: np.ndarray,
@@ -19,19 +43,6 @@ class SerialDDFB(BaseDenoiser):
         n_features: int,
         weights_path=Path(__file__).parents[3] / "data/weights/ddfb",
     ):
-        r"""Serial DDFB network :cite:p:`Repetti2022eusipco`.
-
-        Parameters
-        ----------
-        image_size: xp.ndarray
-            Input image shape.
-        n_layers: int
-            Number of DDFB layers.
-        n_features: int
-            Number of channels in the dual space of the convolution operators.
-        weights_path : str, optional
-            Path to the folder containing the pre-trained denoiser weights.
-        """
         super(SerialDDFB, self).__init__(weights_path)
         if image_size.size < 3:
             # NOTE: accommodate gray scale images (implicitly, number of channes is 1)

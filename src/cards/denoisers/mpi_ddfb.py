@@ -11,8 +11,47 @@ from cards.denoisers.ddfb.network_ddfb import DFBLayer
 from cards.denoisers.denoiser_loader import load_pretrained_ddfb
 from cards.operators.mpi_torch_convolution import MpiTorchConvolution
 
+# TODO: move forward_no_comm method to the base class (variant of __call__() which does not trigger communications for the input stage of the network, which can possibly be made in common with other operators)
+# FIXME: rename all internal convolution operators to make it clear they are private
+
 
 class MpiDDFB(BaseDistributedDenoiser):
+    r"""Distributed implementation for the Deep Dual Forward-Backward (DDFB)
+    denoiser :cite:p:`Repetti2022eusipco`.
+
+    Parameters
+    ----------
+    comm : mpi4py.MPI.Comm
+        Underlying MPI communicator.
+    grid_size : xp.ndarray[int]
+        Number of workers along each of the ``d`` dimensions of the
+        communicator grid.
+    image_size: xp.ndarray
+        Input image shape.
+    n_layers: int
+        Number of DDFB layers.
+    n_features: int
+        Number of channels in the dual space of the convolution operators.
+    weights_path : str, optional
+        Path to the folder containing the pre-trained denoiser weights.
+
+    Attributes
+    ----------
+    n_layers: int
+        Number of DDFB layers.
+    n_features: int
+        Number of channels in the dual space of the convolution operators.
+    mpi_conv: MpiTorchConvolution
+        Internal distributed convolution operator implemented in torch.
+    ddfb : DDFB
+        Local DDFB denoiser.
+
+    Methods
+    -------
+    forward_no_comm()
+        Apply the DDFB denoiser without communication for the first layer.
+    """
+
     def __init__(
         self,
         comm: MPI.Comm,
@@ -22,25 +61,6 @@ class MpiDDFB(BaseDistributedDenoiser):
         n_features: int,
         weights_path=Path(__file__).parents[3] / "data/weights/ddfb",
     ):
-        r"""Distributed implementation for the Deep Dual Forward-Backward (DDFB)
-        denoiser :cite:p:`Repetti2022eusipco`.
-
-        Parameters
-        ----------
-        comm : mpi4py.MPI.Comm
-            Underlying MPI communicator.
-        grid_size : xp.ndarray[int]
-            Number of workers along each of the ``d`` dimensions of the
-            communicator grid.
-        image_size: xp.ndarray
-            Input image shape.
-        n_layers: int
-            Number of DDFB layers.
-        n_features: int
-            Number of channels in the dual space of the convolution operators.
-        weights_path : str, optional
-            Path to the folder containing the pre-trained denoiser weights.
-        """
         super(BaseDistributedDenoiser, self).__init__(weights_path)
         if image_size.size < 3:
             # NOTE: accommodate gray scale images (implicitly, number of channes is 1)

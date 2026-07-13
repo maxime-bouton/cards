@@ -18,7 +18,7 @@ class MpiGradient2d:
         grid_size: np.ndarray,
         comm: MPI.Comm = MPI.COMM_WORLD,
         enable_internal_buffer: bool = True,
-        dtype: xp.dtype | None = xp.float64,
+        dtype: type = xp.float64,
     ):
         self.dtype = dtype
         self.comm = comm

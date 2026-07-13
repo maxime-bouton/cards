@@ -8,6 +8,8 @@ from cards.denoisers.ddfb.network_ddfb import DDFB
 from cards.denoisers.dncnn.network_dncnn import DnCNN
 from cards.denoisers.drunet.network_drunet import DRUNet
 
+# TODO: trim-down redundancies between the functions if possible, only differing in the instanciation of the network
+
 
 def load_pretrained_ddfb(
     C=3,

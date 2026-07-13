@@ -12,8 +12,52 @@ from cards.denoisers.denoiser_loader import load_pretrained_drunet
 from cards.operators.mpi_torch_convolution import MpiTorchConvolution
 from cards.utils.utils import torch2xp, xp2torch
 
+# TODO: add method equivalent to forward_no_comm in DDFB and DnCNN
+# FIXME: rename all internal convolution operators to make it clear they are private
+
 
 class MpiDRUNet(BaseDistributedDenoiser):
+    r"""Distributed implementation of the DRUNet :cite:p:`Zhang2021` network.
+
+    Parameters
+    ----------
+    comm : mpi4py.MPI.Comm
+        Underlying MPI communicator.
+    grid_size : xp.ndarray[int]
+        Number of workers along each of the ``d`` dimensions of the
+        communicator grid.
+    image_size: xp.ndarray
+        Input image shape.
+    weights_path : str, optional
+        Path to the folder containing the pre-trained denoiser weights.
+
+    Attributes
+    ----------
+    conv1, conv2, conv3, conv4 : MpiTorchConvolution
+        Internal convolution operators used to defined the layers of the network (after different up-/down-sampling levels).
+    head_conv : MpiTorchConvolution
+        Convolution operator in the first layer of the network.
+    tail_conv : MpiTorchConvolution
+        Convolution operator in the last layer of the network.
+    drunet : DRUNet
+        Internal DRUNet denoiser.
+
+    Methods
+    -------
+    state_shape()
+        Returns the shape of the local output image tile handled by the current process.
+    tile_range()
+        Returns the start and end index of the output image tile handled by the current worker.
+
+    Warning
+    -------
+    The current distributed implementation only works for images whose
+    spatial dimensions are a multiple of 8. More precisely, the spatial
+    shape of the local tiles handled by each worker needs to be a
+    multiple of 8 to avoid additional communications for the up- and
+    down-sampling operators.
+    """
+
     def __init__(
         self,
         comm: MPI.Comm,
@@ -21,28 +65,6 @@ class MpiDRUNet(BaseDistributedDenoiser):
         image_size: np.ndarray,
         weights_path=Path(__file__).parents[3] / "data/weights/drunet",
     ):
-        r"""Distributed implementation of the DRUNet :cite:p:`Zhang2021` network.
-
-        Parameters
-        ----------
-        comm : mpi4py.MPI.Comm
-            Underlying MPI communicator.
-        grid_size : xp.ndarray[int]
-            Number of workers along each of the ``d`` dimensions of the
-            communicator grid.
-        image_size: xp.ndarray
-            Input image shape.
-        weights_path : str, optional
-            Path to the folder containing the pre-trained denoiser weights.
-
-        Warning
-        -------
-        The current distributed implementation only works for images whose
-        spatial dimensions are a multiple of 8. More precisely, the spatial
-        shape of the local tiles handled by each worker needs to be a
-        multiple of 8 to avoid additional communications for the up- and
-        down-sampling operators.
-        """
         super(BaseDistributedDenoiser, self).__init__(weights_path)
         if image_size.size < 3:
             # NOTE: accommodate gray scale images (implicitly, number of channes is 1)

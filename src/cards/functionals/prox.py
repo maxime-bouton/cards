@@ -1,4 +1,4 @@
-"""Implementation of useful mathematical functions such as simple proximal operators._"""
+r"""Implementation of useful mathematical functions and operators such as simple proximal operators."""
 
 import cards.backend as xp
 
