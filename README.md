@@ -123,7 +123,7 @@ python -m main --config config_2048_pnp.json --mode serial --device gpu
 
 ### Testing
 
-Before any commit or pull request to the master branch, verify all tests pass under the different configuration considered (serial and distirbuted mode, running on CPU or GPU). See [`tests/conftest.py`](tests/conftestpy) for further details.
+Before any commit or pull request to the master branch, verify all tests pass under the different configuration considered (serial and distirbuted mode, running on CPU or GPU). See [`tests/conftest.py`](tests/conftest.py) for further details.
 
 ```bash
 pixi shell -e full

@@ -1,4 +1,4 @@
-r"""Utility functions to build the applications associated with the experiments reported in :cite:p:`Bouton2025`."""
+r"""Utility functions to build the applications associated with the experiments reported in :cite:p:`Bouton2026`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #

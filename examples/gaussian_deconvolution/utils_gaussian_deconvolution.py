@@ -1,4 +1,4 @@
-r"""Utility functions to set the Gaussian deconvolution example script for the experiments reported in :cite:p:`Bouton2025` (synthetic data generation, sampling and post-processing steps)."""
+r"""Utility functions to set the Gaussian deconvolution example script for the experiments reported in :cite:p:`Bouton2026` (synthetic data generation, sampling and post-processing steps)."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #

@@ -1,4 +1,4 @@
-r"""Implementation of a Poisson deconvolution model using a PnP prior to reproduce the experiments reported in :cite:p:`Bouton2025`."""
+r"""Implementation of a Poisson deconvolution model using a PnP prior to reproduce the experiments reported in :cite:p:`Bouton2026`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #

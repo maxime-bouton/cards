@@ -1,5 +1,5 @@
 r"""Utility functions to generate synthetic data for the inpainting and
-deconvolution experiments reported in :cite:p:`Bouton2025`."""
+deconvolution experiments reported in :cite:p:`Bouton2026`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #

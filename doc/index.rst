@@ -4,7 +4,7 @@ cards documentation
 The ``cards`` (Composable Algorithms for Reproducible Distributed Sampling) Python library provides elementary operators, MPI communicators and Markov transition kernels to facilitate the design of custom distributed Plug-and-Play (PnP) Markov chain Monte Carlo (MCMC) algorithms for high-dimensional Bayesian inference.
 The distributed functionalitites proposed in this library are primarily oriented towards SMPD algorithms running on multiple CPUs or GPUs.
 
-The `associated github repository <https://github.com/maxime-bouton/cards/>`_ also contains codes to reproduce the image processing experiments reported in :cite:p:`Bouton2025`.
+The `associated github repository <https://github.com/maxime-bouton/cards/>`_ also contains codes to reproduce the image processing experiments reported in :cite:p:`Bouton2026`.
 
 
 .. warning::
