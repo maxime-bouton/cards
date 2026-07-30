@@ -155,7 +155,7 @@ The project is licensed under the [GPL-3.0 license](LICENSE).
 
 ## Citation
 
-If you reuse this code, please cite the [associated paper](<>).
+If you reuse this code, please cite the [associated paper](https://ieeexplore.ieee.org/document/11482855).
 
 ```bib
 @article{Bouton2026,
@@ -163,11 +163,15 @@ If you reuse this code, please cite the [associated paper](<>).
   author       = {Maxime Bouton and Pierre-Antoine Thouvenin and Audrey Repetti and Pierre Chainais},
   code         = {https://github.com/maxime-bouton/cards},
   date         = {2026-04},
-  eprinttype   = {arxiv},
+  doi          = {10.1109/TCI.2026.3685151},
+  hal_id       = {hal-05326314},
+  hal_version  = {v1},
   journaltitle = {{IEEE Trans. Comput. Imag.}},
   month        = apr,
-  note         = {to appear},
+  number       = {},
   title        = {A Distributed {P}lug-and-{P}lay {MCMC} Algorithm for High-Dimensional Inverse Problems},
   url          = {https://hal.science/hal-05326314},
+  pages        = {839-849},
+  volume       = {12},
 }
 ```
