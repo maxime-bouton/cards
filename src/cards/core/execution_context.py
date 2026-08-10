@@ -2,6 +2,7 @@
 
 from typing import Literal
 
+import numpy as np
 import torch
 
 import cards.backend as xp
@@ -39,6 +40,11 @@ class ExecutionContext:
         Total number of MPI workers. 1 if "serial".
     is_master : bool
         Whether the current worker is the master (rank 0). True if "serial".
+
+    Methods
+    -------
+    generate_grid_size()
+        Generate the MPI grid size for a given data dimension and splitting strategy.
     """
 
     def __init__(
@@ -114,3 +120,54 @@ class ExecutionContext:
             torch.cuda.set_device(gpu_id)
             torch.set_default_device("cuda")
             torch.backends.cudnn.deterministic = True
+
+    def generate_grid_size(
+        self,
+        dims: int,
+        strategy: Literal["best", "auto"] = "best",
+        spatial_dims: int = 2,
+    ) -> np.ndarray:
+        """Compute the size of the MPI grid partitioning the data of given dimensions.
+
+        Parameters
+        ----------
+        dims : int
+            Total number of dimensions of the data to be partitioned.
+        strategy : Literal["best", "auto"], optional
+            Strategy to use for computing the grid size over the spatial axes.
+            If `best`, the partitioning is only done along the first spatial axis.
+            If `auto`, the grid is computed using MPI's :meth:`Compute_dims` function
+            distributed across all spatial dimensions.
+        spatial_dims : int, optional
+            Number of spatial dimensions at the end of the shape to be partitioned.
+            Default is 2 (e.g., Height, Width).
+
+        Returns
+        -------
+        numpy.ndarray
+           The size of the grid partitioning the data.
+        """
+        if not self.is_mpi:
+            return np.ones(dims, dtype=int)
+
+        if spatial_dims < 1:
+            raise ValueError(
+                "There must be at least one spatial dimension to partition."
+            )
+
+        if dims < spatial_dims:
+            raise ValueError(
+                f"Data dims ({dims}) cannot be less than spatial dims ({spatial_dims})."
+            )
+
+        # first dimensions are not partitioned (no mpi communication along them)
+        prefix = [1] * (dims - spatial_dims)
+        if strategy == "best":
+            # partition only along the first spatial dimension, keep the rest as 1
+            suffix = [self.comm_size] + [1] * (spatial_dims - 1)
+        else:
+            from mpi4py import MPI
+
+            # MPI distributes the ranks across ALL spatial dimensions
+            suffix = MPI.Compute_dims(self.comm_size, spatial_dims)
+        return np.asarray(prefix + suffix, dtype=int)
