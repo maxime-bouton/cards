@@ -1,6 +1,7 @@
 import pytest
 import torch
-from mpi4py import MPI
+
+from cards.core.execution_context import ExecutionContext
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -56,78 +57,60 @@ def pytest_collection_modifyitems(
 
         current_tags = {m.name for m in item.iter_markers()}
 
-        if target_device == "cpu" and "cpu" not in current_tags:
+        if (
+            target_device == "cpu"
+            and "cpu" not in current_tags
+            or target_device == "gpu"
+            and "gpu" not in current_tags
+        ):
             item.add_marker(skip_wrong_device)
-        elif target_device == "gpu" and "gpu" not in current_tags:
-            item.add_marker(skip_wrong_device)
 
-        if target_mode == "mpi" and "mpi" not in current_tags:
+        if (
+            target_mode == "mpi"
+            and "mpi" not in current_tags
+            or target_mode == "serial"
+            and "serial" not in current_tags
+        ):
             item.add_marker(skip_wrong_mode)
-        elif target_mode == "serial" and "serial" not in current_tags:
-            item.add_marker(skip_wrong_mode)
-
-
-@pytest.fixture(scope="session")
-def mode(request: pytest.FixtureRequest) -> str:
-    return request.config.getoption("--mode")
-
-
-@pytest.fixture(scope="session")
-def comm(mode: str) -> MPI.Comm | None:
-    if mode == "mpi":
-        return MPI.COMM_WORLD
-    else:
-        return None
-
-
-@pytest.fixture(scope="session")
-def rank(comm: MPI.Comm | None) -> int:
-    if comm is not None:
-        return comm.Get_rank()
-    else:
-        return 0
-
-
-@pytest.fixture(scope="session")
-def comm_size(comm: MPI.Comm | None) -> int:
-    if comm is not None:
-        return comm.Get_size()
-    else:
-        return 1
-
-
-@pytest.fixture(scope="session")
-def device(request: pytest.FixtureRequest) -> str:
-    return request.config.getoption("--device")
 
 
 @pytest.fixture(scope="session", autouse=True)
-def backend_setup(device: str, rank: int) -> None:
-    if device == "gpu":
-        import cards.backend as xp
-
-        xp.set_backend("cupy")
-
-        nb_gpu = xp.cuda.runtime.getDeviceCount()
-        gpu_id = rank % nb_gpu
-
-        xp.cuda.runtime.setDevice(gpu_id)
-        torch.set_default_device(f"cuda:{gpu_id}")
-
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cuda.matmul.allow_tf32 = False
-        torch.backends.cudnn.allow_tf32 = False
+def ctx(request: pytest.FixtureRequest) -> ExecutionContext:
+    mode = request.config.getoption("--mode")
+    device = request.config.getoption("--device")
+    return ExecutionContext(mode=mode, device=device)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def torch_device(device: str, rank: int) -> torch.device:
-    if device == "gpu":
-        nb_gpu = torch.cuda.device_count()
-        gpu_id = rank % nb_gpu
+@pytest.fixture(scope="session")
+def comm(ctx: ExecutionContext):
+    return ctx.comm
 
-        return torch.device(f"cuda:{gpu_id}")
-    else:
-        return torch.device("cpu")
+
+@pytest.fixture(scope="session")
+def rank(ctx: ExecutionContext) -> int:
+    return ctx.rank
+
+
+@pytest.fixture(scope="session")
+def comm_size(ctx: ExecutionContext) -> int:
+    return ctx.comm_size
+
+
+@pytest.fixture(scope="session")
+def mode(ctx: ExecutionContext) -> str:
+    return ctx.mode
+
+
+@pytest.fixture(scope="session")
+def device(ctx: ExecutionContext) -> str:
+    return ctx.device
+
+
+@pytest.fixture(scope="session")
+def torch_device(ctx: ExecutionContext) -> torch.device:
+    if ctx.is_gpu:
+        return torch.device("cuda")
+    return torch.device("cpu")
 
 
 @pytest.fixture(scope="session")
