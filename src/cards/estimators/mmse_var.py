@@ -1,11 +1,11 @@
 r"""Implementation of the MMSE estimate using an online computing approach."""
 
 import cards.backend as xp
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.base_estimator import BaseEstimator
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
-class MMSEVarBuilder(BaseEstimatorBuilder):
+class MMSEVar(BaseEstimator):
     r"""Implementation of an MMSE estimator.
 
     Computation is carried out online.
