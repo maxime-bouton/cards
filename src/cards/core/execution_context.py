@@ -119,7 +119,14 @@ class ExecutionContext:
             xp.cuda.Device(gpu_id).use()
             torch.cuda.set_device(gpu_id)
             torch.set_default_device("cuda")
+
             torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
+
+            torch.backends.cuda.matmul.allow_tf32 = False
+            torch.backends.cudnn.allow_tf32 = False
+
+        torch.use_deterministic_algorithms(True)
 
     def generate_grid_size(
         self,
