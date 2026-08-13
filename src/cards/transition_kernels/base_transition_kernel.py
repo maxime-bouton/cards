@@ -7,7 +7,6 @@ r"""Abstract class to implement probability transition kernels."""
 # Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
 import cards.backend as xp
 
@@ -34,8 +33,8 @@ class BaseTransitionKernel(ABC):
     def __init__(
         self,
         state_shape: tuple[int, ...],
-        initial_value: Optional[xp.ndarray] = None,
-        dtype: Optional[xp.dtype] = None,
+        initial_value: xp.ndarray | None = None,
+        dtype: xp.dtype | None = None,
     ) -> None:
         r"""
         Parameters
@@ -56,15 +55,7 @@ class BaseTransitionKernel(ABC):
     @abstractmethod
     def mc_step(self, rng) -> None:
         r"""Update the state of the parameter."""
-        pass
 
     def get_state(self) -> xp.ndarray | None:
         r"""Return current state of the parameter."""
         return self.current_state
-
-
-# TODO (minor): delegate .get to io_manager
-class BaseGpuTransitionKernel(BaseTransitionKernel):
-    def get_state(self) -> xp.ndarray | None:
-        r"""Return current state of the parameter."""
-        return self.current_state.get()

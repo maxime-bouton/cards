@@ -8,15 +8,13 @@ gradient Langevin algorithm (PnP-PSGLA) :cite:p:`Renaud2025`.
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
 # Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
-from typing import Optional
-
 import torch
 
 import cards.backend as xp
-from cards.transition_kernels.base_transition_kernel import BaseGpuTransitionKernel
+from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
-class GpuPnpSGLA(BaseGpuTransitionKernel):
+class GpuPnpSGLA(BaseTransitionKernel):
     r"""PnP-PSGLA transition kernel.
 
     PnP-PSGLA transition kernel :cite:p:`Renaud2025`, whose negative
@@ -32,8 +30,8 @@ class GpuPnpSGLA(BaseGpuTransitionKernel):
         self,
         state_shape: tuple[int, ...],
         step_size: float,
-        dtype: Optional[xp.dtype] = None,
-        initial_value: Optional[xp.ndarray] = None,
+        dtype: xp.dtype | None = None,
+        initial_value: xp.ndarray | None = None,
     ) -> None:
         r"""Constructor of the GpuPnpSGLA class.
 

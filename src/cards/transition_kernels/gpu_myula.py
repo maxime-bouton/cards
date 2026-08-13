@@ -8,15 +8,13 @@ r"""Abstract GPU implementation for the Moreau-Yosida Unajusted Langevin Algorit
 #
 # adpated from: https://gitlab.cristal.univ-lille.fr/pthouven/dsgs
 
-from typing import Optional
-
 import torch
 
 import cards.backend as xp
-from cards.transition_kernels.base_transition_kernel import BaseGpuTransitionKernel
+from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
-class GpuMYULA(BaseGpuTransitionKernel):
+class GpuMYULA(BaseTransitionKernel):
     r"""Abstract GPU implementation of the MYULA transition kernel.
 
     MYULA transition kernel :cite:p:`Durmus2018` associated with a target
@@ -67,7 +65,7 @@ class GpuMYULA(BaseGpuTransitionKernel):
         lipschitz_cst: float,
         regularization_factor: float = 1.0,
         stepsize_factor: float = 0.5,
-        dtype: Optional[xp.dtype] = None,
+        dtype: xp.dtype | None = None,
         initial_value: xp.ndarray | None = None,
     ) -> None:
         r"""Constructor of the GpuMYULA class.
@@ -100,9 +98,7 @@ class GpuMYULA(BaseGpuTransitionKernel):
             The parameters ``stepsize_factor`` and ``regularization_factor``
             both need to be <= 1.
         """
-        super(GpuMYULA, self).__init__(
-            state_shape, dtype=dtype, initial_value=initial_value
-        )
+        super().__init__(state_shape, dtype=dtype, initial_value=initial_value)
 
         if xp.minimum(stepsize_factor, regularization_factor) > 1:
             raise ValueError(
