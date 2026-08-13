@@ -11,16 +11,16 @@ r"""Utility functions to build the applications associated with the experiments 
 import argparse
 import importlib
 import json
+from collections.abc import Callable  # NoReturn
 from os.path import join
 from pathlib import Path
-from typing import Callable  # NoReturn
 
 import torch
 
 import cards.backend as xp
 from cards.analysis.core import analyze_data
 from cards.logger import build_logger
-from cards.samplers.base_sampler import SamplerParameters
+from cards.samplers.sampler import SamplerParameters
 from cards.utils.path_builder import (
     generate_obs_dir_path,
     generate_save_dir_path,
@@ -95,9 +95,9 @@ def main(
 
     module = importlib.import_module(module_name)
     if "denoiser_params" in params:
-        compute_fn = getattr(module, "compute_pnp")
+        compute_fn = module.compute_pnp
     else:
-        compute_fn = getattr(module, "compute_tv")
+        compute_fn = module.compute_tv
     compute_fn(logger=logger, mode=mode, device=device, **args_main)
 
     if rank == 0:
