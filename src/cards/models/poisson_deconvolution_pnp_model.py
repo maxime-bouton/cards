@@ -14,7 +14,7 @@ import torch
 
 import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDenoiser, BaseDistributedDenoiser
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.base_estimator import BaseEstimator
 from cards.functionals.prox import KL, prox_KL, prox_nonegativity
 from cards.models.base_model import BaseDistributedModel
 from cards.models.base_poisson_deconvolution_model import (
@@ -33,7 +33,7 @@ from cards.transition_kernels.psgla import PSGLA
 class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DftConvolution | MpiDftConvolution,
         X: BaseTransitionKernel,
@@ -162,7 +162,7 @@ class DistributedPoissonDeconvolutionPnpModel(
 ):
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         convolution_operator: MpiDftConvolution,
         params: PoissonDeconvolutionParameters,
         X: BaseTransitionKernel,

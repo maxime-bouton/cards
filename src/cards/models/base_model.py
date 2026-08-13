@@ -12,7 +12,7 @@ import numpy as np
 import torch
 
 import cards.backend as xp
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.base_estimator import BaseEstimator
 
 
 class BaseModel(ABC):
@@ -28,7 +28,7 @@ class BaseModel(ABC):
         A list of estimator builders used to compute parameter estimates during sampling.
     """
 
-    def __init__(self, estimators: list[BaseEstimatorBuilder]) -> None:
+    def __init__(self, estimators: list[BaseEstimator]) -> None:
         self._estimators = estimators
 
     @abstractmethod
@@ -176,7 +176,7 @@ class BaseDistributedModel(BaseModel):
         A list of estimator builders used to compute parameter estimates during sampling.
     """
 
-    def __init__(self, estimators: list[BaseEstimatorBuilder]):
+    def __init__(self, estimators: list[BaseEstimator]):
         super().__init__(estimators)
         self.global_sizes = {}
         self.local_sizes = {}

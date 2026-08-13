@@ -15,7 +15,7 @@ import torch
 
 import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDenoiser
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.base_estimator import BaseEstimator
 from cards.models.base_gaussian_inpainting_model import (
     BaseGaussianInpaintingModel,
     GaussianInpaintingParameters,
@@ -33,7 +33,7 @@ class GaussianInpaintingPnpParameters(GaussianInpaintingParameters): ...
 class BaseGaussianInpaintingPnpModel(BaseGaussianInpaintingModel):
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: GaussianInpaintingPnpParameters,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
@@ -122,7 +122,7 @@ class DistributedGaussianInpaintingPnpModel(
 ):
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: GaussianInpaintingPnpParameters,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,

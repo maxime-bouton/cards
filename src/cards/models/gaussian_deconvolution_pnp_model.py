@@ -15,7 +15,7 @@ import torch
 
 import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDenoiser, BaseDistributedDenoiser
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.base_estimator import BaseEstimator
 from cards.models.base_gaussian_deconvolution_model import (
     BaseGaussianDeconvolutionModel,
     GaussianDeconvolutionParams,
@@ -37,7 +37,7 @@ class GaussianDeconvolutionPnpParams(GaussianDeconvolutionParams): ...
 class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: GaussianDeconvolutionPnpParams,
         convolution_operator: DftConvolution | MpiDftConvolution,
         X: BaseTransitionKernel,
@@ -132,7 +132,7 @@ class DistributedGaussianDeconvolutionPnpModel(
 ):
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: GaussianDeconvolutionPnpParams,
         convolution_operator: MpiDftConvolution,
         X: BaseTransitionKernel,

@@ -16,7 +16,7 @@ import numpy as np
 from mpi4py import MPI
 
 import cards.backend as xp
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.base_estimator import BaseEstimator
 from cards.functionals.prox import l21_norm, prox_l21norm, prox_nonegativity
 from cards.models.base_gaussian_inpainting_model import (
     BaseGaussianInpaintingModel,
@@ -40,7 +40,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
 
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: GaussianInpaintingTvParameters,
         X: BaseTransitionKernel,
         Z: BaseTransitionKernel,
@@ -125,7 +125,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
 class GaussianInpaintingTvModel(BaseGaussianInpaintingTvModel):
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: GaussianInpaintingTvParameters,
         X: BaseTransitionKernel,
         Z: BaseTransitionKernel,
@@ -141,7 +141,7 @@ class DistributedGaussianInpaintingTvModel(
 ):
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: GaussianInpaintingTvParameters,
         X: BaseTransitionKernel,
         Z: BaseTransitionKernel,
