@@ -209,13 +209,12 @@ class Sampler(ABC):
         of the parameters is regularly saved in checkpoint files, along with
         quantities required for a batched evaluation of the final estimates.
         """
-        if self.rank == 0:
-            pbar = ProgressBar(total=self.n_ckpts, desc="Sampling", bar_len=100)
-
         if self.start_ckpt_idx > 0:
             self._load_checkpoint()
-            if self.rank == 0:
-                pbar.update(self.start_ckpt_idx)
+
+        if self.rank == 0:
+            pbar = ProgressBar(total=self.n_ckpts, desc="Sampling", bar_len=100)
+            pbar.update(self.start_ckpt_idx)
 
         self.model.setup_estimators(self.ckpt_size)
 
@@ -250,7 +249,7 @@ class Sampler(ABC):
                     self.logger.info(
                         f"  │    │ Checkpoint {cyan}{ckpt_idx + 1:>{pad}}/{self.n_ckpts}{reset} | "
                         f"Potential: {yellow}{self._potential[-1]: 1.3e}{reset} | "
-                        f"Time/Step: {magenta}{self._computation_time[-1]: 1.3e}{reset}s"
+                        f"t/it (s): {magenta}{self._computation_time[-1]: 1.3e}{reset}"
                     )
                 ckpt_time = sum(self._computation_time)
                 pbar.update(ckpt_idx + 1, time_per_step=ckpt_time)
