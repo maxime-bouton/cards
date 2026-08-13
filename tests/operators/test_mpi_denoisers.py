@@ -72,6 +72,7 @@ def test_mpi_dncnn(seed, input_size, comm, grid_size):
     xp.testing.assert_allclose(y_serial, y_mpi, rtol=1e-5, atol=1e-5)
 
 
+# FIXME: this test is still failing, even with this tolerance
 @pytest.mark.mpi
 def test_mpi_drunet(seed, input_size, comm, grid_size):
     r"""Verify that the distributed DRUNet yields results identical to the serial DRUNet.
