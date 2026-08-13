@@ -122,12 +122,33 @@ class ProgressBar:
             sys.stdout.write("\033[1A\033[2K")
             self._is_visible = False
 
-    def update(self, current: int) -> None:
+    def _format_time(self, seconds: float) -> str:
+        r"""Format seconds into a readable time string."""
+        if seconds <= 0:
+            return "00:00"
+
+        m, s = divmod(int(seconds), 60)
+        h, m = divmod(m, 60)
+
+        if h > 0:
+            return f"{h:02d}h {m:02d}m {s:02d}s"
+        return f"{m:02d}m {s:02d}s"
+
+    def update(self, current: int, time_per_step: float | None = None) -> None:
         r"""Draw the progress bar on a new line."""
         percent = min(current / self.total, 1.0)
         filled = int(self.bar_len * percent)
-        bar = "█" * filled + "░" * (self.bar_len - filled)
-        pbar_line = f"{self.desc} |{bar}| {current}/{self.total} [{percent:>4.0%}]\n"
+        bar = "█" * filled + " " * (self.bar_len - filled)
+
+        eta_str = ""
+        if time_per_step is not None:
+            remaining_steps = self.total - current
+            eta_seconds = remaining_steps * time_per_step
+            eta_str = f" | ETA: {self._format_time(eta_seconds)}"
+
+        pbar_line = (
+            f"{self.desc} |{bar}| {current}/{self.total} [{percent:>4.0%}]{eta_str}\n"
+        )
 
         sys.stdout.write(pbar_line)
         sys.stdout.flush()
