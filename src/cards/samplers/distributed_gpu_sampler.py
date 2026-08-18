@@ -64,7 +64,7 @@ class DistributedGpuSampler(Sampler):
         with self.io_manager.open(ckpt_path, "w") as f:
             self.io_manager.write_dict(
                 f,
-                self.model.get_states(),
+                self.model.states,
                 self.model.global_sizes,
                 self.model.slices,
             )
@@ -84,11 +84,10 @@ class DistributedGpuSampler(Sampler):
     def _load_checkpoint(self) -> None:
         r"""Load sampler state collaboratively from disk via parallel HDF5 (``mpio``)."""
         with self.io_manager.open(self.restart_path, "r") as f:
-            self.model.set_states(
-                self.io_manager.read_dict(
-                    f,
-                    self.model.vars,
-                    self.model.slices,
-                )
+            self.model.states = self.io_manager.read_dict(
+                f,
+                self.model.keys,
+                self.model.slices,
             )
+
             self.rng = self.io_manager.read_rng(f)

@@ -251,6 +251,7 @@ class Sampler(ABC):
             pbar.update(self.start_ckpt_idx)
 
         self._setup_estimators()
+        self.model.compile()
 
         for ckpt_idx in range(self.start_ckpt_idx, self.n_ckpts):
             self._reset_estimators()

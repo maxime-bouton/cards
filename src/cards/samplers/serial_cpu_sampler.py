@@ -35,7 +35,7 @@ class SerialCpuSampler(Sampler):
 
     def _save_checkpoint(self, ckpt_path: Path) -> None:
         with self.io_manager.open(ckpt_path, "w") as f:
-            self.io_manager.write_dict(f, self.model.get_states())
+            self.io_manager.write_dict(f, self.model.states)
             # self.io_manager.write_dict(f, self.model.get_estimates())
             self.io_manager.write_array(f, "potential", self._potential)
             self.io_manager.write_stacked(f, "computation_time", self._computation_time)
@@ -43,5 +43,5 @@ class SerialCpuSampler(Sampler):
 
     def _load_checkpoint(self) -> None:
         with self.io_manager.open(self.restart_path, "r") as f:
-            self.model.set_states(self.io_manager.read_dict(f, self.model.vars))
+            self.model.states = self.io_manager.read_dict(f, self.model.keys)
             self.rng = self.io_manager.read_rng(f)  # type : ignore
