@@ -1,0 +1,49 @@
+{
+    "application": {
+        "type": "gaussian_deconvolution",
+        "name": "pnp_ddfb"
+    },
+    "io": {
+        "root_dir_path": "produced_data",
+        "obs_dir_path": "",
+        "obs_file_stem": "data",
+        "ckpt_dir_path": "",
+        "ckpt_prefix": "checkpoint_",
+        "start_ckpt_dir_path": "",
+        "log_file_path": "",
+        "log_file_prefix": "sampling"
+    },
+    "sampler": {
+        "ckpt_size": 100,
+        "n_ckpts": 10,
+        "seed": 42,
+        "start_ckpt_idx": 0
+    },
+    "observations": {
+        "img_path": "data/128.h5",
+        "seed_data": 1234,
+        "kernel": {
+            "type": "motion",
+            "size": 5,
+            "intensity": 0.5
+        },
+        "isnr": 15,
+        "mask_loss": 0.7
+    },
+    "parameters": {
+        "reg_coef": 1.0,
+        "split_coef1": 10.0,
+        "split_coef2": 0.001,
+        "denoiser": {
+            "type": "ddfb",
+            "n_layers": 4,
+            "n_features": 64,
+            "denoising_level": 0.05,
+            "L": 2.0
+        }
+    },
+    "analysis": {
+        "burnin": 1,
+        "save_all": false
+    }
+}

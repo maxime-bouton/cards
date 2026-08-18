@@ -26,16 +26,16 @@ Examples
 >>> #TODO: add example usage of the samplers here
 """
 
-from .base_sampler import SamplerParameters
 from .distributed_cpu_sampler import DistributedCpuSampler
 from .distributed_gpu_sampler import DistributedGpuSampler
+from .sampler import SamplerParameters
 from .serial_cpu_sampler import SerialCpuSampler
 from .serial_gpu_sampler import SerialGpuSampler
 
 __all__ = [
+    "DistributedCpuSampler",
+    "DistributedGpuSampler",
     "SamplerParameters",
     "SerialCpuSampler",
     "SerialGpuSampler",
-    "DistributedCpuSampler",
-    "DistributedGpuSampler",
 ]

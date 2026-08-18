@@ -6,7 +6,7 @@ import cards.backend as xp
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
-class BaseEstimatorBuilder(ABC):
+class BaseEstimator(ABC):
     """Abstract class underlying the computation of Bayesian estimates.
 
     Parameters

@@ -8,15 +8,13 @@ Algorithm (PSGLA) :cite:p:`Salim2020`.
 # Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
 # Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
 
-from typing import Optional
-
 import torch
 
 import cards.backend as xp
-from cards.transition_kernels.base_transition_kernel import BaseGpuTransitionKernel
+from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
-class GpuPSGLA(BaseGpuTransitionKernel):
+class GpuPSGLA(BaseTransitionKernel):
     r"""Generic GPU implementation of the Proximal Stochastic Gradient Langevin
     Algorithm (PSGLA) :cite:p:`Salim2020`, with target distribution
 
@@ -37,8 +35,8 @@ class GpuPSGLA(BaseGpuTransitionKernel):
         self,
         state_shape: tuple[int, ...],
         step_size: float,
-        dtype: Optional[xp.dtype] = None,
-        initial_value: Optional[xp.ndarray] = None,
+        dtype: xp.dtype | None = None,
+        initial_value: xp.ndarray | None = None,
     ) -> None:
         r"""Constructor of the GpuPSGLA class.
 

@@ -4,15 +4,14 @@ import logging
 from pathlib import Path
 
 import cupy as cp
-import h5py
 import torch
 
 from cards.io.io_manager import IOManager
 from cards.models.base_model import BaseModel
-from cards.samplers.base_sampler import BaseSampler, SamplerParameters
+from cards.samplers.sampler import Sampler, SamplerParameters
 
 
-class SerialGpuSampler(BaseSampler):
+class SerialGpuSampler(Sampler):
     r"""Serial GPU implementation of the MCMC sampling backbone.
 
     This class executes the MCMC loop synchronously on a single GPU core, utilizing
@@ -20,27 +19,21 @@ class SerialGpuSampler(BaseSampler):
     generation. It employs CUDA events for high-resolution timing of each MCMC step.
     """
 
-    rng: torch.Generator
-
     def __init__(
         self,
+        io_mng: IOManager,
         params: SamplerParameters,
         model: BaseModel,
+        rng: torch.Generator,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(params, model, logger)
+        super().__init__(io_mng, params, model, rng, logger)
 
         self._start_gpu = cp.cuda.Event()
         self._end_gpu = cp.cuda.Event()
 
     def _setup_rank(self) -> int:
         return 0
-
-    def _setup_rng(self) -> torch.Generator:
-        return torch.Generator(device="cuda").manual_seed(self.seed)
-
-    def _setup_io_manager(self) -> IOManager:
-        return IOManager(self.ckpt_size)
 
     def _start_timer(self) -> None:
         self._start_gpu.record()
@@ -57,14 +50,14 @@ class SerialGpuSampler(BaseSampler):
         return self.model.compute_potential()
 
     def _save_checkpoint(self, ckpt_path: Path) -> None:
-        with h5py.File(ckpt_path, "w") as file:
-            self.io_manager.save_dict(self.model.get_states(), file)
-            self.io_manager.save_dict(self.model.get_estimates(), file)
-            self.io_manager.save_rng_torch(self.rng, self.seed, file)
-            self.io_manager.save_array(self._potential, file, "potential")
-            self.io_manager.save_array(self._computation_time, file, "computation_time")
+        with self.io_manager.open(ckpt_path, "w") as f:
+            self.io_manager.write_dict(f, self.model.get_states())
+            # self.io_manager.write_dict(f, self.model.get_estimates())
+            self.io_manager.write_array(f, "potential", self._potential)
+            self.io_manager.write_stacked(f, "computation_time", self._computation_time)
+            self.io_manager.write_rng(f, self.rng)
 
     def _load_checkpoint(self) -> None:
-        with h5py.File(self.restart_path, "r") as file:
-            self.model.set_states(self.io_manager.load_states(file, self.model.vars))
-            self.io_manager.load_rng_torch(self.rng, file)
+        with self.io_manager.open(self.restart_path, "r") as f:
+            self.model.set_states(self.io_manager.read_dict(f, self.model.vars))
+            self.rng = self.io_manager.read_rng(f)

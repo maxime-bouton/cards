@@ -10,7 +10,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 
 import cards.backend as xp
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.base_estimator import BaseEstimator
 from cards.models.base_model import BaseModel
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
@@ -28,8 +28,8 @@ class GaussianDeconvolutionParams:
     observations: xp.ndarray
     r"""The observed degraded signal or image, often denoted as :math:`\mathbf{y}`."""
 
-    kernel: xp.ndarray
-    r"""The blur kernel defining the convolution operator."""
+    # kernel: xp.ndarray
+    # r"""The blur kernel defining the convolution operator."""
 
     sigma2: float
     r"""The variance of the additive white Gaussian noise, :math:`\sigma^2`."""
@@ -59,7 +59,7 @@ class BaseGaussianDeconvolutionModel(BaseModel):
 
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: GaussianDeconvolutionParams,
         convolution_operator: DftConvolution | MpiDftConvolution,
         X: BaseTransitionKernel,

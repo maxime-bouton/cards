@@ -9,27 +9,45 @@ r"""Utility functions to create and format logger outputs."""
 # TODO: documentation
 
 import logging
+import re
 import sys
 from pathlib import Path
 
 
+def get_null_logger(name: str = "null_logger") -> logging.Logger:
+    r"""Create a null logger."""
+    logger = logging.getLogger(name)
+    logger.addHandler(logging.NullHandler())
+    return logger
+
+
 class ColoredFormatter(logging.Formatter):
-    r"""
-    Custom formatter that adds colors based on log level.
-    """
+    r"""Custom formatter that adds colors based on log level."""
 
     RESET = "\033[0m"
-    RED = "\033[31m"
-    YELLOW = "\033[33m"
+    COLORS = {
+        logging.CRITICAL: "\033[1;31m",
+        logging.ERROR: "\033[31m",
+        logging.WARNING: "\033[33m",
+        logging.INFO: RESET,
+        logging.DEBUG: "\033[36m",
+    }
 
     def format(self, record):
         orig_msg = super().format(record)
-        if record.levelno == logging.ERROR:
-            return f"{ColoredFormatter.RED}{orig_msg}{ColoredFormatter.RESET}"
-        elif record.levelno == logging.WARNING:
-            return f"{ColoredFormatter.YELLOW}{orig_msg}{ColoredFormatter.RESET}"
-        else:
-            return orig_msg
+        color = self.COLORS.get(record.levelno, self.RESET)
+        return f"{color}{orig_msg}{self.RESET}"
+
+
+class PlainFileFormatter(logging.Formatter):
+    r"""Formatter that strips ANSI escape codes for clean file logging."""
+
+    # Regex to match standard ANSI color/style escape sequences
+    ANSI_RE = re.compile(r"\033\[[0-9;]*m")
+
+    def format(self, record):
+        orig_msg = super().format(record)
+        return self.ANSI_RE.sub("", orig_msg)
 
 
 def build_logger(
@@ -64,7 +82,9 @@ def build_logger(
     logger.handlers = []
 
     if path is not None:
-        file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        file_formatter = PlainFileFormatter(
+            "%(asctime)s - %(levelname)-8s - %(message)s"
+        )
         path.parent.mkdir(parents=True, exist_ok=True)
         file_handler = logging.FileHandler(path)
         file_handler.setFormatter(file_formatter)
@@ -73,7 +93,7 @@ def build_logger(
     if rank is not None and rank == print_rank:
         console_handler = logging.StreamHandler(sys.stdout)
         colored_formatter = ColoredFormatter(
-            f"%(asctime)s - Rank {rank} - %(levelname)s - %(message)s"
+            f"%(asctime)s - Rank {rank} - %(levelname)-8s - %(message)s"
         )
         console_handler.setFormatter(colored_formatter)
         logger.addHandler(console_handler)
@@ -102,12 +122,33 @@ class ProgressBar:
             sys.stdout.write("\033[1A\033[2K")
             self._is_visible = False
 
-    def update(self, current: int) -> None:
+    def _format_time(self, seconds: float) -> str:
+        r"""Format seconds into a readable time string."""
+        if seconds <= 0:
+            return "00:00"
+
+        m, s = divmod(int(seconds), 60)
+        h, m = divmod(m, 60)
+
+        if h > 0:
+            return f"{h:02d}h {m:02d}m {s:02d}s"
+        return f"{m:02d}m {s:02d}s"
+
+    def update(self, current: int, time_per_step: float | None = None) -> None:
         r"""Draw the progress bar on a new line."""
         percent = min(current / self.total, 1.0)
         filled = int(self.bar_len * percent)
-        bar = "█" * filled + "░" * (self.bar_len - filled)
-        pbar_line = f"{self.desc} |{bar}| {current}/{self.total} [{percent:>4.0%}]\n"
+        bar = "█" * filled + " " * (self.bar_len - filled)
+
+        eta_str = ""
+        if time_per_step is not None:
+            remaining_steps = self.total - current
+            eta_seconds = remaining_steps * time_per_step
+            eta_str = f" | ETA: {self._format_time(eta_seconds)}"
+
+        pbar_line = (
+            f"{self.desc} |{bar}| {current}/{self.total} [{percent:>4.0%}]{eta_str}\n"
+        )
 
         sys.stdout.write(pbar_line)
         sys.stdout.flush()

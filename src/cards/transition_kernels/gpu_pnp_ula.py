@@ -11,10 +11,10 @@ r"""Abstract GPU implementation of the Plug-and-Play Unadjusted Langevin
 import torch
 
 import cards.backend as xp
-from cards.transition_kernels.base_transition_kernel import BaseGpuTransitionKernel
+from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
-class GpuPnpULA(BaseGpuTransitionKernel):
+class GpuPnpULA(BaseTransitionKernel):
     r"""Generic GPU implementation of PnP-ULA.
 
     Attributes

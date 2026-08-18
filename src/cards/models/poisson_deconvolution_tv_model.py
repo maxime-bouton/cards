@@ -11,7 +11,7 @@ r"""Implementation of a Poisson deconvolution model using a TV prior to reproduc
 import numpy as np
 
 import cards.backend as xp
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.base_estimator import BaseEstimator
 from cards.functionals.prox import (
     KL,
     l21_norm,
@@ -36,7 +36,7 @@ from cards.transition_kernels.psgla import PSGLA
 class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DftConvolution | MpiDftConvolution,
         gradient_operator: Gradient2d | MpiGradient2d,
@@ -150,7 +150,7 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
 class PoissonDeconvolutionTvModel(BasePoissonDeconvolutionTvModel):
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DftConvolution,
         X: BaseTransitionKernel,
@@ -176,7 +176,7 @@ class DistributedPoissonDeconvolutionTvModel(
 ):
     def __init__(
         self,
-        estimators: list[BaseEstimatorBuilder],
+        estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
         convolution_operator: MpiDftConvolution,
         X: BaseTransitionKernel,

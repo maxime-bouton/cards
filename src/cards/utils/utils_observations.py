@@ -10,13 +10,14 @@ deconvolution experiments reported in :cite:p:`Bouton2026`."""
 # TODO: `rng` should be compatible with both numpy and cupy
 # create rng abstraction layer that can handle both numpy and cupy/torch generators?
 
+from collections.abc import Callable, Sequence, Sized
 from pathlib import Path
-from typing import Callable, Sequence, Sized
 
 import h5py
 import numpy as np
 
 import cards.backend as xp
+from cards.core.execution_context import ExecutionContext
 from cards.operators.linear_operator import LinearOperator
 from cards.utils.utils import expanded_left_view
 from cards.utils.utils_img import load_img, normalize_ndarray
@@ -163,22 +164,41 @@ def slice_linear_conv_to_original(
     return tuple(np.s_[k // 2 : i + k // 2] for k, i in zip(kernel_shape, img_shape))
 
 
-def compute_sigma2_from_isnr(signal: xp.ndarray, isnr: float) -> float:
+def compute_sigma2_from_isnr(
+    signal: xp.ndarray, isnr: float, ctx: ExecutionContext | None = None
+) -> float:
     """Estimate the noise variance from the input signal and the desired input SNR.
 
     Parameters
     ----------
     signal: xp.ndarray
-        The input signal (numpy array).
+        The input signal (numpy/cupy array). If distributed, this is the local chunk.
     isnr: float
         The desired input SNR (in dB).
+    ctx: ExecutionContext, optional
+        Execution context object containing MPI properties (e.g., is_mpi, comm, rank).
 
     Returns:
     -------
     float
-        Corresponding noise variance.
+        Corresponding noise variance (computed globally, returned identical on all ranks).
     """
-    return float(xp.linalg.norm(signal) ** 2 / signal.size / (10 ** (isnr / 10)))
+    local_sq_norm = float(xp.linalg.norm(signal) ** 2)
+    local_size = int(signal.size)
+
+    if ctx is not None and ctx.is_mpi:
+        from mpi4py import MPI
+
+        global_sq_norm = ctx.comm.allreduce(local_sq_norm, op=MPI.SUM)
+        global_size = ctx.comm.allreduce(local_size, op=MPI.SUM)
+    else:
+        global_sq_norm = local_sq_norm
+        global_size = local_size
+
+    if global_size == 0:
+        raise ValueError("Global signal size is 0. Cannot compute variance.")
+
+    return global_sq_norm / global_size / (10 ** (isnr / 10))
 
 
 def apply_poisson_noise(

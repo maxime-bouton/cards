@@ -8,9 +8,12 @@ from pathlib import Path
 import numpy as np
 import torch
 
+import cards.backend as xp
+from cards.core.execution_context import ExecutionContext
 from cards.io.io_manager import IOManager
 from cards.logger import ProgressBar
 from cards.models.base_model import BaseModel
+from cards.random import create_rng
 
 
 @dataclass
@@ -30,8 +33,7 @@ class SamplerParameters:
     r"""Path to the directory where the checkpoint files are saved."""
 
     ckpt_prefix: str
-    r"""Root name under which checkpoint files will be saved while running the chain.
-    These can be used to restart the chain at an earlier state."""
+    r"""Root name under which checkpoint files will be saved while running the chain."""
 
     seed: int
     r"""Seed to initialize the random number generator.
@@ -46,7 +48,7 @@ class SamplerParameters:
     :data:`None` (i.e. same as :attr:`ckpt_dir_path`)."""
 
 
-class BaseSampler(ABC):
+class Sampler(ABC):
     r"""Abstract sampler implementation for MCMC algorithms.
 
     This class handles the main MCMC loop, timing, logging, and I/O operations.
@@ -94,8 +96,10 @@ class BaseSampler(ABC):
 
     def __init__(
         self,
+        io_mng: IOManager,
         params: SamplerParameters,
         model: BaseModel,
+        rng: np.random.Generator | torch.Generator,
         logger: logging.Logger | None = None,
     ) -> None:
         self.ckpt_size = params.ckpt_size
@@ -109,30 +113,70 @@ class BaseSampler(ABC):
         self.restart_path = start_path / self._ckpt_file.format(self.start_ckpt_idx)
 
         self.model = model
-        self.io_manager = self._setup_io_manager()
+        self.io_manager = io_mng
         self.logger = logger
 
         self.rank = self._setup_rank()
+        self.rng = rng
 
         self.seed = params.seed
-        self.rng = self._setup_rng()
 
         if self.rank == 0:
-            self._potential = np.zeros([self.ckpt_size])
+            self._potential = xp.zeros([self.ckpt_size])
 
-        self._computation_time = np.zeros([self.ckpt_size])
+        self._computation_time = xp.zeros([self.ckpt_size])
+
+    @classmethod
+    def create_from_context(
+        cls,
+        ctx: ExecutionContext,
+        io_mng: IOManager,
+        model: BaseModel,
+        params: SamplerParameters,
+        logger: logging.Logger | None = None,
+    ) -> "Sampler":
+        r"""Factory method to instantiate the correct child class."""
+
+        from . import (
+            DistributedCpuSampler,
+            DistributedGpuSampler,
+            SerialCpuSampler,
+            SerialGpuSampler,
+        )
+
+        rng = create_rng(params.seed, ctx)
+
+        match (ctx.is_mpi, ctx.is_gpu):
+            case (False, False):
+                return SerialCpuSampler(io_mng, params, model, rng, logger)
+            case (True, False):
+                return DistributedCpuSampler(
+                    io_mng,
+                    ctx.comm,
+                    params,
+                    model,  # type: ignore
+                    rng,  # type: ignore
+                    logger,
+                )
+            case (False, True):
+                return SerialGpuSampler(io_mng, params, model, rng, logger)  # type: ignore
+            case (True, True):
+                return DistributedGpuSampler(
+                    io_mng,
+                    ctx.comm,
+                    params,
+                    model,  # type: ignore
+                    rng,  # type: ignore
+                    logger,
+                )
+            case _:
+                raise ValueError(
+                    f"Unknown configuration: mpi={ctx.is_mpi}, gpu={ctx.is_gpu}"
+                )
 
     @abstractmethod
     def _setup_rank(self) -> int:
         r"""Determine and return the local worker rank."""
-
-    @abstractmethod
-    def _setup_rng(self) -> np.random.Generator | torch.Generator:
-        r"""Instantiate and return the random number generator."""
-
-    @abstractmethod
-    def _setup_io_manager(self) -> IOManager:
-        r"""Instantiate and return the IOManager."""
 
     @abstractmethod
     def _start_timer(self) -> None:
@@ -165,13 +209,12 @@ class BaseSampler(ABC):
         of the parameters is regularly saved in checkpoint files, along with
         quantities required for a batched evaluation of the final estimates.
         """
-        if self.rank == 0:
-            pbar = ProgressBar(total=self.n_ckpts, desc="Sampling")
-
         if self.start_ckpt_idx > 0:
             self._load_checkpoint()
-            if self.rank == 0:
-                pbar.update(self.start_ckpt_idx)
+
+        if self.rank == 0:
+            pbar = ProgressBar(total=self.n_ckpts, desc="Sampling", bar_len=100)
+            pbar.update(self.start_ckpt_idx)
 
         self.model.setup_estimators(self.ckpt_size)
 
@@ -198,9 +241,18 @@ class BaseSampler(ABC):
             if self.rank == 0:
                 pbar.clear()
                 if self.logger:
+                    pad = len(str(self.n_ckpts))
+                    cyan = "\033[96m"
+                    yellow = "\033[93m"
+                    magenta = "\033[95m"
+                    reset = "\033[0m"
                     self.logger.info(
-                        f"Checkpoint {ckpt_idx + 1} out of {self.n_ckpts} computed"
+                        f"  │    │ Checkpoint {cyan}{ckpt_idx + 1:>{pad}}/{self.n_ckpts}{reset} | "
+                        f"Potential: {yellow}{self._potential[-1]: 1.3e}{reset} | "
+                        f"t/it (s): {magenta}{self._computation_time[-1]: 1.3e}{reset}"
                     )
-                    self.logger.info(f"Potential: {self._potential[-1]:1.3e}")
-                    self.logger.info(f"Time/Step: {self._computation_time[-1]:1.3e}s")
-                pbar.update(ckpt_idx + 1)
+                ckpt_time = sum(self._computation_time)
+                pbar.update(ckpt_idx + 1, time_per_step=ckpt_time)
+
+        if self.rank == 0:
+            pbar.clear()

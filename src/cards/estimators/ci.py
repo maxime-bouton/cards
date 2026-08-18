@@ -1,11 +1,11 @@
 r"""Implementation of the MMSE and pixel variance estimates using Welford's online algorithm."""
 
 import cards.backend as xp
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.base_estimator import BaseEstimator
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
-class CIBuilder(BaseEstimatorBuilder):
+class CI(BaseEstimator):
     """Batched Credibility Interval estimator using empirical quantiles."""
 
     def __init__(
