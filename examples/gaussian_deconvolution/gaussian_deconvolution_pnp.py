@@ -6,6 +6,7 @@ import torch
 
 import cards.backend as xp
 from cards.core.execution_context import ExecutionContext
+from cards.core.layout import Layout
 from cards.denoisers.base_denoiser import BaseDenoiser
 from cards.denoisers.mpi_ddfb import MpiDDFB
 from cards.denoisers.mpi_dncnn import MpiDnCNN
@@ -37,17 +38,10 @@ from cards.utils.utils_observations import (
 
 
 @dataclass
-class Space:
-    tile: tuple[int, ...]  # local tile shape
-    full: tuple[int, ...]  # global shape
-    s: tuple[slice, ...] | None  # slice global to tile
-
-
-@dataclass
 class PnpDeconvGeometry:
     grid_size: np.ndarray
-    x_space: Space
-    y_space: Space
+    layout_x: Layout
+    layout_y: Layout
     H: DftConvolution | MpiDftConvolution
     D: BaseDenoiser
     kernel: xp.ndarray
@@ -173,9 +167,9 @@ class PnpDeconvGeometryHook:
         y_shape = tuple(H.data_size)
         tile_x_shape = tuple(slicer_x.tile_size) if slicer_x else x_shape
         tile_y_shape = tuple(slicer_y.tile_size) if slicer_y else y_shape
-        x_space = Space(tile_x_shape, x_shape, slice_x)
-        y_space = Space(tile_y_shape, y_shape, slice_y)
-        return PnpDeconvGeometry(grid_size, x_space, y_space, H, D, kernel_2d)
+        layout_x = Layout(tile_x_shape, x_shape, slice_x)
+        layout_y = Layout(tile_y_shape, y_shape, slice_y)
+        return PnpDeconvGeometry(grid_size, layout_x, layout_y, H, D, kernel_2d)
 
 
 @dataclass
@@ -204,7 +198,7 @@ class GaussianDeconvObservationsHook:
         img_path = obs_cfg["img_path"]
 
         with io_mng.open(img_path) as f:
-            x = io_mng.read_array(f, "x", geom.x_space.s)
+            x = io_mng.read_array(f, "x", geom.layout_x.s)
 
         Hx = geom.H.forward(x)
 
@@ -216,11 +210,11 @@ class GaussianDeconvObservationsHook:
         # TODO: rework rng handling
         if ctx.is_gpu:
             n = torch.normal(
-                0, sigma2**0.5, size=geom.y_space.tile, device="cuda", generator=rng
+                0, sigma2**0.5, size=geom.layout_y.tile, device="cuda", generator=rng
             )
             n = xp.asarray(n)
         else:
-            n = sigma2**0.5 * rng.standard_normal(geom.y_space.tile)
+            n = sigma2**0.5 * rng.standard_normal(geom.layout_y.tile)
 
         y = Hx + n
         return GaussianDeconvObs(
@@ -236,10 +230,10 @@ class GaussianDeconvObservationsHook:
         obs_path: Path,
     ) -> None:
         with io_mng.open(obs_path, mode="x") as f:
-            io_mng.write_array(f, "y", obs.y, geom.y_space.full, geom.y_space.s)
-            io_mng.write_array(f, "Hx", obs.Hx, geom.y_space.full, geom.y_space.s)
-            io_mng.write_array(f, "n", obs.n, geom.y_space.full, geom.y_space.s)
-            io_mng.write_array(f, "x", obs.x, geom.x_space.full, geom.x_space.s)
+            io_mng.write_array(f, "y", obs.y, geom.layout_y.full, geom.layout_y.s)
+            io_mng.write_array(f, "Hx", obs.Hx, geom.layout_y.full, geom.layout_y.s)
+            io_mng.write_array(f, "n", obs.n, geom.layout_y.full, geom.layout_y.s)
+            io_mng.write_array(f, "x", obs.x, geom.layout_x.full, geom.layout_x.s)
 
         with io_mng.open_master_only(obs_path, mode="r+") as f:
             if f is not None:
@@ -261,10 +255,10 @@ class GaussianDeconvObservationsHook:
         obs_path: Path,
     ) -> GaussianDeconvObs:
         with io_mng.open(obs_path, mode="r", force_serial=True) as f:
-            y = io_mng.read_array(f, "y", geom.y_space.s)
-            Hx = io_mng.read_array(f, "Hx", geom.y_space.s)
-            n = io_mng.read_array(f, "n", geom.y_space.s)
-            x = io_mng.read_array(f, "x", geom.x_space.s)
+            y = io_mng.read_array(f, "y", geom.layout_y.s)
+            Hx = io_mng.read_array(f, "Hx", geom.layout_y.s)
+            n = io_mng.read_array(f, "n", geom.layout_y.s)
+            x = io_mng.read_array(f, "x", geom.layout_x.s)
             kernel = io_mng.read_array(f, "kernel")
             obs_dict = io_mng.read_config(f)
 
@@ -324,7 +318,7 @@ class GaussianDeconvPnpMcmcHook:
         model_params = GaussianDeconvolutionPnpParams(obs.y, obs.sigma2, reg_coef)
 
         X = GpuPnpULA(
-            geom.x_space.tile,
+            geom.layout_x.tile,
             step_size_X,
             reg_coef,
             obs.sigma2,
