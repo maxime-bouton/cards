@@ -14,7 +14,8 @@ import numpy as np
 import torch
 
 import cards.backend as xp
-from cards.denoisers.base_denoiser import BaseDenoiser, BaseDistributedDenoiser
+from cards.core.variable import Variable
+from cards.denoisers.base_denoiser import BaseDenoiser
 from cards.models.base_gaussian_deconvolution_model import (
     BaseGaussianDeconvolutionModel,
     GaussianDeconvolutionParams,
@@ -33,16 +34,17 @@ from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
 class GaussianDeconvolutionPnpParams(GaussianDeconvolutionParams): ...
 
 
-class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
+class GaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
     def __init__(
         self,
         params: GaussianDeconvolutionPnpParams,
         convolution_operator: DftConvolution | MpiDftConvolution,
+        y: Variable,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
     ):
+        super().__init__(params, convolution_operator, y, X)
         self.denoiser = denoiser
-        super().__init__(params, convolution_operator, X)
 
     def set_conditionals(self):
         if type(self.X) is GpuPnpULA:
@@ -53,8 +55,7 @@ class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
                 cp_dtype=xp.float64,
             )
             self.X.grad = lambda state: (
-                self.convolution_operator.adjoint(self.convX - self.observations)
-                / self.sigma2
+                self.H.adjoint(self.Hx - self.y.state) / self.sigma2
             )
             self.X.project = lambda state: state.clip(-1, 2)
         elif type(self.X) is GpuPnpSGLA:
@@ -64,36 +65,12 @@ class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
                 torch_dtype=torch.float32,
                 cp_dtype=xp.float64,
             )
-            self.X.grad = lambda state: (
-                self.convolution_operator.adjoint(self.convX - self.observations)
-                / self.sigma2
-            )
+            self.X.grad = lambda state: self.H.adjoint(self.Hx - self.y) / self.sigma2
         else:
             raise ValueError("Kernel type not yet supported by this model.")
 
-    def get_states(self) -> dict:
-        """Extracts the current state of the transition kernel and other variables of interest and return the in a dictionary.
-
-        Returns
-        -------
-        dict
-            Dictionary containing the curent states of the variables.
-        """
-        return {"X": self.X.get_state()}
-
-    def set_states(self, states):
-        """Read the dictionary given in entry and set the variables of the model to the values contained in it.
-        The keys used by the dictionary must be the same as in "get_states"
-
-        Parameters
-        ----------
-        states : dict
-            Dictionary containing new values for the variables of the model.
-        """
-
-        self.X.current_state = xp.asarray(states["X"], dtype=self.X.current_state.dtype)
-
-        self.convX = self.convolution_operator.forward(self.X.current_state)
+    def _on_states_updated(self):
+        self.Hx = self.H.forward(self.X.state)
 
     def update(self, rng: np.random.Generator | torch.Generator):
         """Global update of the model. Updates every kernel used by the model and computes annex variables.
@@ -107,7 +84,7 @@ class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
         self.X.mc_step(rng)
 
         # update cached buffer related to X
-        self.convX = self.convolution_operator.forward(self.X.current_state)
+        self.Hx = self.H.forward(self.X.state)
 
     def compute_potential(self) -> float:
         """Compute the potential of the likelihood for the current step.
@@ -117,34 +94,11 @@ class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
         float
             Potential of the targeted distribution.
         """
-        p = (0.5 / self.sigma2) * xp.sum((self.observations - self.convX) ** 2)
+        p = (0.5 / self.sigma2) * xp.sum((self.y.state - self.Hx) ** 2)
         return p
 
 
-class GaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionPnpModel): ...
-
-
 class DistributedGaussianDeconvolutionPnpModel(
-    BaseGaussianDeconvolutionPnpModel,
+    GaussianDeconvolutionPnpModel,
     BaseDistributedModel,
-):
-    def __init__(
-        self,
-        params: GaussianDeconvolutionPnpParams,
-        convolution_operator: MpiDftConvolution,
-        X: BaseTransitionKernel,
-        denoiser: BaseDistributedDenoiser,
-    ):
-        self.full_size = convolution_operator.image_size
-        super().__init__(params, convolution_operator, X, denoiser)
-
-    def set_slices(self):
-        """Describes which portion of the global buffer the current thread must handle."""
-        self.slices["X"] = self.denoiser.global_to_tile_slice
-
-    def set_global_sizes(self):
-        """Describe the global sizes of several global buffers."""
-        self.global_sizes["X"] = np.asarray(self.full_size, dtype=int)
-
-    def set_local_sizes(self):
-        self.local_sizes["X"] = self.X.current_state.shape
+): ...
