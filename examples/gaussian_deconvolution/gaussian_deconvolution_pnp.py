@@ -7,6 +7,7 @@ import torch
 import cards.backend as xp
 from cards.core.execution_context import ExecutionContext
 from cards.core.layout import Layout
+from cards.core.variable import Variable
 from cards.denoisers.base_denoiser import BaseDenoiser
 from cards.denoisers.mpi_ddfb import MpiDDFB
 from cards.denoisers.mpi_dncnn import MpiDnCNN
@@ -14,8 +15,6 @@ from cards.denoisers.mpi_drunet import MpiDRUNet
 from cards.denoisers.serial_ddfb import SerialDDFB
 from cards.denoisers.serial_dncnn import SerialDnCNN
 from cards.denoisers.serial_drunet import SerialDRUNet
-from cards.estimators.base_estimator import BaseEstimator
-from cards.estimators.mmse_var import MMSEVar
 from cards.io.io_manager import IOManager
 from cards.models import (
     BaseModel,
@@ -315,22 +314,46 @@ class GaussianDeconvPnpMcmcHook:
             L,
             eps,
         )
-        model_params = GaussianDeconvolutionPnpParams(obs.y, obs.sigma2, reg_coef)
 
-        X = GpuPnpULA(
-            geom.layout_x.tile,
-            step_size_X,
-            reg_coef,
-            obs.sigma2,
-            lambda_,
+        y_var = Variable(
+            layout=geom.layout_y,
+            name="Y",
+            state=obs.y,
+            dtype=obs.y.dtype,
+        )
+
+        x_var = Variable(
+            layout=geom.layout_x,
+            name="X",
             dtype=obs.x.dtype,
         )
 
-        estimators: list[BaseEstimator] = [MMSEVar(X)]
+        model_params = GaussianDeconvolutionPnpParams(
+            sigma2=obs.sigma2, reg_coeff=reg_coef
+        )
+
+        X = GpuPnpULA(
+            var=x_var,
+            step_size=step_size_X,
+            reg_coef=reg_coef,
+            epsilon=obs.sigma2,
+            lambda_=lambda_,
+        )
 
         if ctx.is_mpi:
             Model = DistributedGaussianDeconvolutionPnpModel
         else:
             Model = GaussianDeconvolutionPnpModel
 
-        return Model(estimators, model_params, geom.H, X, geom.D)
+        model = Model(
+            params=model_params,
+            convolution_operator=geom.H,
+            y=y_var,
+            X=X,
+            denoiser=geom.D,
+        )
+
+        # estimators: list[BaseEstimator] = [MMSEVar(X)]
+
+        # return model, estimators
+        return model
