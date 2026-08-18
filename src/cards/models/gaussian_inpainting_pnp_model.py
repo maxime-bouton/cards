@@ -15,7 +15,6 @@ import torch
 
 import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDenoiser
-from cards.estimators.base_estimator import BaseEstimator
 from cards.models.base_gaussian_inpainting_model import (
     BaseGaussianInpaintingModel,
     GaussianInpaintingParameters,
@@ -33,13 +32,12 @@ class GaussianInpaintingPnpParameters(GaussianInpaintingParameters): ...
 class BaseGaussianInpaintingPnpModel(BaseGaussianInpaintingModel):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: GaussianInpaintingPnpParameters,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
     ):
         self.denoiser = denoiser
-        super().__init__(estimators, params, X)
+        super().__init__(params, X)
 
     def set_conditionals(self):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
@@ -122,7 +120,6 @@ class DistributedGaussianInpaintingPnpModel(
 ):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: GaussianInpaintingPnpParameters,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
@@ -130,7 +127,7 @@ class DistributedGaussianInpaintingPnpModel(
     ):
         self.full_size = full_size
 
-        super().__init__(estimators, params, X, denoiser)
+        super().__init__(params, X, denoiser)
 
     def set_slices(self):
         """set_slices Describes which portion of the global buffer the current thread must handle.

@@ -15,7 +15,6 @@ import torch
 
 import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDenoiser, BaseDistributedDenoiser
-from cards.estimators.base_estimator import BaseEstimator
 from cards.models.base_gaussian_deconvolution_model import (
     BaseGaussianDeconvolutionModel,
     GaussianDeconvolutionParams,
@@ -37,14 +36,13 @@ class GaussianDeconvolutionPnpParams(GaussianDeconvolutionParams): ...
 class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: GaussianDeconvolutionPnpParams,
         convolution_operator: DftConvolution | MpiDftConvolution,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
     ):
         self.denoiser = denoiser
-        super().__init__(estimators, params, convolution_operator, X)
+        super().__init__(params, convolution_operator, X)
 
     def set_conditionals(self):
         if type(self.X) is GpuPnpULA:
@@ -132,14 +130,13 @@ class DistributedGaussianDeconvolutionPnpModel(
 ):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: GaussianDeconvolutionPnpParams,
         convolution_operator: MpiDftConvolution,
         X: BaseTransitionKernel,
         denoiser: BaseDistributedDenoiser,
     ):
         self.full_size = convolution_operator.image_size
-        super().__init__(estimators, params, convolution_operator, X, denoiser)
+        super().__init__(params, convolution_operator, X, denoiser)
 
     def set_slices(self):
         """Describes which portion of the global buffer the current thread must handle."""

@@ -14,7 +14,6 @@ import torch
 
 import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDenoiser, BaseDistributedDenoiser
-from cards.estimators.base_estimator import BaseEstimator
 from cards.functionals.prox import KL, prox_KL, prox_nonegativity
 from cards.models.base_model import BaseDistributedModel
 from cards.models.base_poisson_deconvolution_model import (
@@ -33,7 +32,6 @@ from cards.transition_kernels.psgla import PSGLA
 class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DftConvolution | MpiDftConvolution,
         X: BaseTransitionKernel,
@@ -42,7 +40,7 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
         denoiser: BaseDenoiser,
     ):
         self.denoiser = denoiser
-        super().__init__(estimators, params, convolution_operator, X, Z1, Z2)
+        super().__init__(params, convolution_operator, X, Z1, Z2)
 
     def set_conditionals(self) -> None:
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
@@ -162,7 +160,6 @@ class DistributedPoissonDeconvolutionPnpModel(
 ):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         convolution_operator: MpiDftConvolution,
         params: PoissonDeconvolutionParameters,
         X: BaseTransitionKernel,
@@ -172,7 +169,7 @@ class DistributedPoissonDeconvolutionPnpModel(
     ):
         self.full_size = convolution_operator.image_size
 
-        super().__init__(estimators, params, convolution_operator, X, Z1, Z2, denoiser)
+        super().__init__(params, convolution_operator, X, Z1, Z2, denoiser)
 
     def set_slices(self):
         """Describes which portion of the global buffer the current thread must handle.

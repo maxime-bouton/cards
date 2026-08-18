@@ -113,6 +113,7 @@ class Sampler(ABC):
         self.restart_path = start_path / self._ckpt_file.format(self.start_ckpt_idx)
 
         self.model = model
+        self.estimators = {}
         self.io_manager = io_mng
         self.logger = logger
 
@@ -202,6 +203,39 @@ class Sampler(ABC):
     def _load_checkpoint(self) -> None:
         r"""Load the sampler state from a previous checkpoint."""
 
+    def _aggregate_states(self) -> None:
+        r"""Aggregate consecutive samples over a predefined window to form parameter estimates."""
+        for estimator in self.estimators:
+            estimator.aggregate_states()
+
+    def _setup_estimators(self) -> None:
+        r"""Configure the estimators to be used for the current application."""
+        for estimator in self.estimators:
+            estimator.setup(self.ckpt_size)
+
+    def _build_estimates(self) -> None:
+        r"""Build the final estimates for the parameters of interest."""
+        for estimator in self.estimators:
+            estimator.build_estimates()
+
+    def _get_estimates(self) -> dict[str, xp.ndarray]:
+        r"""Retrieve the final estimates for the parameters of interest.
+
+        Returns
+        -------
+        dict[str, xp.ndarray]
+            Dictionary containing the batched estimates of the parameters.
+        """
+        estimates = {}
+        for estimator in self.estimators:
+            estimates.update(estimator.get_estimates())
+        return estimates
+
+    def _reset_estimators(self) -> None:
+        r"""Reset the estimators to their initial states."""
+        for estimator in self.estimators:
+            estimator.reset()
+
     def sample(self) -> None:
         r"""Main iteration loop of the MCMC algorithm.
 
@@ -216,10 +250,10 @@ class Sampler(ABC):
             pbar = ProgressBar(total=self.n_ckpts, desc="Sampling", bar_len=100)
             pbar.update(self.start_ckpt_idx)
 
-        self.model.setup_estimators(self.ckpt_size)
+        self._setup_estimators()
 
         for ckpt_idx in range(self.start_ckpt_idx, self.n_ckpts):
-            self.model.reset_estimators()
+            self._reset_estimators()
 
             for i in range(self.ckpt_size):
                 self._start_timer()
@@ -230,10 +264,10 @@ class Sampler(ABC):
                 if self.rank == 0:
                     self._potential[i] = potential
 
-                self.model.aggregate_states()
+                self._aggregate_states()
                 self._computation_time[i] = self._get_elapsed_time()
 
-            self.model.build_estimates()
+            self._build_estimates()
 
             ckpt_path = self.ckpt_dir_path / self._ckpt_file.format(ckpt_idx + 1)
             self._save_checkpoint(ckpt_path)

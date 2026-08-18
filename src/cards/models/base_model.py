@@ -12,7 +12,6 @@ import numpy as np
 import torch
 
 import cards.backend as xp
-from cards.estimators.base_estimator import BaseEstimator
 
 
 class BaseModel(ABC):
@@ -21,15 +20,7 @@ class BaseModel(ABC):
     This class defines the common interface for models, managing the associated
     estimators and specifying the required methods for state manipulation, potential
     computation, and transition kernel updates.
-
-    Parameters
-    ----------
-    estimators : list[BaseEstimatorBuilder]
-        A list of estimator builders used to compute parameter estimates during sampling.
     """
-
-    def __init__(self, estimators: list[BaseEstimator]) -> None:
-        self._estimators = estimators
 
     @abstractmethod
     def update(self, rng: np.random.Generator | torch.Generator) -> None:
@@ -80,74 +71,6 @@ class BaseModel(ABC):
         with a learned prior (e.g., encoded by a deep denoiser in Plug-and-Play approaches).
         """
 
-    def aggregate_states(self) -> None:
-        r"""Aggregate consecutive samples over a predefined window to form parameter estimates.
-
-        Note
-        ----
-        This method triggers :meth:`~cards.estimators.BaseEstimatorBuilder.aggregate_states`
-        across all estimators selected for the current application.
-        """
-        for estimator in self._estimators:
-            estimator.aggregate_states()
-
-    def setup_estimators(self, ckpt_size: int) -> None:
-        r"""Configure the estimators to be used for the current application.
-
-        Parameters
-        ----------
-        ckpt_size : int
-            Number of samples per checkpoint used to compute the estimates.
-
-        Note
-        ----
-        This method triggers :meth:`~cards.estimators.BaseEstimatorBuilder.setup`
-        across the configured estimators. It is primarily used for batched estimators,
-        which require the checkpoint size to allocate the necessary memory.
-        """
-        for estimator in self._estimators:
-            estimator.setup(ckpt_size)
-
-    def build_estimates(self) -> None:
-        r"""Build the final estimates for the parameters of interest.
-
-        Note
-        ----
-        This method triggers :meth:`~cards.estimators.BaseEstimatorBuilder.build_estimates`
-        across all estimators selected for the current application.
-        """
-        for estimator in self._estimators:
-            estimator.build_estimates()
-
-    def get_estimates(self) -> dict[str, xp.ndarray]:
-        r"""Retrieve the final estimates for the parameters of interest.
-
-        Returns
-        -------
-        dict[str, xp.ndarray]
-            Dictionary containing the batched estimates of the parameters.
-
-        Note
-        ----
-        This method triggers :meth:`~cards.estimators.BaseEstimatorBuilder.get_estimates`
-        across all estimators selected for the current application.
-        """
-        estimates = {}
-        for estimator in self._estimators:
-            estimates.update(estimator.get_estimates())
-        return estimates
-
-    def reset_estimators(self) -> None:
-        r"""Reset the estimators to their initial states.
-
-        Note
-        ----
-        This method triggers :meth:`~cards.estimators.BaseEstimatorBuilder.reset`
-        across all estimators selected for the current application.
-        """
-        for estimator in self._estimators:
-            estimator.reset()
-
     @property
     def vars(self) -> list[str]:
         r"""Return the list of variables to be sampled in the model."""
@@ -169,15 +92,10 @@ class BaseDistributedModel(BaseModel):
         (:meth:`set_slices`, :meth:`set_global_sizes`, and :meth:`set_local_sizes`).
         Because these methods typically rely on attributes defined in the child class,
         calling the parent constructor too early will result in missing attribute errors.
-
-    Parameters
-    ----------
-    estimators : list[BaseEstimatorBuilder]
-        A list of estimator builders used to compute parameter estimates during sampling.
     """
 
-    def __init__(self, estimators: list[BaseEstimator]):
-        super().__init__(estimators)
+    def __init__(self):
+        super().__init__()
         self.global_sizes = {}
         self.local_sizes = {}
         self.slices = {}
