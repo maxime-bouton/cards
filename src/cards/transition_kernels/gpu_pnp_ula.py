@@ -11,11 +11,24 @@ r"""Abstract GPU implementation of the Plug-and-Play Unadjusted Langevin
 import torch
 
 import cards.backend as xp
+from cards.core.variable import Variable
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
 class GpuPnpULA(BaseTransitionKernel):
     r"""Generic GPU implementation of PnP-ULA.
+
+    Parameters
+    ----------
+    step_size : float
+        Step-size value used in the transition.
+    reg_coef : float
+        Regularization parameter for the contribution from Tweedie's
+        identity (MMSE denoiser).
+    epsilon : float
+        Standard deviation of the denoiser.
+    lambda_ : float
+        Projection smoothing parameter.
 
     Attributes
     ----------
@@ -32,35 +45,14 @@ class GpuPnpULA(BaseTransitionKernel):
 
     def __init__(
         self,
-        state_shape: tuple[int, ...],
+        var: Variable,
         step_size: float,
         reg_coef: float,
         epsilon: float,
         lambda_: float,
-        dtype: xp.dtype | None = None,
-        initial_value: xp.ndarray | None = None,
     ) -> None:
-        r"""Constructor of the GpuPnpULA class.
-
-        Parameters
-        ----------
-        state_shape : tuple[int, ...]
-            Shape of the parameter handled by the transition kernel.
-        step_size : float
-            Step-size value used in the transition.
-        reg_coef : float
-            Regularization parameter for the contribution from Tweedie's
-            identity (MMSE denoiser).
-        epsilon : float
-            Standard deviation of the denoiser.
-        lambda_ : float
-            Projection smoothing parameter.
-        dtype : xp.dtype | None, optional
-            Parameter type, by default None.
-        initial_value : xp.ndarray | None, optional
-            Initial state value, by default None.
-        """
-        super().__init__(state_shape, dtype=dtype, initial_value=initial_value)
+        r"""Constructor of the GpuPnpULA class."""
+        super().__init__(var)
         self.step_size = step_size
         self.reg_coef = reg_coef
         self.lambda_ = lambda_
@@ -83,25 +75,32 @@ class GpuPnpULA(BaseTransitionKernel):
         raise ValueError("Projection function not defined.")
 
     def mc_step(self, rng):
-        d = self.current_state - self.denoise(self.current_state)
-        p = self.current_state - self.project(self.current_state)
-        self.current_state = (
-            self.current_state
-            + (2 * self.step_size) ** 0.5
-            * xp.from_dlpack(
-                torch.normal(
-                    mean=0,
-                    std=1,
-                    size=self.current_state.shape,
-                    generator=rng,
-                    device=rng.device,
-                )
-                # TODO: proper dtype handling in the torch.normal call
-            )
-            - self.step_size
-            * (
-                self.grad(self.current_state)
-                + d * self.reg_coef / self.epsilon
-                + p / self.lambda_
+        state = self.var.state
+
+        grad = self.grad(state)
+        denoised = self.denoise(state)
+        projected = self.project(state)
+        noise = xp.asarray(
+            torch.normal(
+                mean=0.0,
+                std=1.0,
+                size=state.shape,
+                generator=rng,
+                device=rng.device,
             )
         )
+
+        xp.subtract(state, denoised, out=denoised)
+        denoised *= self.reg_coef / self.epsilon
+
+        xp.subtract(state, projected, out=projected)
+        projected /= self.lambda_
+
+        grad += denoised
+        grad += projected
+        grad *= self.step_size
+
+        state -= grad
+
+        noise *= (2 * self.step_size) ** 0.5
+        state += noise
