@@ -13,9 +13,9 @@ import numpy as np
 from scipy import interpolate
 
 import cards.backend as xp
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.base_estimator import BaseEstimator
 from cards.estimators.ci_builder import CIBuilder
-from cards.estimators.mmse_var_builder import MMSEVarBuilder
+from cards.estimators.mmse_var import MMSEVar
 from cards.models.gaussian_inpainting_pnp_model import (
     DistributedGaussianInpaintingPnpModel,
     GaussianInpaintingPnpModel,
@@ -429,8 +429,8 @@ def compute_tv(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
-    estimators: list[BaseEstimatorBuilder] = [
-        MMSEVarBuilder(X),
+    estimators: list[BaseEstimator] = [
+        MMSEVar(X),
         CIBuilder(X, all_samples=True),
     ]
 
@@ -551,8 +551,8 @@ def compute_pnp(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
-    estimators: list[BaseEstimatorBuilder] = [
-        MMSEVarBuilder(X),
+    estimators: list[BaseEstimator] = [
+        MMSEVar(X),
         CIBuilder(X, all_samples=False),
     ]
 

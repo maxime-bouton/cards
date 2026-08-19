@@ -51,7 +51,7 @@ class BaseGaussianDeconvolutionModel(BaseModel):
 
     Parameters
     ----------
-    estimators : list[BaseEstimatorBuilder]
+    estimators : list[BaseEstimator]
         A list of estimator builders used to compute parameter estimates during sampling.
     params : GaussianDeconvolutionParams
         The configuration parameters containing the observations, kernel, and noise variance.

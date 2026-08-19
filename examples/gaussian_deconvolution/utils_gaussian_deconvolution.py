@@ -13,8 +13,8 @@ import h5py
 import numpy as np
 
 import cards.backend as xp
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
-from cards.estimators.mmse_var_builder import MMSEVarBuilder
+from cards.estimators.base_estimator import BaseEstimator
+from cards.estimators.mmse_var import MMSEVar
 from cards.models.gaussian_deconvolution_pnp_model import (
     DistributedGaussianDeconvolutionPnpModel,
     GaussianDeconvolutionPnpModel,
@@ -389,7 +389,7 @@ def compute_tv(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
-    estimators: list[BaseEstimatorBuilder] = [MMSEVarBuilder(X)]
+    estimators: list[BaseEstimator] = [MMSEVar(X)]
 
     match mode:
         case "mpi":
@@ -528,7 +528,7 @@ def compute_pnp(
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 
-    model_params = GaussianDeconvolutionPnpParams(y, kernel, sigma2, reg_coef)
+    model_params = GaussianDeconvolutionPnpParams(y, sigma2, reg_coef)
 
     match device:
         case "cpu":
@@ -540,7 +540,7 @@ def compute_pnp(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
-    estimators: list[BaseEstimatorBuilder] = [MMSEVarBuilder(X)]
+    estimators: list[BaseEstimator] = [MMSEVar(X)]
 
     match mode:
         case "mpi":
