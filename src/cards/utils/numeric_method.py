@@ -4,7 +4,7 @@ r"""Short implementation of the power method to evaluate the Lipshotz contsant o
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
-from typing import Callable, Sequence
+from collections.abc import Callable, Sequence
 
 import torch
 
@@ -21,8 +21,6 @@ def power_method(
 ) -> float:
     r"""
     Computes the largest singular value of an operator using the power method.
-
-    Automatically determines whether H is PyTorch-based or CuPy-based.
 
     Parameters
     ----------
@@ -43,6 +41,10 @@ def power_method(
     -------
     float
         Estimated largest singular value.
+
+    Note
+    ----
+    Automatically determines whether ``H`` is PyTorch-based or CuPy-based.
     """
     # if isinstance(H, torch.nn.Module) or getattr(H, "__module__", "").startswith(
     #     "torch"

@@ -5,9 +5,6 @@ deconvolution experiments reported in :cite:p:`Bouton2026`."""
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
-# TODO: `rng` should be compatible with both numpy and cupy
-# create rng abstraction layer that can handle both numpy and cupy/torch generators?
-
 from collections.abc import Callable, Sequence, Sized
 from pathlib import Path
 
@@ -24,7 +21,7 @@ from cards.utils.utils_img import load_img, normalize_ndarray
 def generate_gaussian_kernel(
     kernel_width: int,
     kernel_std: float,
-    dtype: xp.dtype | None = None,
+    dtype: type | None = None,
 ) -> xp.ndarray:
     r"""Generate a square normalized 2D Gaussian kernel.
 
@@ -59,7 +56,7 @@ def generate_gaussian_kernel(
 def generate_motion_kernel(
     kernel_width: int,
     intensity: float,
-    dtype: xp.dtype | None = None,
+    dtype: type | None = None,
     rng: np.random.Generator | None = None,
 ) -> xp.ndarray:
     r"""Generate a square normalized 2D motion kernel.
@@ -95,7 +92,7 @@ def generate_motion_kernel(
 
 
 def fit_kernel_shape(kernel: xp.ndarray, img_shape: Sized) -> xp.ndarray:
-    """Broadcast the kernel to match the number of dimensions of the image.
+    r"""Broadcast the kernel to match the number of dimensions of the image.
 
     Parameters
     ----------
@@ -120,7 +117,7 @@ def fit_mask_shape(
     mask: xp.ndarray,
     img_shape: Sized,
 ) -> xp.ndarray:
-    """Broadcast the mask to match the number of dimensions of the image.
+    r"""Broadcast the mask to match the number of dimensions of the image.
 
     Parameters
     ----------
@@ -145,7 +142,7 @@ def slice_linear_conv_to_original(
     img_shape: Sequence[int],
     kernel_shape: Sequence[int],
 ) -> tuple[slice, ...]:
-    """Compute the slices to extract the original image from the linear convolution result.
+    r"""Compute the slices to extract the original image from the linear convolution result.
 
     Parameters
     ----------
@@ -165,7 +162,7 @@ def slice_linear_conv_to_original(
 def compute_sigma2_from_isnr(
     signal: xp.ndarray, isnr: float, ctx: ExecutionContext | None = None
 ) -> float:
-    """Estimate the noise variance from the input signal and the desired input SNR.
+    r"""Estimate the noise variance from the input signal and the desired input SNR.
 
     Parameters
     ----------
@@ -176,7 +173,7 @@ def compute_sigma2_from_isnr(
     ctx: ExecutionContext, optional
         Execution context object containing MPI properties (e.g., is_mpi, comm, rank).
 
-    Returns:
+    Returns
     -------
     float
         Corresponding noise variance (computed globally, returned identical on all ranks).
@@ -204,7 +201,7 @@ def apply_poisson_noise(
     rng: np.random.Generator,
     dynamic_range: float = 1.0,
 ) -> tuple[xp.ndarray, dict[str, float]]:
-    """Apply Poisson noise to the input signal based on the specified scale.
+    r"""Apply Poisson noise to the input signal based on the specified scale.
 
     Parameters
     ----------
@@ -212,15 +209,15 @@ def apply_poisson_noise(
         The input signal.
     rng: np.random.Generator
         Random number generator for reproducibility.
-    scale: float, optional
+    dynamic_range: float, optional
         The scale parameter for the Poisson distribution, by default 1.0.
 
-    Returns:
+    Returns
     -------
     tuple[xp.ndarray, dict[str, float]]
 
     """
-
+    # NOTE: noise is applied on CPU arrays only. The result is sent back to GPU whenever required
     if not isinstance(signal, np.ndarray):
         signal = signal.get()
 
@@ -235,7 +232,7 @@ def apply_gaussian_noise(
     rng: np.random.Generator,
     sigma2: float,
 ) -> xp.ndarray:
-    """Apply Gaussian noise to the input signal based on the specified variance.
+    r"""Apply Gaussian noise to the input signal based on the specified variance.
 
     Parameters
     ----------
@@ -246,11 +243,12 @@ def apply_gaussian_noise(
     sigma2: float
         The variance of the Gaussian noise to be applied.
 
-    Returns:
+    Returns
     -------
     xp.ndarray
         The noisy signal.
     """
+    # NOTE: noise is applied on CPU arrays only. The result is sent back to GPU whenever required
     return (
         signal
         + xp.asarray(rng.standard_normal(signal.shape, signal.dtype)) * sigma2**0.5
@@ -262,7 +260,7 @@ def apply_target_gaussian_noise(
     rng: np.random.Generator,
     isnr: float,
 ) -> tuple[xp.ndarray, dict[str, float]]:
-    """Apply noise to the input signal based on the desired iSNR.
+    r"""Apply noise to the input signal based on the desired iSNR.
 
     Parameters
     ----------
@@ -273,11 +271,12 @@ def apply_target_gaussian_noise(
     isnr: float
         The desired iSNR (in dB).
 
-    Returns:
+    Returns
     -------
     tuple[xp.ndarray, dict[str, float]]
         The noisy signal and a dictionary containing the estimated noise variance.
     """
+    # NOTE: noise is applied on CPU arrays only. The result is sent back to GPU whenever required
     sigma2 = compute_sigma2_from_isnr(signal, isnr)
     return apply_gaussian_noise(signal, rng, sigma2), {"sigma2": sigma2}
 
@@ -292,7 +291,7 @@ def generate_and_save_observations(
     maximum: float = 1.0,
     **noise_args: float,
 ) -> None:
-    """Generates and saves a deteriorated signal from the one given in entry.
+    r"""Generates and saves a deteriorated signal from the one given in entry.
 
     Parameters
     ----------
@@ -305,7 +304,9 @@ def generate_and_save_observations(
     apply_noise : Callable
         Function to apply noise to the transformed image.
     seed_data : int
-        Seed.
+        Seed to generate synthetic data.
+    params_saved: dict
+        Dictionary contaning the generated noise parameters to be saved to disk (e.g., noise variance, ...).
     maximum : float, optional
         Maximum value imposed for the ground truth image used to generate synthetic data.
     noise_args : dict, optional
@@ -328,6 +329,7 @@ def generate_and_save_observations(
     if extra_params and isinstance(extra_params[0], dict):
         params_saved.update(**extra_params[0])
 
+    # TODO: replace by call to an io manager
     with h5py.File(observations_path, "w") as file:
         file["x"] = (
             normalized_img
@@ -350,27 +352,25 @@ def generate_and_save_observations(
 
 
 def generate_observations(
-    img,
+    img: xp.ndarray,
     operator: LinearOperator,
     apply_noise: Callable,
-    rng,
+    rng: np.random.Generator,
     maximum: float = 1.0,
     **noise_args: float,
 ):
-    """Generates and saves a deteriorated signal from the one given in entry.
+    r"""Generates and saves a deteriorated signal from the one given in entry.
 
     Parameters
     ----------
-    img : ...
-        ...
-    observations_path : str
-        Path to the file where to save the generated data.
+    img : xp.ndarray
+        Input image.
     operator : LinearOperator
         Determinist deterioration operator.
     apply_noise : Callable
         Function to apply noise to the transformed image.
-    rng : ...
-        ...
+    rng : np.random.Generator
+        Random number generator to generate synthetic data.
     maximum : float, optional
         Maximum value imposed for the ground truth image used to generate synthetic data.
     noise_args : dict, optional
