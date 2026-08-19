@@ -12,9 +12,8 @@ import time
 from datetime import datetime
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from PIL import Image
+from torch import nn, optim
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 

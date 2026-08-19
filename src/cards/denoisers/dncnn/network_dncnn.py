@@ -6,7 +6,7 @@ r"""DnCNN network, as described in :cite:`Zhang2017`. Implementation has been sl
 
 from collections import OrderedDict
 
-import torch.nn as nn
+from torch import nn
 
 
 def sequential(*args):
@@ -363,7 +363,7 @@ class ResBlock(nn.Module):
         mode="CRC",
         negative_slope=0.2,
     ):
-        super(ResBlock, self).__init__()
+        super().__init__()
 
         assert in_channels == out_channels, "Only support in_channels==out_channels."
         if mode[0] in ["R", "L"]:
@@ -384,8 +384,6 @@ class ResBlock(nn.Module):
         res = self.res(x)
         return x + res
 
-
-import torch.nn as nn  # noqa: E402
 
 # """
 # # --------------------------------------------
@@ -440,7 +438,7 @@ class DnCNN(nn.Module):
         normalization during training.
         # ------------------------------------
         """
-        super(DnCNN, self).__init__()
+        super().__init__()
         assert "R" in act_mode or "L" in act_mode, (
             "Examples of activation function: R, L, BR, BL, IR, IL"
         )

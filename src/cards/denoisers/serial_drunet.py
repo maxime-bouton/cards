@@ -41,7 +41,7 @@ class SerialDRUNet(BaseDenoiser):
         image_size: np.ndarray,
         weights_path=Path(__file__).parents[3] / "data/weights/drunet",
     ):
-        super(SerialDRUNet, self).__init__(weights_path)
+        super().__init__(weights_path)
         if image_size.size < 3:
             # NOTE: accommodate gray scale images (implicitly, number of channes is 1)
             n_channels = 1

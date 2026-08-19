@@ -49,9 +49,9 @@ __all__ = [
     "BaseDenoiser",
     "BaseDistributedDenoiser",
     "DistributedDDFB",
-    "DistributedDnCNN",
     "DistributedDRUNet",
+    "DistributedDnCNN",
     "SerialDDFB",
-    "SerialDnCNN",
     "SerialDRUNet",
+    "SerialDnCNN",
 ]

@@ -4,7 +4,8 @@ r"""Deep Dual Forward-Backward (DDFB) network, as described in :cite:`Repetti202
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
-from typing import Sequence, cast
+from collections.abc import Sequence
+from typing import cast
 
 import torch
 from torch.nn import Conv2d, ConvTranspose2d, Module, ModuleList
