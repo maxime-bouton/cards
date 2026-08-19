@@ -6,6 +6,7 @@ from pathlib import Path
 import cupy as cp
 import torch
 
+from cards.estimators.base_estimator import BaseEstimator
 from cards.io.io_manager import IOManager
 from cards.models.base_model import BaseModel
 from cards.samplers.sampler import Sampler, SamplerParameters
@@ -24,10 +25,11 @@ class SerialGpuSampler(Sampler):
         io_mng: IOManager,
         params: SamplerParameters,
         model: BaseModel,
+        estimators: list[BaseEstimator],
         rng: torch.Generator,
         logger: logging.Logger | None = None,
     ) -> None:
-        super().__init__(io_mng, params, model, rng, logger)
+        super().__init__(io_mng, params, model, estimators, rng, logger)
 
         self._start_gpu = cp.cuda.Event()
         self._end_gpu = cp.cuda.Event()
@@ -52,7 +54,7 @@ class SerialGpuSampler(Sampler):
     def _save_checkpoint(self, ckpt_path: Path) -> None:
         with self.io_manager.open(ckpt_path, "w") as f:
             self.io_manager.write_dict(f, self.model.states)
-            # self.io_manager.write_dict(f, self.model.get_estimates())
+            self.io_manager.write_dict(f, self._get_estimates())
             self.io_manager.write_array(f, "potential", self._potential)
             self.io_manager.write_stacked(f, "computation_time", self._computation_time)
             self.io_manager.write_rng(f, self.rng)

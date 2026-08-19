@@ -8,6 +8,7 @@ from typing import cast
 import numpy as np
 from mpi4py import MPI
 
+from cards.estimators.base_estimator import BaseEstimator
 from cards.io.io_manager import IOManager
 from cards.models.base_model import BaseDistributedModel
 from cards.samplers.sampler import Sampler, SamplerParameters
@@ -30,12 +31,13 @@ class DistributedCpuSampler(Sampler):
         comm: MPI.Comm,
         params: SamplerParameters,
         model: BaseDistributedModel,
+        estimators: list[BaseEstimator],
         rng: np.random.Generator,
         logger: logging.Logger | None = None,
     ):
         self.comm = comm
 
-        super().__init__(io_mng, params, model, rng, logger)
+        super().__init__(io_mng, params, model, estimators, rng, logger)
 
     def _setup_rank(self) -> int:
         return self.comm.Get_rank()
@@ -64,12 +66,12 @@ class DistributedCpuSampler(Sampler):
                 self.model.global_sizes,
                 self.model.slices,
             )
-            # self.io_manager.write_dict(
-            #     f,
-            #     self.model.get_estimates(),
-            #     self.model.global_sizes,
-            #     self.model.slices,
-            # )
+            self.io_manager.write_dict(
+                f,
+                self._get_estimates(),
+                self._get_estimates_global_sizes(),
+                self._get_estimates_slices(),
+            )
             self.io_manager.write_stacked(f, "computation_time", self._computation_time)
             self.io_manager.write_rng(f, self.rng)
 
@@ -86,3 +88,15 @@ class DistributedCpuSampler(Sampler):
                 self.model.slices,
             )
             self.rng = self.io_manager.read_rng(f)
+
+    def _get_estimates_global_sizes(self):
+        estimates_global_sizes = {}
+        for estimator in self.estimators:
+            estimates_global_sizes.update(estimator.global_sizes)
+        return estimates_global_sizes
+
+    def _get_estimates_slices(self):
+        estimates_slices = {}
+        for estimator in self.estimators:
+            estimates_slices.update(estimator.slices)
+        return estimates_slices

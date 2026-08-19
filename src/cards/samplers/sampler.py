@@ -10,6 +10,7 @@ import torch
 
 import cards.backend as xp
 from cards.core.execution_context import ExecutionContext
+from cards.estimators.base_estimator import BaseEstimator
 from cards.io.io_manager import IOManager
 from cards.logger import ProgressBar
 from cards.models.base_model import BaseModel
@@ -99,6 +100,7 @@ class Sampler(ABC):
         io_mng: IOManager,
         params: SamplerParameters,
         model: BaseModel,
+        estimators: list[BaseEstimator],
         rng: np.random.Generator | torch.Generator,
         logger: logging.Logger | None = None,
     ) -> None:
@@ -113,7 +115,7 @@ class Sampler(ABC):
         self.restart_path = start_path / self._ckpt_file.format(self.start_ckpt_idx)
 
         self.model = model
-        self.estimators = {}
+        self.estimators: list[BaseEstimator] = estimators
         self.io_manager = io_mng
         self.logger = logger
 
@@ -133,6 +135,7 @@ class Sampler(ABC):
         ctx: ExecutionContext,
         io_mng: IOManager,
         model: BaseModel,
+        estimators: list[BaseEstimator],
         params: SamplerParameters,
         logger: logging.Logger | None = None,
     ) -> "Sampler":
@@ -149,24 +152,26 @@ class Sampler(ABC):
 
         match (ctx.is_mpi, ctx.is_gpu):
             case (False, False):
-                return SerialCpuSampler(io_mng, params, model, rng, logger)
+                return SerialCpuSampler(io_mng, params, model, estimators, rng, logger)
             case (True, False):
                 return DistributedCpuSampler(
                     io_mng,
                     ctx.comm,
                     params,
                     model,  # type: ignore
+                    estimators,
                     rng,  # type: ignore
                     logger,
                 )
             case (False, True):
-                return SerialGpuSampler(io_mng, params, model, rng, logger)  # type: ignore
+                return SerialGpuSampler(io_mng, params, model, estimators, rng, logger)  # type: ignore
             case (True, True):
                 return DistributedGpuSampler(
                     io_mng,
                     ctx.comm,
                     params,
                     model,  # type: ignore
+                    estimators,
                     rng,  # type: ignore
                     logger,
                 )
@@ -228,7 +233,7 @@ class Sampler(ABC):
         """
         estimates = {}
         for estimator in self.estimators:
-            estimates.update(estimator.get_estimates())
+            estimates.update(estimator.estimates)
         return estimates
 
     def _reset_estimators(self) -> None:
