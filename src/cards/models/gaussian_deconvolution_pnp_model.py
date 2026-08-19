@@ -27,7 +27,7 @@ from cards.transition_kernels.base_transition_kernel import (
     BaseTransitionKernel,
 )
 from cards.transition_kernels.gpu_pnp_sgla import GpuPnpSGLA
-from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
+from cards.transition_kernels.pnp_ula import PnpULA
 
 
 @dataclass
@@ -47,23 +47,15 @@ class GaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
         self.denoiser = denoiser
 
     def set_conditionals(self):
-        if type(self.X) is GpuPnpULA:
-            self.X.denoise = lambda state: self.denoiser(
-                state,
-                self.X.epsilon**0.5,
-                torch_dtype=torch.float32,
-                cp_dtype=xp.float64,
-            )
+        if isinstance(self.X, PnpULA):
+            self.X.denoise = lambda state: self.denoiser(state, self.X.epsilon**0.5)
             self.X.grad = lambda state: (
                 self.H.adjoint(self.Hx - self.y.state) / self.sigma2
             )
             self.X.project = lambda state: state.clip(-1, 2)
-        elif type(self.X) is GpuPnpSGLA:
+        elif isinstance(self.X, GpuPnpSGLA):
             self.X.denoise = lambda state: self.denoiser(
-                state,
-                self.X.reg_coef * self.X.epsilon**0.5,
-                torch_dtype=torch.float32,
-                cp_dtype=xp.float64,
+                state, self.X.reg_coef * self.X.epsilon**0.5
             )
             self.X.grad = lambda state: self.H.adjoint(self.Hx - self.y) / self.sigma2
         else:
@@ -94,8 +86,7 @@ class GaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
         float
             Potential of the targeted distribution.
         """
-        p = (0.5 / self.sigma2) * xp.sum((self.y.state - self.Hx) ** 2)
-        return p
+        return (0.5 / self.sigma2) * xp.sum((self.y.state - self.Hx) ** 2)
 
 
 class DistributedGaussianDeconvolutionPnpModel(
