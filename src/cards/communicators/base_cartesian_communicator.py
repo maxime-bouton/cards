@@ -3,6 +3,10 @@ of processes with an arbitrary number of axes.
 The class underlies all the computations conducted within the distributed operators implemented in :mod:`~card`.operators`.
 """
 
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
 # TODO: keep Tuple[int, ...] for all shapes, convert to numpy arrays only internally (and temporarily)
 # TODO: check typing (xp.ndarray or np.ndarray)
 

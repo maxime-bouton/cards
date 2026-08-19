@@ -1,5 +1,9 @@
 r"""Base class to define Poisson deconvolution models leveraging approximate data augmentation (AXDA :cite:`Vono2021`)."""
 
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
 # TODO: documentation
 
 from abc import abstractmethod
