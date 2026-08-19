@@ -1,13 +1,10 @@
-r"""Abstract GPU implementation of the Plug-and-Play Unadjusted Langevin
+r"""Implementations of the Plug-and-Play Unadjusted Langevin
 (PnP-ULA) algorithm :cite:p:`Laumont2022`.
 """
 
-# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
-#
-# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
-# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
-# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+from abc import abstractmethod
 
+import numpy as np
 import torch
 
 import cards.backend as xp
@@ -15,8 +12,8 @@ from cards.core.variable import Variable
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
-class GpuPnpULA(BaseTransitionKernel):
-    r"""Generic GPU implementation of PnP-ULA.
+class PnpULA(BaseTransitionKernel):
+    r"""Generic implementation of PnP-ULA.
 
     Parameters
     ----------
@@ -74,21 +71,20 @@ class GpuPnpULA(BaseTransitionKernel):
         """
         raise ValueError("Projection function not defined.")
 
+    @abstractmethod
+    def _noise(
+        self,
+        state: xp.ndarray,
+        rng,
+    ) -> xp.ndarray: ...
+
     def mc_step(self, rng):
         state = self.var.state
 
         grad = self.grad(state)
         denoised = self.denoise(state)
         projected = self.project(state)
-        noise = xp.asarray(
-            torch.normal(
-                mean=0.0,
-                std=1.0,
-                size=state.shape,
-                generator=rng,
-                device=rng.device,
-            )
-        )
+        noise = self._noise(state, rng)
 
         xp.subtract(state, denoised, out=denoised)
         denoised *= self.reg_coef / self.epsilon
@@ -104,3 +100,22 @@ class GpuPnpULA(BaseTransitionKernel):
 
         noise *= (2 * self.step_size) ** 0.5
         state += noise
+
+
+class CpuPnpULA(PnpULA):
+    def _noise(self, state: xp.ndarray, rng: np.random.Generator) -> xp.ndarray:
+        return rng.standard_normal(state.shape, dtype=state.dtype)
+
+
+class GpuPnpULA(PnpULA):
+    def _noise(self, state: xp.ndarray, rng: torch.Generator) -> xp.ndarray:
+        return xp.asarray(
+            torch.normal(
+                mean=0.0,
+                std=1.0,
+                size=state.shape,
+                generator=rng,
+                device=rng.device,
+            ),
+            state.dtype,
+        )
