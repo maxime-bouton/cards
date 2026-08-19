@@ -3,7 +3,8 @@ from typing import Protocol
 from cards.core.execution_context import ExecutionContext
 from cards.core.geometry_hook import G
 from cards.core.observations_hook import Obs
-from cards.models import BaseDistributedModel, BaseModel
+from cards.estimators.base_estimator import BaseEstimator
+from cards.models import BaseModel
 
 
 class McmcHook(Protocol[G, Obs]):
@@ -13,4 +14,4 @@ class McmcHook(Protocol[G, Obs]):
         cfg: dict,
         geom: G,
         obs: Obs,
-    ) -> BaseModel | BaseDistributedModel: ...
+    ) -> tuple[BaseModel, list[BaseEstimator]]: ...
