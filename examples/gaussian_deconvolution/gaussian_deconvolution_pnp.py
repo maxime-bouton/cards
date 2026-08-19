@@ -15,6 +15,9 @@ from cards.denoisers.mpi_drunet import MpiDRUNet
 from cards.denoisers.serial_ddfb import SerialDDFB
 from cards.denoisers.serial_dncnn import SerialDnCNN
 from cards.denoisers.serial_drunet import SerialDRUNet
+from cards.estimators.base_estimator import BaseEstimator
+from cards.estimators.ci import CI
+from cards.estimators.mmse_var import MMSEVar
 from cards.io.io_manager import IOManager
 from cards.models import (
     BaseModel,
@@ -297,7 +300,7 @@ class GaussianDeconvPnpMcmcHook:
         cfg: dict,
         geom: PnpDeconvGeometry,
         obs: GaussianDeconvObs,
-    ) -> BaseModel:
+    ) -> tuple[BaseModel, list[BaseEstimator]]:
 
         reg_coef = cfg["parameters"]["reg_coef"]
         denoiser_params = cfg["parameters"]["denoiser"]
@@ -353,7 +356,6 @@ class GaussianDeconvPnpMcmcHook:
             denoiser=geom.D,
         )
 
-        # estimators: list[BaseEstimator] = [MMSEVar(X)]
+        estimators: list[BaseEstimator] = [MMSEVar(x_var), CI(x_var, all_samples=True)]
 
-        # return model, estimators
-        return model
+        return model, estimators
