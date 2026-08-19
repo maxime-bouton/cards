@@ -214,9 +214,9 @@ class GaussianDeconvObservationsHook:
             n = torch.normal(
                 0, sigma2**0.5, size=geom.layout_y.tile, device="cuda", generator=rng
             )
-            n = xp.asarray(n)
+            n = xp.asarray(n, x.dtype)
         else:
-            n = sigma2**0.5 * rng.standard_normal(geom.layout_y.tile)
+            n = sigma2**0.5 * rng.standard_normal(geom.layout_y.tile, x.dtype)
 
         y = Hx + n
         return GaussianDeconvObs(
