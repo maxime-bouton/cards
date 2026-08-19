@@ -28,7 +28,7 @@ from cards.models.gaussian_deconvolution_pnp_model import GaussianDeconvolutionP
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
 from cards.random import create_rng
-from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
+from cards.transition_kernels.pnp_ula import CpuPnpULA, GpuPnpULA
 from cards.utils.utils_img import read_dtype, read_img_shape
 from cards.utils.utils_observations import (
     compute_sigma2_from_isnr,
@@ -335,7 +335,9 @@ class GaussianDeconvPnpMcmcHook:
             sigma2=obs.sigma2, reg_coeff=reg_coef
         )
 
-        X = GpuPnpULA(
+        PnpULA = GpuPnpULA if ctx.is_gpu else CpuPnpULA
+
+        X = PnpULA(
             var=x_var,
             step_size=step_size_X,
             reg_coef=reg_coef,
