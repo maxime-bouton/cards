@@ -1,7 +1,7 @@
 """Distributed implementation of a pytorch linear convolution operator.
 
 The class is leveraged in the distributed implementation of denoisers encoded
-by convolutional neural networks (see :module:`cards.denoisers`)
+by convolutional neural networks (see :mod:`cards.denoisers`)
 """
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
@@ -111,12 +111,7 @@ class DistributedTorchConvolution(LinearOperator):
     padding : np.ndarray(int)
         Padding size to be applied to the image.
     overlap_size : np.ndarray[int]
-        Size of the overlap between contiguous facets along each of the ``d``
-        axes of the problem.
-
-    overlap_size : np.ndarray[int]
-        Size of the overlap between contiguous facets along each of the ``d``
-        axes of the problem.
+        Size of the overlap between contiguous facets along each axis of the problem.
     slice_valid_coefficients : Slice
         Slice to extract valid coefficients from the local forward/adjoint convolution.
     direct_communicator : cards.communicator.sync_cartesian_communicator.SyncCartesianCommunicator

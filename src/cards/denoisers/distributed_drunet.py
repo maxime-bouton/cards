@@ -45,11 +45,6 @@ class DistributedDRUNet(BaseDistributedDenoiser):
     drunet : DRUNet
         Internal DRUNet denoiser.
 
-    Methods
-    -------
-    __call__()
-        Apply the distributed denoiser to an input image.
-
     Warning
     -------
     The current distributed implementation only works for images whose
@@ -195,6 +190,24 @@ class DistributedDRUNet(BaseDistributedDenoiser):
     def __call__(
         self, input_image: xp.ndarray, sigma: float, torch_dtype=None, xp_dtype=None
     ) -> xp.ndarray:
+        """Apply the distributed denoiser.
+
+        Parameters
+        ----------
+        input_image: xp.ndarray
+            Input image tile.
+        sigma: float
+            Denoiser parameter (noise standard deviation).
+        torch_dtype : _type_, optional
+            Desired torch type, by default None
+        xp_dtype : _type_, optional
+            Desired xp type, by default None
+
+        Returns
+        -------
+        xp.ndarray
+            Denoised image tile.
+        """
         _, h, w = input_image.shape
         noise_map = xp.full((1, h, w), sigma)
         tile_x0 = xp.concatenate((input_image, noise_map), axis=0)

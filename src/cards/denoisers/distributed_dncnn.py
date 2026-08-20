@@ -39,11 +39,6 @@ class DistributedDnCNN(BaseDistributedDenoiser):
         Distributed convolution operator implemented in torch, corresponding to the first and the last layer of the network.
     dncnn : DnCNN
         Local DnCNN denoiser.
-
-    Methods
-    -------
-    __call__()
-        Apply the distributed denoiser to an input image.
     """
 
     def __init__(

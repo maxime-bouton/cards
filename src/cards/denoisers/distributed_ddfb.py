@@ -48,11 +48,6 @@ class DistributedDDFB(BaseDistributedDenoiser):
         Internal distributed convolution operator implemented in torch.
     ddfb : DDFB
         Local DDFB denoiser.
-
-    Methods
-    -------
-    __call__()
-        Apply the distributed denoiser to an input image.
     """
 
     def __init__(
