@@ -7,13 +7,13 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from cards.denoisers.mpi_ddfb import MpiDDFB
-from cards.denoisers.mpi_dncnn import MpiDnCNN
-from cards.denoisers.mpi_drunet import MpiDRUNet
 
 import cards.backend as xp
 from cards.core.execution_context import ExecutionContext
 from cards.denoisers.base_denoiser import BaseDenoiser
+from cards.denoisers.distributed_ddfb import DistributedDDFB
+from cards.denoisers.distributed_dncnn import DistributedDnCNN
+from cards.denoisers.distributed_drunet import DistributedDRUNet
 from cards.denoisers.serial_ddfb import SerialDDFB
 from cards.denoisers.serial_dncnn import SerialDnCNN
 from cards.denoisers.serial_drunet import SerialDRUNet
@@ -66,14 +66,14 @@ def build_convolution_operator(
 ) -> DftConvolution | DistributedDftConvolution:
     if ctx.is_mpi:
         return DistributedDftConvolution(
-            np.asarray(full_shape),
+            full_shape,
             kernel,
             ctx.comm,
             grid_size,
             tile_range=tile_range,
         )
     data_size = np.asarray(full_shape) + np.asarray(kernel.shape, dtype=int) - 1
-    return DftConvolution(np.asarray(full_shape), data_size, kernel)
+    return DftConvolution(full_shape, data_size, kernel)
 
 
 def build_denoiser(
@@ -84,34 +84,33 @@ def build_denoiser(
 ) -> tuple[BaseDenoiser, np.ndarray | None]:
     # if not ctx.is_gpu:
     #     raise ValueError("CPU not supported for Gaussian Deconvolution models with PnP")
-    img_size = np.asarray(full_shape)
     tile_range = None
     match (params["type"], ctx.is_mpi):
         case ("ddfb", False):
-            denoiser = SerialDDFB(img_size, params["n_layers"], params["n_features"])
+            denoiser = SerialDDFB(full_shape, params["n_layers"], params["n_features"])
         case ("ddfb", True):
-            denoiser = MpiDDFB(
+            denoiser = DistributedDDFB(
                 ctx.comm,
-                grid_size,
-                img_size,
+                (*grid_size,),
+                full_shape,
                 params["n_layers"],
                 params["n_features"],
             )
         case ("dncnn", False):
-            denoiser = SerialDnCNN(img_size)
+            denoiser = SerialDnCNN(full_shape)
         case ("dncnn", True):
-            denoiser = MpiDnCNN(ctx.comm, grid_size, img_size)
+            denoiser = DistributedDnCNN(ctx.comm, (*grid_size,), full_shape)
         case ("drunet", False):
-            denoiser = SerialDRUNet(img_size)
+            denoiser = SerialDRUNet(full_shape)
         case ("drunet", True):
-            denoiser = MpiDRUNet(ctx.comm, grid_size, img_size)
+            denoiser = DistributedDRUNet(ctx.comm, (*grid_size,), full_shape)
             tile_range = denoiser.tile_range
         case _:
             raise ValueError(f"Unknown denoiser type '{params['type']}'.")
     return denoiser, tile_range
 
 
-def build_kernel(obs_cfg: dict, dtype: np.dtype | None = None) -> xp.ndarray:
+def build_kernel(obs_cfg: dict, dtype: type | None = None) -> xp.ndarray:
     kernel_cfg = obs_cfg["kernel"]
     if kernel_cfg.get("path", None):
         return load_img(kernel_cfg["path"], dtype=dtype)
@@ -174,7 +173,7 @@ class PnpDeconvGeometryHook:
         slice_x = slicer_x.slice_global_buffer_to_tile if slicer_x else None
         slice_y = slicer_y.slice_global_buffer_to_tile if slicer_y else None
         x_shape = gt_shape
-        y_shape = tuple(H.data_size)
+        y_shape = H.data_shape
         tile_x_shape = tuple(slicer_x.tile_size) if slicer_x else x_shape
         tile_y_shape = tuple(slicer_y.tile_size) if slicer_y else y_shape
         x_space = Space(tile_x_shape, x_shape, slice_x)

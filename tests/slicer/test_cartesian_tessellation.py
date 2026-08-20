@@ -25,7 +25,7 @@ def overlap():
     return 3
 
 
-def test_local_split_range_single_chunk(N, nchunks, overlap):
+def test_local_split_range_single_chunk(N, nchunks):
     with pytest.raises(ValueError) as excinfo:
         ct.local_split_range(nchunks, N, 0, 4)
     assert "More than 100% overlap between two consecutive segments" in str(
@@ -41,7 +41,7 @@ def test_fail_split_range_overlap(N, nchunks, overlap):
     )
 
 
-def test_fail_local_split_range_overlap(N, nchunks, overlap):
+def test_fail_local_split_range_overlap(N, nchunks):
     with pytest.raises(ValueError) as excinfo:
         ct.local_split_range(nchunks, N, 0, 4)
     assert "More than 100% overlap between two consecutive segments" in str(
@@ -50,9 +50,10 @@ def test_fail_local_split_range_overlap(N, nchunks, overlap):
 
     with pytest.raises(ValueError) as excinfo:
         ct.local_split_range(nchunks, N, N)
-    assert "Index should be taken in [0, ..., nchunks-1], with nchunks={0}".format(
-        nchunks
-    ) in str(excinfo.value)
+    assert (
+        f"Index should be taken in [0, ..., nchunks-1], with nchunks={nchunks}"
+        in str(excinfo.value)
+    )
 
 
 def test_split_range_no_overlap(N, nchunks, overlap):
@@ -138,23 +139,25 @@ def test_local_split_range_overlap_n(N, nchunks, overlap):
 def test_split_range_interleaved_error(N):
     with pytest.raises(ValueError) as excinfo:
         ct.split_range_interleaved(N + 1, N)
-    assert r"Number of segments nchunks={0} greater than the dimension N={1}".format(
-        N + 1, N
-    ) in str(excinfo.value)
+    assert (
+        f"Number of segments nchunks={N + 1} greater than the dimension N={N}"
+        in str(excinfo.value)
+    )
 
 
 def test_local_split_range_interleaved_error(N):
     with pytest.raises(ValueError) as excinfo:
         ct.local_split_range_interleaved(N + 1, N, 0)
-    assert r"Number of segments nchunks={0} greater than the dimension N={1}".format(
-        N + 1, N
-    ) in str(excinfo.value)
+    assert (
+        f"Number of segments nchunks={N + 1} greater than the dimension N={N}"
+        in str(excinfo.value)
+    )
 
     with pytest.raises(ValueError) as excinfo:
         ct.local_split_range_interleaved(2, N, N)
-    assert r"Index should be taken in [0, ..., nchunks-1], with nchunks={0}".format(
-        2
-    ) in str(excinfo.value)
+    assert f"Index should be taken in [0, ..., nchunks-1], with nchunks={2}" in str(
+        excinfo.value
+    )
 
 
 def test_split_range_interleaved(N, nchunks, overlap):

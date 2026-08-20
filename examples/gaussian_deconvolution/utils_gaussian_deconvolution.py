@@ -87,6 +87,7 @@ def generate_gaussian_deconvolution_observations(
     data_size = gt_size.copy()
     # convolution affects only the last two dimensions (i.e., spatial dimensions)
     data_size[-2:] += np.asarray(kernel_params["size"], dtype=int) - 1
+    data_shape = (*data_size,)
 
     # generate convolution kernel
     if kernel_params["type"] == "motion":
@@ -126,10 +127,10 @@ def generate_gaussian_deconvolution_observations(
             seed = comm.scatter(child_seed, root=0)
 
             # MPI.Compute_dims(size, 2)
-            grid_size = np.asarray([1] * (len(gt_shape) - 2) + [comm_size, 1])
+            grid_shape = tuple([1] * (len(gt_shape) - 2) + [comm_size, 1])
 
             convolution_operator = DistributedDftConvolution(
-                gt_size, kernel, comm, grid_size
+                gt_shape, grid_shape, comm, kernel
             )
 
         case "serial":
@@ -137,7 +138,7 @@ def generate_gaussian_deconvolution_observations(
 
             seed = data_seed
 
-            convolution_operator = DftConvolution(gt_size, data_size, kernel)
+            convolution_operator = DftConvolution(gt_shape, data_shape, kernel)
 
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
@@ -352,11 +353,9 @@ def compute_tv(
             comm = MPI.COMM_WORLD
             size = comm.Get_size()
             # MPI.Compute_dims(size, 2)
-            grid_size = np.asarray([1] * (len(gt_shape) - 2) + [size, 1])
+            grid_shape = tuple([1] * (len(gt_shape) - 2) + [size, 1])
 
-            op = DistributedDftConvolution(
-                np.asarray(gt_shape), kernel, comm, grid_size
-            )
+            op = DistributedDftConvolution(gt_shape, grid_shape, comm, kernel)
             y = np.empty(
                 op.adjoint_communicator.cartslicer.tile_size, dtype=kernel.dtype
             )
@@ -373,13 +372,12 @@ def compute_tv(
                 y = xp.asarray(f["y"])
             state_shape = gt_shape
             data_size = np.asarray(gt_shape) + np.asarray(kernel.shape, dtype=int) - 1
-            op = DftConvolution(np.asarray(gt_shape), data_size, kernel)
+            op = DftConvolution(gt_shape, data_size, kernel)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 
     model_params = GaussianDeconvolutionTvParams(
         y,
-        kernel,
         sigma2,
         reg_coef,
         split_coef,
@@ -453,7 +451,7 @@ def compute_pnp(
 
             comm = MPI.COMM_WORLD
             size = comm.Get_size()
-            grid_size = np.asarray([1] * (len(gt_shape) - 2) + [size, 1])
+            grid_shape = tuple([1] * (len(gt_shape) - 2) + [size, 1])
             tile_range = None
 
             match denoiser_params["type"]:
@@ -462,24 +460,20 @@ def compute_pnp(
 
                     denoiser = DistributedDDFB(
                         comm,
-                        grid_size,
-                        image_size=np.asarray(gt_shape),
-                        n_layers=denoiser_params["n_layers"],
-                        n_features=denoiser_params["n_features"],
+                        grid_shape,
+                        gt_shape,
+                        denoiser_params["n_layers"],
+                        denoiser_params["n_features"],
                     )
                 case "dncnn":
                     from cards.denoisers.distributed_dncnn import DistributedDnCNN
 
-                    denoiser = DistributedDnCNN(
-                        comm, grid_size, image_size=np.asarray(gt_shape)
-                    )
+                    denoiser = DistributedDnCNN(comm, grid_shape, gt_shape)
 
                 case "drunet":
                     from cards.denoisers.distributed_drunet import DistributedDRUNet
 
-                    denoiser = DistributedDRUNet(
-                        comm, grid_size, image_size=np.asarray(gt_shape)
-                    )
+                    denoiser = DistributedDRUNet(comm, grid_shape, gt_shape)
                     tile_range = (
                         denoiser.tail_conv.adjoint_communicator.cartslicer.tile_range
                     )
@@ -490,7 +484,7 @@ def compute_pnp(
                     )
 
             op = DistributedDftConvolution(
-                np.asarray(gt_shape), kernel, comm, grid_size, tile_range=tile_range
+                gt_shape, kernel, comm, grid_shape, tile_range=tile_range
             )
             y = np.empty(
                 op.adjoint_communicator.cartslicer.tile_size, dtype=kernel.dtype
@@ -509,18 +503,18 @@ def compute_pnp(
                     from cards.denoisers.serial_ddfb import SerialDDFB
 
                     denoiser = SerialDDFB(
-                        image_size=np.asarray(gt_shape),
-                        n_layers=denoiser_params["n_layers"],
-                        n_features=denoiser_params["n_features"],
+                        gt_shape,
+                        denoiser_params["n_layers"],
+                        denoiser_params["n_features"],
                     )
                 case "dncnn":
                     from cards.denoisers.serial_dncnn import SerialDnCNN
 
-                    denoiser = SerialDnCNN(image_size=np.asarray(gt_shape))
+                    denoiser = SerialDnCNN(gt_shape)
                 case "drunet":
                     from cards.denoisers.serial_drunet import SerialDRUNet
 
-                    denoiser = SerialDRUNet(image_size=np.asarray(gt_shape))
+                    denoiser = SerialDRUNet(gt_shape)
                 case _:
                     raise ValueError(
                         f"Unknown denoiser type: {denoiser_params['type']}"
@@ -530,7 +524,7 @@ def compute_pnp(
                 y = xp.asarray(f["y"])
             state_shape = gt_shape
             data_size = np.asarray(gt_shape) + np.asarray(kernel.shape, dtype=int) - 1
-            op = DftConvolution(np.asarray(gt_shape), data_size, kernel)
+            op = DftConvolution(gt_shape, data_size, kernel)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 
