@@ -27,10 +27,9 @@ class DistributedDDFB(BaseDistributedDenoiser):
     ----------
     comm : mpi4py.MPI.Comm
         Underlying MPI communicator.
-    grid_size : xp.ndarray[int]
-        Number of workers along each of the ``d`` dimensions of the
-        communicator grid.
-    image_size: xp.ndarray
+    grid_shape : tuple[int, ...]
+        Number of MPI workers along each of axis of the communicator grid.
+    image_shape: tuple[int, ...]
         Input image shape.
     n_layers: int
         Number of DDFB layers.
@@ -49,25 +48,30 @@ class DistributedDDFB(BaseDistributedDenoiser):
         Internal distributed convolution operator implemented in torch.
     ddfb : DDFB
         Local DDFB denoiser.
+
+    Methods
+    -------
+    __call__()
+        Apply the distributed denoiser to an input image.
     """
 
     def __init__(
         self,
         comm: MPI.Comm,
-        grid_size: xp.ndarray,
-        image_size: xp.ndarray,
+        grid_shape: tuple[int, ...],
+        image_shape: tuple[int, ...],
         n_layers: int,
         n_features: int,
         weights_path=Path(__file__).parents[3] / "data/weights/ddfb",
     ):
         super(BaseDistributedDenoiser, self).__init__(weights_path)
-        if image_size.size < 3:
+        if len(image_shape) < 3:
             # NOTE: accommodate gray scale images (implicitly, number of channes is 1)
             n_channels = 1
-            im_size = xp.concatenate((xp.ones(1, dtype=image_size.dtype), image_size))
+            im_shape = (1, *image_shape)
         else:
-            n_channels = image_size[-3]
-            im_size = image_size.copy()
+            n_channels = image_shape[-3]
+            im_shape = image_shape
         self.n_features = n_features
         self.n_layers = n_layers
 
@@ -79,14 +83,14 @@ class DistributedDDFB(BaseDistributedDenoiser):
         )
 
         rng = torch.Generator(next(self.ddfb.parameters()).device).manual_seed(42)
-        self.ddfb.update_lip(tuple(im_size[-3:]), rng=rng)
+        self.ddfb.update_lip(tuple(im_shape[-3:]), rng=rng)
 
         self.mpi_conv = DistributedTorchConvolution(
-            im_size,
+            im_shape,
             self.ddfb.D0.kernel_size,
             self.ddfb.D0.padding,  # type: ignore
             comm,
-            grid_size,
+            grid_shape,
             self.ddfb.D0.out_channels,
         )
 
@@ -102,7 +106,7 @@ class DistributedDDFB(BaseDistributedDenoiser):
         return (tile_u + layer.tau_k * Dk_tmp).clip(-nu, nu)
 
     def __call__(
-        self, input_image: xp.ndarray, sigma: float, torch_dtype=None, cp_dtype=None
+        self, input_image: xp.ndarray, sigma: float, torch_dtype=None, xp_dtype=None
     ) -> xp.ndarray:
         r"""Apply the distributed denoiser.
 
@@ -114,7 +118,7 @@ class DistributedDDFB(BaseDistributedDenoiser):
             Denoiser parameter (noise standard deviation).
         torch_dtype : torch.dtype or None, optional
             Numerical precision to be used for computations with `torch`. Default is `None`.
-        cp_dtype : xp.dtype or None, optional
+        xp_dtype : xp.dtype or None, optional
             Numerical precision to be used for computations with `xp` (`numpy`
             or `cupy`). Default is `None`.
 
@@ -153,7 +157,6 @@ class DistributedDDFB(BaseDistributedDenoiser):
         xp.ndarray
             Denoised image facet.
         """
-        # TODO: see if accommodating xp.float* or torch.float*
         assert isinstance(sigma, float)
         tile_u = self.mpi_conv.forward_no_comm(input_image.clip(0, 1), self.ddfb.D0)
         for layer in self.ddfb.layers:

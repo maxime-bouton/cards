@@ -13,8 +13,8 @@ from cards.denoisers.serial_drunet import SerialDRUNet
 # TODO: add test with gray images (n_channels = 1), missing DDFB weights with nch=1
 # NOTE: only first spatial axis is partitioned because way too slow when both axes are.
 @pytest.fixture
-def grid_size(comm_size: int) -> np.ndarray:
-    return np.asarray([1, comm_size, 1])
+def grid_shape(comm_size: int) -> tuple[int, ...]:
+    return (1, comm_size, 1)
 
 
 # NOTE: only one input shape configuration: DRUNet requires the
@@ -30,23 +30,25 @@ def input_size(input_shape) -> np.ndarray:
 
 
 @pytest.mark.mpi
-def test_distributed_ddfb(seed, input_size, comm, grid_size):
+def test_distributed_ddfb(seed, input_shape, comm, grid_shape):
     r"""Verify that the distributed DDFB yields results identical to the serial DDFB."""
     rng = xp.random.default_rng(seed)
-    x = rng.random(input_size).astype(xp.float32)
+    x = rng.random(input_shape).astype(xp.float32)
+    n_layers = 4
+    n_features = 64
 
     serial_ddfb = SerialDDFB(
-        image_size=input_size,
-        n_layers=4,
-        n_features=64,
+        input_shape,
+        n_layers,
+        n_features,
     )
 
     distributed_ddfb = DistributedDDFB(
         comm,
-        grid_size,
-        image_size=input_size,
-        n_layers=4,
-        n_features=64,
+        grid_shape,
+        input_shape,
+        n_layers,
+        n_features,
     )
 
     y_serial = serial_ddfb(x, 0.03)[distributed_ddfb.global_to_tile_slice]
@@ -56,14 +58,14 @@ def test_distributed_ddfb(seed, input_size, comm, grid_size):
 
 
 @pytest.mark.mpi
-def test_distributed_dncnn(seed, input_size, comm, grid_size):
+def test_distributed_dncnn(seed, input_shape, comm, grid_shape):
     r"""Verify that the distributed DnCNN yields results identical to the serial DnCNN."""
     rng = xp.random.default_rng(seed)
-    x = rng.random(input_size).astype(xp.float32)
+    x = rng.random(input_shape).astype(xp.float32)
 
-    serial_dncnn = SerialDnCNN(image_size=input_size)
+    serial_dncnn = SerialDnCNN(input_shape)
 
-    distributed_dncnn = DistributedDnCNN(comm, grid_size, image_size=input_size)
+    distributed_dncnn = DistributedDnCNN(comm, grid_shape, input_shape)
 
     y_serial = serial_dncnn(x, 0.03)[distributed_dncnn.global_to_tile_slice]
     y_mpi = distributed_dncnn(x[distributed_dncnn.global_to_tile_slice], 0.03)
@@ -72,7 +74,7 @@ def test_distributed_dncnn(seed, input_size, comm, grid_size):
 
 
 @pytest.mark.mpi
-def test_distributed_drunet(seed, input_size, comm, grid_size):
+def test_distributed_drunet(seed, input_shape, comm, grid_shape):
     r"""Verify that the distributed DRUNet yields results identical to the serial DRUNet.
 
     Warning
@@ -81,11 +83,11 @@ def test_distributed_drunet(seed, input_size, comm, grid_size):
     (along each spatial axis).
     """
     rng = xp.random.default_rng(seed)
-    x = rng.random(input_size).astype(xp.float32)
+    x = rng.random(input_shape).astype(xp.float32)
 
-    serial_drunet = SerialDRUNet(image_size=input_size)
+    serial_drunet = SerialDRUNet(input_shape)
 
-    distributed_drunet = DistributedDRUNet(comm, grid_size, image_size=input_size)
+    distributed_drunet = DistributedDRUNet(comm, grid_shape, input_shape)
 
     y_serial = serial_drunet(x, 0.03)[distributed_drunet.global_to_tile_slice]
     y_mpi = distributed_drunet(x[distributed_drunet.global_to_tile_slice], 0.03)

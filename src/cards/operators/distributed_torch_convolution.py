@@ -67,9 +67,9 @@ class DistributedTorchConvolution(LinearOperator):
 
     Parameters
     ----------
-    image_size : np.ndarray[int], of size ``d``
+    image_shape : tuple[int, ...]
         Full image size.
-    kernel_shape : tuple[int, int]
+    kernel_shape : tuple[int, ...]
         Convolution kernel size.
     padding : tuple[int, int]
         Padding size to be applied to the image.
@@ -291,7 +291,9 @@ class DistributedTorchConvolution(LinearOperator):
             return torch2xp(conv(xp2torch(input_array)))[self.slice_valid_coefficients]
 
     def adjoint(
-        self, data: xp.ndarray, adjoint_op: torch.nn.ConvTranspose2d | None = None
+        self,
+        data: xp.ndarray,
+        adjoint_op: torch.nn.Conv2d | torch.nn.ConvTranspose2d | None = None,
     ):
         r"""Implementation of the adjoint operator to update the input array
         ``data`` (from data to image space).

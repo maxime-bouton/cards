@@ -38,7 +38,7 @@ class BaseDenoiser(ABC):
         input_image: xp.ndarray,
         sigma: float,
         torch_dtype: xp.dtype | None = None,
-        cp_dtype: torch.dtype | None = None,
+        xp_dtype: torch.dtype | None = None,
     ) -> xp.ndarray:
         r"""Apply the serial denoiser.
 
@@ -50,7 +50,7 @@ class BaseDenoiser(ABC):
             Denoiser parameter (noise standard deviation).
         torch_dtype : torch.dtype or None, optional
             Numerical precision to be used for computations with `torch`. Default is `None`.
-        cp_dtype : xp.dtype or None, optional
+        xp_dtype : xp.dtype or None, optional
             Numerical precision to be used for computations with `xp` (`numpy`
             or `cupy`). Default is `None`.
 

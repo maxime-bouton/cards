@@ -27,10 +27,9 @@ class DistributedDRUNet(BaseDistributedDenoiser):
     ----------
     comm : mpi4py.MPI.Comm
         Underlying MPI communicator.
-    grid_size : xp.ndarray[int]
-        Number of workers along each of the ``d`` dimensions of the
-        communicator grid.
-    image_size: xp.ndarray
+    grid_shape : tuple[int, ...]
+        Number of MPI workers along each of axis of the communicator grid.
+    image_shape: tuple[int, ...]
         Input image shape.
     weights_path : str, optional
         Path to the folder containing the pre-trained denoiser weights.
@@ -46,6 +45,11 @@ class DistributedDRUNet(BaseDistributedDenoiser):
     drunet : DRUNet
         Internal DRUNet denoiser.
 
+    Methods
+    -------
+    __call__()
+        Apply the distributed denoiser to an input image.
+
     Warning
     -------
     The current distributed implementation only works for images whose
@@ -58,18 +62,18 @@ class DistributedDRUNet(BaseDistributedDenoiser):
     def __init__(
         self,
         comm: MPI.Comm,
-        grid_size: np.ndarray,
-        image_size: np.ndarray,
+        grid_shape: tuple[int, ...],
+        image_shape: tuple[int, ...],
         weights_path=Path(__file__).parents[3] / "data/weights/drunet",
     ):
         super(BaseDistributedDenoiser, self).__init__(weights_path)
-        if image_size.size < 3:
+        if len(image_shape) < 3:
             # NOTE: accommodate gray scale images (implicitly, number of channes is 1)
             n_channels = 1
-            size_in = xp.concatenate((xp.ones(1, dtype=image_size.dtype), image_size))
+            size_in = [1, *image_shape]
         else:
-            n_channels = image_size[-3]
-            size_in = image_size.copy()
+            n_channels = image_shape[-3]
+            size_in = list(image_shape)
 
         self.drunet = load_pretrained_drunet(
             n_channels,
@@ -79,9 +83,10 @@ class DistributedDRUNet(BaseDistributedDenoiser):
         # full size concatenated with noise map channel
         # size_in = image_size.copy()
         size_in[-3] += 1
+        size_in = tuple(size_in)
 
         # full size in dual space
-        size1 = size_in.copy()
+        size1 = np.asarray(size_in)
         size1[-3] = self.drunet.m_head.out_channels
 
         # channel doubled and spatial dimensions halved for each downsampling level
@@ -98,35 +103,35 @@ class DistributedDRUNet(BaseDistributedDenoiser):
         size4[-2:] = size3[-2:] // 2
 
         self.conv1 = DistributedTorchConvolution(
-            size1,
+            (*size1,),
             self.drunet.m_down1[0].res[0].kernel_size,
             self.drunet.m_down1[0].res[0].padding,
             comm,
-            grid_size,
+            grid_shape,
         )
 
         self.conv2 = DistributedTorchConvolution(
-            size2,
+            (*size2,),
             self.drunet.m_down2[0].res[0].kernel_size,
             self.drunet.m_down2[0].res[0].padding,
             comm,
-            grid_size,
+            grid_shape,
         )
 
         self.conv3 = DistributedTorchConvolution(
-            size3,
+            (*size3,),
             self.drunet.m_down3[0].res[0].kernel_size,
             self.drunet.m_down3[0].res[0].padding,
             comm,
-            grid_size,
+            grid_shape,
         )
 
         self.conv4 = DistributedTorchConvolution(
-            size4,
+            (*size4,),
             self.drunet.m_body[0].res[0].kernel_size,
             self.drunet.m_body[0].res[0].padding,
             comm,
-            grid_size,
+            grid_shape,
         )
 
         tile_range = self.conv1.adjoint_communicator.cartslicer.tile_range.copy()
@@ -137,19 +142,19 @@ class DistributedDRUNet(BaseDistributedDenoiser):
             self.drunet.m_head.kernel_size,
             self.drunet.m_head.padding,
             comm,
-            grid_size,
+            grid_shape,
             Cout=self.drunet.m_head.out_channels,
             backward=True,
             tile_range=tile_range,
         )
 
         self.tail_conv = DistributedTorchConvolution(
-            size1,
+            (*size1,),
             self.drunet.m_tail.kernel_size,
             self.drunet.m_tail.padding,
             comm,
-            grid_size,
-            Cout=image_size[-3],
+            grid_shape,
+            Cout=image_shape[-3],
             backward=False,
         )
 
@@ -158,11 +163,11 @@ class DistributedDRUNet(BaseDistributedDenoiser):
         tile_u: xp.ndarray,
         mpi_conv: DistributedTorchConvolution,
         conv_forward: torch.nn.Conv2d,
-        conv_adjoint: torch.nn.Conv2d,
+        conv_adjoint: torch.nn.ConvTranspose2d,
     ) -> xp.ndarray:
-        tmp = mpi_conv.forward(tile_u, conv_forward)
+        tmp = mpi_conv.forward(tile_u, op=conv_forward)
         tmp.clip(min=0, out=tmp)
-        result = mpi_conv.adjoint(tmp, conv_adjoint)
+        result = mpi_conv.adjoint(tmp, adjoint_op=conv_adjoint)
         result += tile_u
         return result
 
@@ -188,7 +193,7 @@ class DistributedDRUNet(BaseDistributedDenoiser):
         return tile_u
 
     def __call__(
-        self, input_image: xp.ndarray, sigma: float, torch_dtype=None, cp_dtype=None
+        self, input_image: xp.ndarray, sigma: float, torch_dtype=None, xp_dtype=None
     ) -> xp.ndarray:
         _, h, w = input_image.shape
         noise_map = xp.full((1, h, w), sigma)

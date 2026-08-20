@@ -24,10 +24,9 @@ class DistributedDnCNN(BaseDistributedDenoiser):
     ----------
     comm : mpi4py.MPI.Comm
         Underlying MPI communicator.
-    grid_size : xp.ndarray[int]
-        Number of workers along each of the ``d`` dimensions of the
-        communicator grid.
-    image_size: xp.ndarray
+    grid_shape : tuple[int, ...]
+        Number of MPI workers along each of axis of the communicator grid.
+    image_shape: tuple[int, ...]
         Input image shape.
     weights_path : str, optional
         Path to the folder containing the pre-trained denoiser weights.
@@ -40,23 +39,28 @@ class DistributedDnCNN(BaseDistributedDenoiser):
         Distributed convolution operator implemented in torch, corresponding to the first and the last layer of the network.
     dncnn : DnCNN
         Local DnCNN denoiser.
+
+    Methods
+    -------
+    __call__()
+        Apply the distributed denoiser to an input image.
     """
 
     def __init__(
         self,
         comm: MPI.Comm,
-        grid_size: xp.ndarray,
-        image_size: xp.ndarray,
+        grid_shape: tuple[int, ...],
+        image_shape: tuple[int, ...],
         weights_path=Path(__file__).parents[3] / "data/weights/dncnn",
     ):
         super(BaseDistributedDenoiser, self).__init__(weights_path)
-        if image_size.size < 3:
+        if len(image_shape) < 3:
             # NOTE: accommodate gray scale images (implicitly, number of channes is 1)
             n_channels = 1
-            core_size = xp.concatenate((xp.ones(1, dtype=image_size.dtype), image_size))
+            core_shape = [1, *image_shape]
         else:
-            n_channels = image_size[-3]
-            core_size = image_size.copy()
+            n_channels = image_shape[-3]
+            core_shape = list(image_shape)
 
         self.dncnn = load_pretrained_dncnn(
             n_channels,
@@ -64,17 +68,17 @@ class DistributedDnCNN(BaseDistributedDenoiser):
         )
 
         self.edge_mpi_conv = DistributedTorchConvolution(
-            image_size,
+            image_shape,
             self.dncnn.model[0].kernel_size,
             self.dncnn.model[0].padding,
             comm,
-            grid_size,
+            grid_shape,
             Cout=self.dncnn.model[0].out_channels,
             backward=False,
         )
 
-        # core_size = image_size.copy()
-        core_size[-3] = self.dncnn.model[0].out_channels
+        core_shape[-3] = self.dncnn.model[0].out_channels
+        core_shape = tuple(core_shape)
 
         tile_range = (
             self.edge_mpi_conv.adjoint_communicator.cartslicer.tile_range.copy()
@@ -82,11 +86,11 @@ class DistributedDnCNN(BaseDistributedDenoiser):
         tile_range[-3] = [0, self.dncnn.model[0].out_channels - 1]
 
         self.core_mpi_conv = DistributedTorchConvolution(
-            core_size,
+            core_shape,
             self.dncnn.model[0].kernel_size,
             self.dncnn.model[0].padding,
             comm,
-            grid_size,
+            grid_shape,
             backward=True,
             tile_range=tile_range,
         )
@@ -95,13 +99,13 @@ class DistributedDnCNN(BaseDistributedDenoiser):
         self,
         tile_u: xp.ndarray,
         conv_forward: torch.nn.Conv2d,
-        conv_adjoint: torch.nn.Conv2d,
+        conv_adjoint: torch.nn.ConvTranspose2d,  # torch.nn.Conv2d,
     ) -> xp.ndarray:
-        tile_u = self.core_mpi_conv.forward(tile_u, conv_forward).clip(min=0)
-        return self.core_mpi_conv.adjoint(tile_u, conv_adjoint).clip(min=0)
+        tile_u = self.core_mpi_conv.forward(tile_u, op=conv_forward).clip(min=0)
+        return self.core_mpi_conv.adjoint(tile_u, adjoint_op=conv_adjoint).clip(min=0)
 
     def __call__(
-        self, input_image: xp.ndarray, sigma: float, torch_dtype=None, cp_dtype=None
+        self, input_image: xp.ndarray, sigma: float, torch_dtype=None, xp_dtype=None
     ) -> xp.ndarray:
         r"""Apply the distributed denoiser.
 
@@ -147,8 +151,6 @@ class DistributedDnCNN(BaseDistributedDenoiser):
         xp.ndarray
             Denoised image.
         """
-        # TODO: see if accommodating xp.float* or torch.float*
-        assert isinstance(sigma, float)
         tile_u = self.edge_mpi_conv.forward_no_comm(
             input_image, self.dncnn.model[0]
         ).clip(min=0)

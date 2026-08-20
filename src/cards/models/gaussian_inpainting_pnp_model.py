@@ -46,7 +46,7 @@ class BaseGaussianInpaintingPnpModel(BaseGaussianInpaintingModel):
                 state,
                 self.X.epsilon**0.5,
                 torch_dtype=torch.float32,
-                cp_dtype=xp.float64,
+                xp_dtype=xp.float64,
             )
             self.X.grad = lambda state: (
                 self.mask * (state - self.observations) / self.sigma2
@@ -57,7 +57,7 @@ class BaseGaussianInpaintingPnpModel(BaseGaussianInpaintingModel):
                 state,
                 self.X.reg_coef * self.X.epsilon**0.5,
                 torch_dtype=torch.float32,
-                cp_dtype=xp.float64,
+                xp_dtype=xp.float64,
             )
             self.X.grad = lambda state: (
                 self.mask * (state - self.observations) / self.sigma2

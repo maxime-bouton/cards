@@ -6,7 +6,6 @@ r"""Serial denoiser class for the DRUNet network :cite:p:`Zhang2021`."""
 
 from pathlib import Path
 
-import numpy as np
 import torch
 
 import cards.backend as xp
@@ -20,7 +19,7 @@ class SerialDRUNet(BaseDenoiser):
 
     Parameters
     ----------
-    image_size: xp.ndarray
+    image_shape: tuple[int, ...]
         Input image shape.
     weights_path : str, optional
         Path to the folder containing the pre-trained denoiser weights.
@@ -38,15 +37,15 @@ class SerialDRUNet(BaseDenoiser):
 
     def __init__(
         self,
-        image_size: np.ndarray,
+        image_shape: tuple[int, ...],
         weights_path=Path(__file__).parents[3] / "data/weights/drunet",
     ):
         super().__init__(weights_path)
-        if image_size.size < 3:
+        if len(image_shape) < 3:
             # NOTE: accommodate gray scale images (implicitly, number of channes is 1)
             n_channels = 1
         else:
-            n_channels = image_size[-3]
+            n_channels = image_shape[-3]
 
         self.drunet = load_pretrained_drunet(
             n_channels,
@@ -57,12 +56,12 @@ class SerialDRUNet(BaseDenoiser):
         self,
         input_image: xp.ndarray,
         sigma: float,
-        torch_dtype: xp.dtype | None = None,
-        cp_dtype: torch.dtype | None = None,
+        torch_dtype: torch.dtype | None = None,
+        xp_dtype: xp.dtype | None = None,
     ) -> xp.ndarray:
         # TODO: add error or warning when the number of channels in the input does not fit that of the denoiser
         with torch.no_grad():
             return torch2xp(
                 self.drunet(xp2torch(input_image, torch_dtype=torch_dtype), sigma),
-                cp_dtype=cp_dtype,
+                xp_dtype=xp_dtype,
             )

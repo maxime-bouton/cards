@@ -93,7 +93,7 @@ def xp2torch(x: xp.ndarray, add_batch: bool = True, torch_dtype=None):
     return torch.as_tensor(x[None, :] if add_batch else x).to(torch_dtype)
 
 
-def torch2xp(x: torch.Tensor, remove_batch: bool = True, cp_dtype=None):
+def torch2xp(x: torch.Tensor, remove_batch: bool = True, xp_dtype=None):
     """Convert a PyTorch tensor to a ndarray.
 
     Parameters
@@ -108,4 +108,4 @@ def torch2xp(x: torch.Tensor, remove_batch: bool = True, cp_dtype=None):
     xp.ndarray
         Converted ndarray.
     """
-    return xp.asarray((x.squeeze(0) if remove_batch else x).detach(), dtype=cp_dtype)
+    return xp.asarray((x.squeeze(0) if remove_batch else x).detach(), dtype=xp_dtype)

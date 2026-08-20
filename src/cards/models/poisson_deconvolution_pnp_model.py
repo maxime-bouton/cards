@@ -72,7 +72,7 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
                 state,
                 self.Z2.epsilon**0.5,
                 torch_dtype=torch.float32,
-                cp_dtype=xp.float64,
+                xp_dtype=xp.float64,
             )
             self.Z2.grad = lambda state: (
                 (state - self.X.current_state) / self.split_coef2
@@ -83,7 +83,7 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
                 state,
                 self.Z2.reg_coef * self.Z2.epsilon**0.5,
                 torch_dtype=torch.float32,
-                cp_dtype=xp.float64,
+                xp_dtype=xp.float64,
             )
             self.Z2.grad = lambda state: (
                 (state - self.X.current_state) / self.split_coef2
