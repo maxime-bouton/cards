@@ -20,9 +20,9 @@ from cards.models.base_gaussian_deconvolution_model import (
 )
 from cards.models.base_model import BaseDistributedModel
 from cards.operators.dft_convolution import DftConvolution
+from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.operators.mpi_gradient import MpiGradient2d
 from cards.transition_kernels.gpu_psgla import GpuPSGLA
 from cards.transition_kernels.psgla import PSGLA
 
@@ -38,7 +38,7 @@ class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         estimators: list[BaseEstimator],
         params: GaussianDeconvolutionTvParams,
         convolution_operator: DftConvolution | MpiDftConvolution,
-        gradient_operator: Gradient2d | MpiGradient2d,
+        gradient_operator: Gradient2d | DistributedGradient2d,
         X: PSGLA | GpuPSGLA,
         Z: PSGLA | GpuPSGLA,
     ):
@@ -162,7 +162,7 @@ class DistributedGaussianDeconvolutionTvModel(
     ):
         self.full_size = convolution_operator.image_size
 
-        gradient_operator = MpiGradient2d(
+        gradient_operator = DistributedGradient2d(
             convolution_operator.image_size,
             convolution_operator.grid_size,
             convolution_operator.comm,

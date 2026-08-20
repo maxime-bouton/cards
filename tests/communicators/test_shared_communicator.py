@@ -6,8 +6,8 @@ from mpi4py import MPI
 
 import cards.backend as xp
 from cards.communicators.shared_communicator import SharedCommunicator
+from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.operators.mpi_gradient import MpiGradient2d
 from cards.utils.utils import expand_shape_left
 
 
@@ -58,7 +58,7 @@ def test_shared_comm(
 
     kernel = rng.random(kernel_size, dtype=xp.float32)
 
-    grad_op = MpiGradient2d(input_size, grid_size, comm)
+    grad_op = DistributedGradient2d(input_size, grid_size, comm)
     conv_op = MpiDftConvolution(input_size, kernel, comm, grid_size)
 
     shared_comm = SharedCommunicator(

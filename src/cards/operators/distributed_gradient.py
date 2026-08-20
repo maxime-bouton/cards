@@ -18,7 +18,7 @@ from cards.communicators.sync_cartesian_communicator import SyncCartesianCommuni
 from cards.operators.linear_operator import LinearOperator
 
 
-class MpiGradient2d(LinearOperator):
+class DistributedGradient2d(LinearOperator):
     def __init__(
         self,
         image_shape: Sequence[int],

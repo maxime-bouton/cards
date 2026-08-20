@@ -23,9 +23,9 @@ from cards.models.base_poisson_deconvolution_model import (
     PoissonDeconvolutionParameters,
 )
 from cards.operators.dft_convolution import DftConvolution
+from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.operators.mpi_gradient import MpiGradient2d
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 from cards.transition_kernels.gpu_psgla import GpuPSGLA
 from cards.transition_kernels.psgla import PSGLA
@@ -37,7 +37,7 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
         estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DftConvolution | MpiDftConvolution,
-        gradient_operator: Gradient2d | MpiGradient2d,
+        gradient_operator: Gradient2d | DistributedGradient2d,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
@@ -183,7 +183,7 @@ class DistributedPoissonDeconvolutionTvModel(
     ):
         self.full_size = convolution_operator.image_size
 
-        gradient_operator = MpiGradient2d(
+        gradient_operator = DistributedGradient2d(
             convolution_operator.image_size,
             convolution_operator.grid_size,
             convolution_operator.comm,

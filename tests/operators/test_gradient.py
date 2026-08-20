@@ -3,8 +3,8 @@ import pytest
 from mpi4py import MPI
 
 import cards.backend as xp
+from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
-from cards.operators.mpi_gradient import MpiGradient2d
 
 
 @pytest.mark.serial
@@ -50,7 +50,7 @@ def test_adjoint_mpi(comm, input_shape, seed):
     grid_dims = (1, *MPI.Compute_dims(comm_size, 2))
     cart_comm = comm.Create_cart(dims=grid_dims)
 
-    grad_op = MpiGradient2d(input_shape, grid_dims, comm)
+    grad_op = DistributedGradient2d(input_shape, grid_dims, comm)
 
     rng = xp.random.default_rng(seed)
 
