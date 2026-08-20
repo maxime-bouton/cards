@@ -1,10 +1,8 @@
-r"""Implementation of a Gaussian deconvolution model under a TV prior to reproduce the experiments reported in :cite:p:`Bouton2025`."""
+r"""Implementation of a Gaussian deconvolution model under a TV prior to reproduce the experiments reported in :cite:p:`Bouton2026`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
-# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
-# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
-# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 # TODO: documentation
 
@@ -22,9 +20,9 @@ from cards.models.base_gaussian_deconvolution_model import (
 )
 from cards.models.base_model import BaseDistributedModel
 from cards.operators.dft_convolution import DftConvolution
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
+from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.operators.mpi_gradient import MpiGradient2d
 from cards.transition_kernels.gpu_psgla import GpuPSGLA
 from cards.transition_kernels.psgla import PSGLA
 
@@ -39,8 +37,8 @@ class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         self,
         estimators: list[BaseEstimator],
         params: GaussianDeconvolutionTvParams,
-        convolution_operator: DftConvolution | MpiDftConvolution,
-        gradient_operator: Gradient2d | MpiGradient2d,
+        convolution_operator: DftConvolution | DistributedDftConvolution,
+        gradient_operator: Gradient2d | DistributedGradient2d,
         X: PSGLA | GpuPSGLA,
         Z: PSGLA | GpuPSGLA,
     ):
@@ -158,13 +156,13 @@ class DistributedGaussianDeconvolutionTvModel(
         self,
         estimators: list[BaseEstimator],
         params: GaussianDeconvolutionTvParams,
-        convolution_operator: MpiDftConvolution,
+        convolution_operator: DistributedDftConvolution,
         X: PSGLA | GpuPSGLA,
         Z: PSGLA | GpuPSGLA,
     ):
         self.full_size = convolution_operator.image_size
 
-        gradient_operator = MpiGradient2d(
+        gradient_operator = DistributedGradient2d(
             convolution_operator.image_size,
             convolution_operator.grid_size,
             convolution_operator.comm,
@@ -182,11 +180,11 @@ class DistributedGaussianDeconvolutionTvModel(
     def set_slices(self):
         """Describes which portion of the global buffer the current thread must handle."""
         self.slices["X"] = (
-            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
+            self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile
         )
         self.slices["Z"] = (
             np.s_[:],
-            *self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile,
+            *self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile,
         )
 
     def set_global_sizes(self):

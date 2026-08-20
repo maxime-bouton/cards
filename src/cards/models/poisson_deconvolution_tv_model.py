@@ -1,10 +1,8 @@
-r"""Implementation of a Poisson deconvolution model using a TV prior to reproduce the experiments reported in :cite:p:`Bouton2025`."""
+r"""Implementation of a Poisson deconvolution model using a TV prior to reproduce the experiments reported in :cite:p:`Bouton2026`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
-# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
-# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
-# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 # TODO: documentation
 
@@ -25,9 +23,9 @@ from cards.models.base_poisson_deconvolution_model import (
     PoissonDeconvolutionParameters,
 )
 from cards.operators.dft_convolution import DftConvolution
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
+from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.operators.mpi_gradient import MpiGradient2d
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 from cards.transition_kernels.gpu_psgla import GpuPSGLA
 from cards.transition_kernels.psgla import PSGLA
@@ -38,8 +36,8 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
         self,
         estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
-        convolution_operator: DftConvolution | MpiDftConvolution,
-        gradient_operator: Gradient2d | MpiGradient2d,
+        convolution_operator: DftConvolution | DistributedDftConvolution,
+        gradient_operator: Gradient2d | DistributedGradient2d,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
@@ -178,14 +176,14 @@ class DistributedPoissonDeconvolutionTvModel(
         self,
         estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
-        convolution_operator: MpiDftConvolution,
+        convolution_operator: DistributedDftConvolution,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
     ):
         self.full_size = convolution_operator.image_size
 
-        gradient_operator = MpiGradient2d(
+        gradient_operator = DistributedGradient2d(
             convolution_operator.image_size,
             convolution_operator.grid_size,
             convolution_operator.comm,
@@ -210,14 +208,14 @@ class DistributedPoissonDeconvolutionTvModel(
             Dictionary containing the slices of the global buffer that this thread will handle.
         """
         self.slices["X"] = (
-            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
+            self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile
         )
         self.slices["Z1"] = (
             self.convolution_operator.adjoint_communicator.cartslicer.slice_global_buffer_to_tile
         )
         self.slices["Z2"] = (
             np.s_[:],
-            *self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile,
+            *self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile,
         )
 
     def set_global_sizes(self):

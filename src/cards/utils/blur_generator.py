@@ -24,7 +24,7 @@ class MotionBlurKernel:
         self,
         size=(100, 100),
         intensity=0.0,
-        dtype: np.dtype | None = None,
+        dtype: type | None = None,
         rng: np.random.Generator | None = None,
     ):
         if not isinstance(size, tuple) or len(size) != 2:
@@ -90,7 +90,7 @@ class MotionBlurKernel:
 
         Returns
         -------
-        numpy.ndarray
+        np.ndarray
             2D array representing the motion blur kernel, normalized to sum to 1.
         """
         path = self._generate_path()
@@ -136,7 +136,7 @@ class MotionBlurKernel:
 
         Returns
         -------
-        numpy.ndarray
+        np.ndarray
             The motion blur kernel.
         """
         return self._kernel

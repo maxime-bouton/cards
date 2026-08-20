@@ -1,13 +1,17 @@
-"""Implementation of the convolution product as a linear operator, computed via the DFT.
-The computations can be done either on CPU or GPU depending on the settings.
-"""
+"""Serial implementation of an FFT-based convolution operator."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
+from collections.abc import Sequence
 
 import cards.backend as xp
 from cards.operators.linear_operator import LinearOperator
 
 
 def fft_conv(x: xp.ndarray, fft_h: xp.ndarray, shape) -> xp.ndarray:
-    r"""FFT-based nd convolution.
+    r"""FFT-based multi-dimensional convolution.
 
     Convolve the array ``x`` with the kernel of Fourier transform ``fft_h``
     using the FFT. Performs linear or circular convolution depending on
@@ -15,9 +19,9 @@ def fft_conv(x: xp.ndarray, fft_h: xp.ndarray, shape) -> xp.ndarray:
 
     Parameters
     ----------
-    x : numpy.ndarray
+    x : xp.ndarray
         Input array (of size :math:`N`).
-    fft_h : numpy.ndarray
+    fft_h : xp.ndarray
         Input kernel (of size
         :math:`\lfloor K/2 \rfloor + 1` if real, :math:`K` otherwise).
     shape : tuple[int, ...]
@@ -25,8 +29,8 @@ def fft_conv(x: xp.ndarray, fft_h: xp.ndarray, shape) -> xp.ndarray:
 
     Returns
     -------
-    y : numpy.ndarray
-        Convolution results.
+    y : xp.ndarray
+        Convolution result.
     """
     # turn shape into a list if only given as a scalar
     if xp.isscalar(shape):
@@ -46,69 +50,48 @@ def fft_conv(x: xp.ndarray, fft_h: xp.ndarray, shape) -> xp.ndarray:
 
 
 class DftConvolution(LinearOperator):
-    r"""Convolution operator on GPU (FFT-based).
+    r"""FFT-based convolution operator.
 
     Attributes
     ----------
-    image_size : numpy.ndarray[int], of size ``d``
-        Full image size.
-    kernel : cupy.ndarray
+    kernel : xp.ndarray
         Input kernel. The array should have ``d`` axis, such that
         ``kernel.shape[i] < image_size[i]`` for ``i in range(d)``.
-    data_size : tuple, of size ``d``
-        Full data size.
-        - If ``data_size == image_size``: circular convolution;
-        - If ``data_size == image_size + kernel_size - 1`` for the spatial axes: linear convolution.
+    fft_kernel : ndarray
+        Fourier transform of the known convolution kernel.
+    valid_coefficients : Slice
+        Slice object to retrieve valid coefficients after applying the
+        adjoint convolution operator.
+
+    Raises
+    ------
+    ValueError
+        ``image_size`` and ``data_size`` must have the same number of
+        elements.
+    ValueError
+        ``kernel`` should have ``ndims = len(image_size)`` dimensions.
+    TypeError
+        Only real-valued kernel supported.
+
+    Note
+    ----
+    The class implements either a linear or a circular comvolution operaotr, depending on the value speficied for ``data_shape``
+        - if ``data_shape[k] == image_shape[k] for k in range(len(image_shape))``: circular convolution;
+        - if ``data_shape[k] == image_shape[k] + kernel.shape[k] - 1 for k in range(len(image_shape))``: linear convolution.
+    See :func:`cards.operators.dft_convolution.fft_conv`
     """
 
     def __init__(
         self,
-        image_size,
+        image_shape: Sequence[int],
+        data_shape: Sequence[int],
         kernel,
-        data_size,
     ):
-        r"""GpuConvolution constructor.
-
-        Parameters
-        ----------
-        image_size : ndarray[int], of size ``d``
-            Full image size.
-        kernel : cards.backend.xp.ndarray[float]
-            Input kernel. The array should have ``d`` axis, such that
-            ``kernel.shape[i] < image_size[i]`` for ``i in range(d)``.
-        data_size : ndarray[int] | tuple[int, ...], of size ``d``
-            Full data size.
-            - If ``data_size == image_size``: circular convolution;
-            - If ``data_size == image_size + kernel_size - 1``: linear convolution.
-        fft_kernel : ndarray
-            Fourier transform of the known convolution kernel.
-        valid_coefficients : Slice
-            Slice object to retrieve valid coefficients after applying the
-            adjoint convolution operator.
-
-        Raises
-        ------
-        ValueError
-            ``image_size`` and ``data_size`` must have the same number of
-            elements.
-        ValueError
-            ``kernel`` should have ``ndims = len(image_size)`` dimensions.
-        TypeError
-            Only real-valued kernel supported.
-
-        Note
-        ----
-        Setting ``data_size`` to the same value as ``image_size`` results in a
-        circular convolution.
-        """
-        # FIXME: size expected as a numpy array, not a tuple (given the current use throughout the library)! (currently inconsistent with what is required from image_size)
-        if not isinstance(data_size, tuple):
-            data_size = tuple(data_size)
-        if not image_size.size == len(data_size):
+        super().__init__(image_shape, data_shape)
+        if not len(self.image_shape) == len(self.data_shape):
             raise ValueError(
-                "image_size and data_size must have the same number of elements"
+                "image_shape and data_shape must have the same number of elements"
             )
-        super(DftConvolution, self).__init__(image_size, data_size)
 
         if not len(kernel.shape) == self.ndims:
             raise ValueError("kernel should have ndims = len(image_size) dimensions")
@@ -118,42 +101,16 @@ class DftConvolution(LinearOperator):
 
         self.kernel = kernel
         self.fft_kernel = xp.fft.rfftn(
-            a=self.kernel, s=self.data_size, axes=range(len(self.image_size))
+            a=self.kernel, s=self.data_shape, axes=range(len(self.image_shape))
         )
         self.valid_coefficients = tuple(
-            [xp.s_[: self.image_size[d]] for d in range(self.ndims)]
+            [xp.s_[: self.image_shape[d]] for d in range(self.ndims)]
         )
 
-    def forward(self, input_image: xp.ndarray) -> xp.ndarray:
-        r"""Implementation of the direct operator to update the input array
-        ``input_image`` (from image to data space).
+    def forward(self, image: xp.ndarray, op=None) -> xp.ndarray:
+        return fft_conv(image, self.fft_kernel, self.data_shape)
 
-        Parameters
-        ----------
-        input_image : cards.backend.xp.ndarray[float]
-            Input array (image space).
-
-        Returns
-        -------
-        cards.backend.xp.ndarray
-            Convolution result (direct operator).
-        """
-        return fft_conv(input_image, self.fft_kernel, self.data_size)
-
-    def adjoint(self, input_data: xp.ndarray) -> xp.ndarray:
-        r"""Implementation of the adjoint operator to update the input array
-        ``input_data`` (from data to image space).
-
-        Parameters
-        ----------
-        input_data : cards.backend.xp.ndarray[float]
-            Input array (data space).
-
-        Returns
-        -------
-        cards.backend.xp.ndarray
-            Convolution result (adjoint operator).
-        """
-        return fft_conv(input_data, xp.conj(self.fft_kernel), self.data_size)[
+    def adjoint(self, data: xp.ndarray, adjoint_op=None) -> xp.ndarray:
+        return fft_conv(data, xp.conj(self.fft_kernel), self.data_shape)[
             self.valid_coefficients
         ]

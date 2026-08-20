@@ -1,5 +1,9 @@
 r"""Standalone script to train the DDFB network :cite:`Repetti2022eusipco`, following recommandations in :cite:`Le2024`."""
 
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
 import argparse
 import logging
 import os
@@ -8,15 +12,14 @@ import time
 from datetime import datetime
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
 from PIL import Image
+from torch import nn, optim
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 
 
 def calculate_snr(clean_images, noisy_or_denoised_images):
-    """
+    r"""
     Calculate the Signal-to-Noise Ratio (SNR) between clean and noisy/denoised images.
 
     Parameters
@@ -45,7 +48,7 @@ def calculate_snr(clean_images, noisy_or_denoised_images):
 
 
 def setup_logger(log_dir, log_filename):
-    """
+    r"""
     Set up logger that writes to both console and file.
 
     Parameters
@@ -84,7 +87,7 @@ def setup_logger(log_dir, log_filename):
 
 
 class DenoisingDataset(Dataset):
-    """
+    r"""
     Dataset class for image denoising, extracts random patches from input images.
 
     Parameters
@@ -155,7 +158,7 @@ def add_noise(
     max_sigma=0.1,
     same_noise_level=True,
 ):
-    """
+    r"""
     Add Gaussian noise to images.
 
     Parameters
@@ -200,7 +203,7 @@ def add_noise(
 
 
 def evaluate(model, val_loader, criterion, device, same_noise_level, sigma=None):
-    """
+    r"""
     Evaluate the model on validation data.
 
     Parameters
@@ -274,7 +277,7 @@ def train(
     device,
     logger,
 ):
-    """
+    r"""
     Train the DDFB model.
 
     Parameters
@@ -420,7 +423,7 @@ def train(
 
 
 def initialize_ddfb_model(model):
-    """
+    r"""
     Apply improved initialization to DDFB model's convolutional layers.
 
     Parameters

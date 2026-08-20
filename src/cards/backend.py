@@ -18,7 +18,7 @@ functions from it directly.
 Note
 ----
 Type checking is deliberately relaxed via :data:`typing.Any` to allow both CPU arrays
-(:class:`numpy.ndarray`) and GPU arrays (:class:`cupy.ndarray`) to pass static linter
+(:class:`np.ndarray`) and GPU arrays (:class:`cupy.ndarray`) to pass static linter
 analysis without throwing class mismatches.
 
 Examples
@@ -33,10 +33,14 @@ Examples
 array([2, 4, 4])
 >>>
 >>> xp.set_backend("numpy")
->>> x = xp.array([2, 3, 4])     # numpy.ndarray
->>> foo(x)                      # numpy.ndarray as well
+>>> x = xp.array([2, 3, 4])     # np.ndarray
+>>> foo(x)                      # np.ndarray as well
 array([2, 4, 4])
 """
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 import importlib
 from typing import TYPE_CHECKING, Any
@@ -76,9 +80,9 @@ def set_backend(new_backend: str) -> None:
     Examples
     --------
     >>> import cards.backend as xp
-    >>> x = xp.zeros((10, 10)) # numpy.ndarray by default
+    >>> x = xp.zeros((10, 10)) # np.ndarray by default
     >>> type(x)
-    <class 'numpy.ndarray'>
+    <class 'np.ndarray'>
     >>> xp.set_backend("cupy")
     >>> x = xp.zeros((10, 10))
     >>> type(x)

@@ -7,16 +7,15 @@ deconvolution and inpainting.
 Base Classes
 ------------
 :class:`~cards.models.base_model.BaseModel`
-    Abstract model class defining the interface for all statistical models to be used
-    within a :class:`~cards.samplers.base_sampler.BaseSampler` for solving inverse
-    problems.
+    Abstract model class defining the interface for all statistical models to
+    be used within a :class:`~cards.samplers.base_sampler.BaseSampler` for
+    solving inverse problems.
 :class:`~cards.models.base_model.BaseDistributedModel`
     Extends :class:`~cards.models.base_model.BaseModel` to support distributed
     computation using MPI.
 
 Concrete Models
 ---------------
-
 Gaussian Deconvolution (PnP)
     Gaussian deconvolution regularized via Plug-and-Play (PnP) denoising priors.
 
@@ -57,6 +56,10 @@ Examples
 --------
 >>> #TODO: add example usage of the models here
 """
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 from .base_model import BaseDistributedModel, BaseModel
 from .gaussian_deconvolution_pnp_model import (

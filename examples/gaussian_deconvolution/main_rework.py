@@ -1,6 +1,9 @@
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
 import warnings
 
-warnings.filterwarnings("ignore", category=UserWarning, module="h5py")
 
 from gaussian_deconvolution_pnp import (
     GaussianDeconvObservationsHook,
@@ -9,6 +12,8 @@ from gaussian_deconvolution_pnp import (
 )
 
 from cards.core.simulation import Simulation
+
+warnings.filterwarnings("ignore", category=UserWarning, module="h5py")
 
 
 def main():

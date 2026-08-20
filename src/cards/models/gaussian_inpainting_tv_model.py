@@ -1,10 +1,8 @@
-r"""Implementation of a Gaussian inpainting model using a TV prior to reproduce the experiments reported in :cite:p:`Bouton2025`."""
+r"""Implementation of a Gaussian inpainting model using a TV prior to reproduce the experiments reported in :cite:p:`Bouton2026`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
-# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
-# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
-# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 # TODO: documentation
 # FIXME: replace class variables by instance variables
@@ -23,8 +21,8 @@ from cards.models.base_gaussian_inpainting_model import (
     GaussianInpaintingParameters,
 )
 from cards.models.base_model import BaseDistributedModel
+from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
-from cards.operators.mpi_gradient import MpiGradient2d
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 from cards.transition_kernels.gpu_psgla import GpuPSGLA
 from cards.transition_kernels.psgla import PSGLA
@@ -36,7 +34,7 @@ class GaussianInpaintingTvParameters(GaussianInpaintingParameters):
 
 
 class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
-    gradient_operator: Gradient2d | MpiGradient2d
+    gradient_operator: Gradient2d | DistributedGradient2d
 
     def __init__(
         self,
@@ -152,7 +150,9 @@ class DistributedGaussianInpaintingTvModel(
         self.comm = comm
         self.full_size = full_size
 
-        self.gradient_operator = MpiGradient2d(self.full_size, grid_size, self.comm)
+        self.gradient_operator = DistributedGradient2d(
+            self.full_size, grid_size, self.comm
+        )
         super().__init__(estimators, params, X, Z)
 
     def set_slices(self):
@@ -164,11 +164,11 @@ class DistributedGaussianInpaintingTvModel(
             Dictionary containing the slices of the global buffer that this thread will handle.
         """
         self.slices["X"] = (
-            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
+            self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile
         )
         self.slices["Z"] = (
             np.s_[:],
-            *self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile,
+            *self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile,
         )
 
     def set_global_sizes(self):

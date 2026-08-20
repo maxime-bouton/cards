@@ -1,10 +1,8 @@
-r"""Utility functions to set the Gaussian inpainting example script for the experiments reported in :cite:p:`Bouton2025` (synthetic data generation, sampling and post-processing steps)."""
+r"""Utility functions to set the Gaussian inpainting example script for the experiments reported in :cite:p:`Bouton2026` (synthetic data generation, sampling and post-processing steps)."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
-# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
-# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
-# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 # FIXME: use DataManager instead to hide details on data loading
 
@@ -15,9 +13,9 @@ import numpy as np
 from scipy import interpolate
 
 import cards.backend as xp
-from cards.estimators.base_estimator_builder import BaseEstimatorBuilder
+from cards.estimators.base_estimator import BaseEstimator
 from cards.estimators.ci_builder import CIBuilder
-from cards.estimators.mmse_var_builder import MMSEVarBuilder
+from cards.estimators.mmse_var import MMSEVar
 from cards.models.gaussian_inpainting_pnp_model import (
     DistributedGaussianInpaintingPnpModel,
     GaussianInpaintingPnpModel,
@@ -431,8 +429,8 @@ def compute_tv(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
-    estimators: list[BaseEstimatorBuilder] = [
-        MMSEVarBuilder(X),
+    estimators: list[BaseEstimator] = [
+        MMSEVar(X),
         CIBuilder(X, all_samples=True),
     ]
 
@@ -553,8 +551,8 @@ def compute_pnp(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
-    estimators: list[BaseEstimatorBuilder] = [
-        MMSEVarBuilder(X),
+    estimators: list[BaseEstimator] = [
+        MMSEVar(X),
         CIBuilder(X, all_samples=False),
     ]
 
@@ -562,9 +560,9 @@ def compute_pnp(
         case "mpi":
             match denoiser_params["type"]:
                 case "ddfb":
-                    from cards.denoisers.mpi_ddfb import MpiDDFB
+                    from cards.denoisers.distributed_ddfb import DistributedDDFB
 
-                    denoiser = MpiDDFB(
+                    denoiser = DistributedDDFB(
                         comm,
                         grid_size,
                         image_size=np.asarray(gt_shape),
@@ -572,15 +570,15 @@ def compute_pnp(
                         n_features=denoiser_params["n_features"],
                     )
                 case "dncnn":
-                    from cards.denoisers.mpi_dncnn import MpiDnCNN
+                    from cards.denoisers.distributed_dncnn import DistributedDnCNN
 
-                    denoiser = MpiDnCNN(
+                    denoiser = DistributedDnCNN(
                         comm, grid_size, image_size=np.asarray(gt_shape)
                     )
                 case "drunet":
-                    from cards.denoisers.mpi_drunet import MpiDRUNet
+                    from cards.denoisers.distributed_drunet import DistributedDRUNet
 
-                    denoiser = MpiDRUNet(
+                    denoiser = DistributedDRUNet(
                         comm, grid_size, image_size=np.asarray(gt_shape)
                     )
                 case _:

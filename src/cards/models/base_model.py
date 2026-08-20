@@ -6,6 +6,10 @@ methods declared here are intended to be called directly within a
 :class:`~cards.samplers.base_sampler.BaseSampler` instance.
 """
 
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -24,7 +28,7 @@ class BaseModel(ABC):
 
     Parameters
     ----------
-    estimators : list[BaseEstimatorBuilder]
+    estimators : list[BaseEstimator]
         A list of estimator builders used to compute parameter estimates during sampling.
     """
 
@@ -85,7 +89,7 @@ class BaseModel(ABC):
 
         Note
         ----
-        This method triggers :meth:`~cards.estimators.BaseEstimatorBuilder.aggregate_states`
+        This method triggers :meth:`~cards.estimators.BaseEstimator.aggregate_states`
         across all estimators selected for the current application.
         """
         for estimator in self._estimators:
@@ -101,7 +105,7 @@ class BaseModel(ABC):
 
         Note
         ----
-        This method triggers :meth:`~cards.estimators.BaseEstimatorBuilder.setup`
+        This method triggers :meth:`~cards.estimators.BaseEstimator.setup`
         across the configured estimators. It is primarily used for batched estimators,
         which require the checkpoint size to allocate the necessary memory.
         """
@@ -113,7 +117,7 @@ class BaseModel(ABC):
 
         Note
         ----
-        This method triggers :meth:`~cards.estimators.BaseEstimatorBuilder.build_estimates`
+        This method triggers :meth:`~cards.estimators.BaseEstimator.build_estimates`
         across all estimators selected for the current application.
         """
         for estimator in self._estimators:
@@ -129,7 +133,7 @@ class BaseModel(ABC):
 
         Note
         ----
-        This method triggers :meth:`~cards.estimators.BaseEstimatorBuilder.get_estimates`
+        This method triggers :meth:`~cards.estimators.BaseEstimator.get_estimates`
         across all estimators selected for the current application.
         """
         estimates = {}
@@ -142,7 +146,7 @@ class BaseModel(ABC):
 
         Note
         ----
-        This method triggers :meth:`~cards.estimators.BaseEstimatorBuilder.reset`
+        This method triggers :meth:`~cards.estimators.BaseEstimator.reset`
         across all estimators selected for the current application.
         """
         for estimator in self._estimators:
@@ -172,7 +176,7 @@ class BaseDistributedModel(BaseModel):
 
     Parameters
     ----------
-    estimators : list[BaseEstimatorBuilder]
+    estimators : list[BaseEstimator]
         A list of estimator builders used to compute parameter estimates during sampling.
     """
 

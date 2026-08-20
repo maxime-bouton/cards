@@ -1,5 +1,9 @@
 r"""Utility functions to load the weights of a denoiser."""
 
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
 from pathlib import Path
 
 import torch
@@ -8,6 +12,8 @@ import cards.backend as xp
 from cards.denoisers.ddfb.network_ddfb import DDFB
 from cards.denoisers.dncnn.network_dncnn import DnCNN
 from cards.denoisers.drunet.network_drunet import DRUNet
+
+# TODO: trim-down redundancies between the functions if possible, only differing in the instanciation of the network
 
 
 def get_torch_device() -> torch.device:

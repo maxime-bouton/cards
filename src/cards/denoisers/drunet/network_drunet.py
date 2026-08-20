@@ -8,7 +8,7 @@ from collections import OrderedDict
 
 import numpy as np
 import torch
-import torch.nn as nn
+from torch import nn
 
 
 def sequential(*args):
@@ -365,7 +365,7 @@ class ResBlock(nn.Module):
         mode="CRC",
         negative_slope=0.2,
     ):
-        super(ResBlock, self).__init__()
+        super().__init__()
 
         assert in_channels == out_channels, "Only support in_channels==out_channels."
         if mode[0] in ["R", "L"]:
@@ -399,7 +399,7 @@ class DRUNet(nn.Module):
         upsample_mode="convtranspose",
         bias=True,
     ):
-        super(DRUNet, self).__init__()
+        super().__init__()
 
         self.m_head = conv(in_nc, nc[0], bias=bias, mode="C")
 
@@ -412,7 +412,7 @@ class DRUNet(nn.Module):
             downsample_block = downsample_strideconv
         else:
             raise NotImplementedError(
-                "downsample mode [{:s}] is not found".format(downsample_mode)
+                f"downsample mode [{downsample_mode:s}] is not found"
             )
 
         self.m_down1 = sequential(
@@ -452,9 +452,7 @@ class DRUNet(nn.Module):
         elif upsample_mode == "convtranspose":
             upsample_block = upsample_convtranspose
         else:
-            raise NotImplementedError(
-                "upsample mode [{:s}] is not found".format(upsample_mode)
-            )
+            raise NotImplementedError(f"upsample mode [{upsample_mode:s}] is not found")
 
         self.m_up3 = sequential(
             upsample_block(nc[3], nc[2], bias=bias, mode="2"),

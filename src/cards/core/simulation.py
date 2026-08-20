@@ -1,3 +1,7 @@
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -70,7 +74,9 @@ class Simulation(Generic[G, Obs]):
         try:
             geometry = self._run_geometry_phase()
             obs = self._run_observations_phase(geometry)
-            model = self._run_mcmc_phase(geometry, obs)
+            # FIXME: variable assigned but never used for now, teporarily commented
+            __ = self._run_mcmc_phase(geometry, obs)
+            # model = self._run_mcmc_phase(geometry, obs)
             # self._run_analysis_phase(model, sampler)
             self._log_phase("END")
         except Exception:

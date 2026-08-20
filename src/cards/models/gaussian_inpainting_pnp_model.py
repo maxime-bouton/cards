@@ -1,10 +1,8 @@
-r"""Implementation of a Gaussian inpainting model using a PnP prior to reproduce the experiments reported in :cite:p:`Bouton2025`."""
+r"""Implementation of a Gaussian inpainting model using a PnP prior to reproduce the experiments reported in :cite:p:`Bouton2026`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
-# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
-# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
-# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 # TODO: documentation
 
@@ -48,7 +46,7 @@ class BaseGaussianInpaintingPnpModel(BaseGaussianInpaintingModel):
                 state,
                 self.X.epsilon**0.5,
                 torch_dtype=torch.float32,
-                cp_dtype=xp.float64,
+                xp_dtype=xp.float64,
             )
             self.X.grad = lambda state: (
                 self.mask * (state - self.observations) / self.sigma2
@@ -59,7 +57,7 @@ class BaseGaussianInpaintingPnpModel(BaseGaussianInpaintingModel):
                 state,
                 self.X.reg_coef * self.X.epsilon**0.5,
                 torch_dtype=torch.float32,
-                cp_dtype=xp.float64,
+                xp_dtype=xp.float64,
             )
             self.X.grad = lambda state: (
                 self.mask * (state - self.observations) / self.sigma2

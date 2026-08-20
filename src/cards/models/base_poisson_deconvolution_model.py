@@ -1,4 +1,8 @@
-r"""Base class to define Poisson deconvolution models leveraging approximate data augmentation (AXDA :cite:`Vono2020`)."""
+r"""Base class to define Poisson deconvolution models leveraging approximate data augmentation (AXDA :cite:`Vono2021`)."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 # TODO: documentation
 
@@ -9,7 +13,7 @@ import cards.backend as xp
 from cards.estimators.base_estimator import BaseEstimator
 from cards.models.base_model import BaseModel
 from cards.operators.dft_convolution import DftConvolution
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
@@ -28,7 +32,7 @@ class BasePoissonDeconvolutionModel(BaseModel):
         self,
         estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
-        convolution_operator: DftConvolution | MpiDftConvolution,
+        convolution_operator: DftConvolution | DistributedDftConvolution,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,

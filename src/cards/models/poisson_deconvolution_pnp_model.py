@@ -1,10 +1,8 @@
-r"""Implementation of a Poisson deconvolution model using a PnP prior to reproduce the experiments reported in :cite:p:`Bouton2025`."""
+r"""Implementation of a Poisson deconvolution model using a PnP prior to reproduce the experiments reported in :cite:p:`Bouton2026`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
-# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
-# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
-# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 # TODO: documentation
 # TODO: typing
@@ -22,7 +20,7 @@ from cards.models.base_poisson_deconvolution_model import (
     PoissonDeconvolutionParameters,
 )
 from cards.operators.dft_convolution import DftConvolution
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 from cards.transition_kernels.gpu_pnp_sgla import GpuPnpSGLA
 from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
@@ -35,7 +33,7 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
         self,
         estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
-        convolution_operator: DftConvolution | MpiDftConvolution,
+        convolution_operator: DftConvolution | DistributedDftConvolution,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
@@ -74,7 +72,7 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
                 state,
                 self.Z2.epsilon**0.5,
                 torch_dtype=torch.float32,
-                cp_dtype=xp.float64,
+                xp_dtype=xp.float64,
             )
             self.Z2.grad = lambda state: (
                 (state - self.X.current_state) / self.split_coef2
@@ -85,7 +83,7 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
                 state,
                 self.Z2.reg_coef * self.Z2.epsilon**0.5,
                 torch_dtype=torch.float32,
-                cp_dtype=xp.float64,
+                xp_dtype=xp.float64,
             )
             self.Z2.grad = lambda state: (
                 (state - self.X.current_state) / self.split_coef2
@@ -163,7 +161,7 @@ class DistributedPoissonDeconvolutionPnpModel(
     def __init__(
         self,
         estimators: list[BaseEstimator],
-        convolution_operator: MpiDftConvolution,
+        convolution_operator: DistributedDftConvolution,
         params: PoissonDeconvolutionParameters,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,

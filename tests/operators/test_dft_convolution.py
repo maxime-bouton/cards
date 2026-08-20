@@ -4,8 +4,10 @@ from mpi4py import MPI
 
 import cards.backend as xp
 from cards.operators.dft_convolution import DftConvolution
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.utils.utils import expand_shape_left
+
+# FIXME: cleanse distributed test, avoid copying full array on all workers
 
 
 @pytest.fixture
@@ -36,16 +38,18 @@ def grid_shape(
 
 
 @pytest.mark.serial
-def test_adjoint(seed, input_size, kernel_size):
+def test_adjoint(seed, input_shape, input_size, kernel_size):
     """
     Test the adjoint property of the DFT convolution operator in serial setting.
     """
+    data_size = input_size + kernel_size - 1
+    data_shape = (*data_size,)
     rng = xp.random.default_rng(seed)
     X = rng.random(input_size)
-    Y = rng.random(input_size + kernel_size - 1)
+    Y = rng.random(data_size)
     kernel = rng.random(kernel_size)
 
-    conv = DftConvolution(input_size, kernel, input_size + kernel_size - 1)
+    conv = DftConvolution(input_shape, data_shape, kernel)
 
     Hx = conv.forward(X)
     Hy = conv.adjoint(Y)
@@ -57,7 +61,9 @@ def test_adjoint(seed, input_size, kernel_size):
 
 
 @pytest.mark.mpi
-def test_adjoint_mpi(seed, input_size, kernel_size, comm, rank, grid_shape):
+def test_adjoint_mpi(
+    seed, input_shape, input_size, kernel_size, comm, rank, grid_shape
+):
     """
     Test the adjoint property of the DFT convolution operator in distributed settings.
     """
@@ -68,11 +74,11 @@ def test_adjoint_mpi(seed, input_size, kernel_size, comm, rank, grid_shape):
     Y = rng.random(output_size)
     kernel = rng.random(kernel_size)
 
-    convolution_handler = MpiDftConvolution(
-        input_size,
-        kernel,
+    convolution_handler = DistributedDftConvolution(
+        input_shape,
+        grid_shape,
         comm,
-        np.array(grid_shape),
+        kernel,
     )
 
     local_X = X[

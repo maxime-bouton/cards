@@ -1,45 +1,80 @@
-r"""Abstract base class for denoiser networks."""
+r"""Abstract base classes for image denoising neural networks."""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 from abc import ABC, abstractmethod
 from pathlib import Path
+
+import torch
 
 import cards.backend as xp
 
 
 class BaseDenoiser(ABC):
+    r"""Generic abstract class encoding serial image denoising neural-networks.
+
+    Parameters
+    ----------
+    weights_path : str, optional
+        Path to the folder containing the pre-trained denoiser weights.
+
+    Attributes
+    ----------
+    weights_path : str
+        Path to the folder containing the pre-trained denoiser weights.
+    """
+
     def __init__(
         self,
         weights_path=Path(__file__).parents[3] / "data/weights",
     ):
-        r"""Constructor of the BaseDenoiser class.
-
-        Parameters
-        ----------
-        weights_path : str, optional
-            Path to the folder containing the pre-trained denoiser weights.
-        """
         self.weights_path = weights_path
 
     @abstractmethod
-    def __call__(self, input_image: xp.ndarray, sigma: float) -> xp.ndarray:
-        r"""Apply the denoiser to the input image.
+    def __call__(
+        self,
+        input_image: xp.ndarray,
+        sigma: float,
+        torch_dtype: xp.dtype | None = None,
+        xp_dtype: torch.dtype | None = None,
+    ) -> xp.ndarray:
+        r"""Apply the serial denoiser.
 
         Parameters
         ----------
         input_image: xp.ndarray
-            Input image to be denoised.
+            Input image tile.
         sigma: float
-            Denoiser parameter (typically Gaussian noise standard deviation).
+            Denoiser parameter (noise standard deviation).
+        torch_dtype : torch.dtype or None, optional
+            Numerical precision to be used for computations with `torch`. Default is `None`.
+        xp_dtype : xp.dtype or None, optional
+            Numerical precision to be used for computations with `xp` (`numpy`
+            or `cupy`). Default is `None`.
 
         Returns
         -------
         xp.ndarray
             Denoised image.
         """
-        pass
 
 
 class BaseDistributedDenoiser(BaseDenoiser, ABC):
+    r"""Generic abatrsct class for distributed image denoising neural-networks."""
+
     @property
     @abstractmethod
-    def global_to_tile_slice(self) -> tuple[slice, ...]: ...
+    def global_to_tile_slice(self) -> tuple[slice, ...]:
+        r"""Returns slices to extract the image tile handled by the current worker from the internal buffer including ghost cells."""
+
+    @property
+    @abstractmethod
+    def get_recv_size(self) -> xp.ndarray:
+        r"""Returns the extent of the ghost cells to be received from neighbour processes along each axis of the Cartesian grid."""
+
+    @property
+    @abstractmethod
+    def get_send_size(self) -> xp.ndarray:
+        r"""Returns the extent of the ghost cells to be sent to neighbour processes along each axis of the Cartesian grid."""
