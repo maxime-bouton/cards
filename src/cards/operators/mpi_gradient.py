@@ -8,30 +8,38 @@ The computations can be done either on CPU or GPU depending on the settings.
 
 # TODO: documentation
 
+from collections.abc import Sequence
+
 import numpy as np
 from mpi4py import MPI
 
 import cards.backend as xp
 from cards.communicators.sync_cartesian_communicator import SyncCartesianCommunicator
+from cards.operators.linear_operator import LinearOperator
 
 
-class MpiGradient2d:
+class MpiGradient2d(LinearOperator):
     def __init__(
         self,
-        global_size: np.ndarray,
-        grid_size: np.ndarray,
+        image_shape: Sequence[int],
+        grid_shape: Sequence[int],
         comm: MPI.Comm = MPI.COMM_WORLD,
         enable_internal_buffer: bool = True,
         dtype: type = xp.float64,
     ):
+        super().__init__(image_shape, [2, *image_shape])
+        self.image_size = np.asarray(self.image_shape)
+
         self.dtype = dtype
         self.comm = comm
-        dim_extension = [0] * (len(grid_size) - 2)
+        self.grid_size = np.asarray(grid_shape)
+
+        dim_extension = [0] * (len(self.grid_size) - 2)
         overlap = np.asarray(dim_extension + [1, 1])
         self.cart_comm = SyncCartesianCommunicator(
             self.comm,
-            grid_size,
-            global_size,
+            self.grid_size,
+            self.image_size,
             overlap,
             overlap,
             backward=False,
@@ -39,8 +47,8 @@ class MpiGradient2d:
         )
         self.adj_cart_comm_v = SyncCartesianCommunicator(
             self.comm,
-            grid_size,
-            global_size,
+            self.grid_size,
+            self.image_size,
             np.asarray(dim_extension + [1, 0]),
             np.asarray(dim_extension + [1, 0]),
             backward=True,
@@ -48,8 +56,8 @@ class MpiGradient2d:
         )
         self.adj_cart_comm_h = SyncCartesianCommunicator(
             self.comm,
-            grid_size,
-            global_size,
+            self.grid_size,
+            self.image_size,
             np.asarray(dim_extension + [0, 1]),
             np.asarray(dim_extension + [0, 1]),
             backward=True,
@@ -57,9 +65,10 @@ class MpiGradient2d:
         )
 
         self.rank = self.cart_comm.rank
-        grid_size = self.cart_comm.grid_size
         self.ranknd = self.cart_comm.ranknd
-        # TODO mutualize is_first/last -> communications ?
+        grid_size = self.cart_comm.grid_size
+
+        # TODO: mutualize is_first/last -> communications ?
         self.is_first = self.ranknd == 0
         self.is_last = self.ranknd == grid_size - 1
         self.adj_shape = self.cart_comm.cartslicer.tile_size
@@ -80,7 +89,7 @@ class MpiGradient2d:
             dtype=self.dtype,
         )
 
-    def chunk_gradient_2d(self, x: xp.ndarray):
+    def _chunk_gradient_2d(self, x: xp.ndarray):
         r"""Chunk of the 2d discrete gradient .
 
         Compute a chunk of the 2d discrete gradient operator. Assumes forward border overlap between the arrays handled by
@@ -142,7 +151,7 @@ class MpiGradient2d:
 
         return u
 
-    def chunk_gradient_2d_adjoint(self, uh: xp.ndarray, uv: xp.ndarray):
+    def _chunk_gradient_2d_adjoint(self, uh: xp.ndarray, uv: xp.ndarray):
         r"""Chunk of the adjoint 2d discrete gradient.
 
         Compute a chunk of the adjoint 2d discrete gradient. Assumes backward border overlap between the arrays handled by consecutive worker.
@@ -195,13 +204,13 @@ class MpiGradient2d:
             else:
                 self.adj_buffer += uh[..., :-1] - uh[..., 1:]
 
-    def forward(self, local_data: xp.ndarray) -> xp.ndarray:
+    def forward(self, local_image: xp.ndarray) -> xp.ndarray:
         *_, h, w = self.cart_comm.cartslicer.tile_size
-        self.local_buffer[..., :h, :w] = local_data
+        self.local_buffer[..., :h, :w] = local_image
 
         self.cart_comm.update_borders(self.local_buffer)
 
-        return self.chunk_gradient_2d(self.local_buffer)
+        return self._chunk_gradient_2d(self.local_buffer)
 
     def adjoint(self, local_data: xp.ndarray) -> xp.ndarray:
         *_, h, w = self.adj_cart_comm_v.cartslicer.tile_size
@@ -211,7 +220,7 @@ class MpiGradient2d:
         self.adj_cart_comm_v.update_borders(self.local_buffer_adj_v)
         self.adj_cart_comm_h.update_borders(self.local_buffer_adj_h)
 
-        self.chunk_gradient_2d_adjoint(
+        self._chunk_gradient_2d_adjoint(
             self.local_buffer_adj_h,
             self.local_buffer_adj_v,
         )
@@ -224,4 +233,4 @@ class MpiGradient2d:
         return self.cart_comm.cartslicer.send_size
 
     def forward_no_comm(self, X: xp.ndarray):
-        return self.chunk_gradient_2d(X)
+        return self._chunk_gradient_2d(X)

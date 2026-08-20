@@ -37,12 +37,12 @@ class LinearOperator(ABC):
         self.ndims_adjoint = len(data_shape)
 
     @abstractmethod
-    def forward(self, input_image: xp.ndarray) -> xp.ndarray:  # pragma: no cover
+    def forward(self, image: xp.ndarray) -> xp.ndarray:  # pragma: no cover
         r"""Implementation of the direct operator (from image to data space).
 
         Parameters
         ----------
-        input_image : xp.ndarray
+        image : xp.ndarray
             Input tensor (image space).
 
         Returns
@@ -52,12 +52,12 @@ class LinearOperator(ABC):
         """
 
     @abstractmethod
-    def adjoint(self, input_data: xp.ndarray) -> xp.ndarray:  # pragma: no cover
+    def adjoint(self, data: xp.ndarray) -> xp.ndarray:  # pragma: no cover
         r"""Implementation of the adjoint operator (from data to image space).
 
         Parameters
         ----------
-        input_data : xp.ndarray
+        data : xp.ndarray
             Input tensor (data space).
 
         Returns
