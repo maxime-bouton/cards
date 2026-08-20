@@ -92,7 +92,7 @@ class DistributedCpuSampler(Sampler):
     def _get_estimates_global_sizes(self):
         estimates_global_sizes = {}
         for estimator in self.estimators:
-            estimates_global_sizes.update(estimator.global_sizes)
+            estimates_global_sizes.update(estimator.global_shapes)
         return estimates_global_sizes
 
     def _get_estimates_slices(self):
