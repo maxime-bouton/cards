@@ -7,13 +7,13 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from cards.denoisers.mpi_ddfb import MpiDDFB
+from cards.denoisers.mpi_dncnn import MpiDnCNN
+from cards.denoisers.mpi_drunet import MpiDRUNet
 
 import cards.backend as xp
 from cards.core.execution_context import ExecutionContext
 from cards.denoisers.base_denoiser import BaseDenoiser
-from cards.denoisers.mpi_ddfb import MpiDDFB
-from cards.denoisers.mpi_dncnn import MpiDnCNN
-from cards.denoisers.mpi_drunet import MpiDRUNet
 from cards.denoisers.serial_ddfb import SerialDDFB
 from cards.denoisers.serial_dncnn import SerialDnCNN
 from cards.denoisers.serial_drunet import SerialDRUNet
@@ -73,7 +73,7 @@ def build_convolution_operator(
             tile_range=tile_range,
         )
     data_size = np.asarray(full_shape) + np.asarray(kernel.shape, dtype=int) - 1
-    return DftConvolution(np.asarray(full_shape), kernel, data_size)
+    return DftConvolution(np.asarray(full_shape), data_size, kernel)
 
 
 def build_denoiser(

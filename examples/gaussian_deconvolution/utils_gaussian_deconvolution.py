@@ -133,7 +133,7 @@ def generate_gaussian_deconvolution_observations(
 
             seed = data_seed
 
-            convolution_operator = DftConvolution(gt_size, kernel, data_size)
+            convolution_operator = DftConvolution(gt_size, data_size, kernel)
 
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
@@ -367,7 +367,7 @@ def compute_tv(
                 y = xp.asarray(f["y"])
             state_shape = gt_shape
             data_size = np.asarray(gt_shape) + np.asarray(kernel.shape, dtype=int) - 1
-            op = DftConvolution(np.asarray(gt_shape), kernel, data_size)
+            op = DftConvolution(np.asarray(gt_shape), data_size, kernel)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 
@@ -524,7 +524,7 @@ def compute_pnp(
                 y = xp.asarray(f["y"])
             state_shape = gt_shape
             data_size = np.asarray(gt_shape) + np.asarray(kernel.shape, dtype=int) - 1
-            op = DftConvolution(np.asarray(gt_shape), kernel, data_size)
+            op = DftConvolution(np.asarray(gt_shape), data_size, kernel)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 

@@ -11,6 +11,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+from cards.samplers.base_sampler import SamplerParameters
 
 import cards.backend as xp
 from cards.estimators.base_estimator import BaseEstimator
@@ -28,7 +29,6 @@ from cards.models.poisson_deconvolution_tv_model import (
 )
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.samplers.base_sampler import SamplerParameters
 from cards.samplers.distributed_cpu_sampler import DistributedCpuSampler
 from cards.samplers.distributed_gpu_sampler import DistributedGpuSampler
 from cards.samplers.serial_cpu_sampler import SerialCpuSampler
@@ -135,7 +135,7 @@ def generate_poisson_deconvolution_observations(
 
             seed = data_seed
 
-            convolution_operator = DftConvolution(gt_size, kernel, data_size)
+            convolution_operator = DftConvolution(gt_size, data_size, kernel)
 
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
@@ -390,7 +390,7 @@ def compute_tv(
                 y = xp.asarray(f["y"])
             state_shape = gt_shape
             data_size = np.asarray(gt_shape) + np.asarray(kernel.shape, dtype=int) - 1
-            op = DftConvolution(np.asarray(gt_shape), kernel, data_size)
+            op = DftConvolution(np.asarray(gt_shape), data_size, kernel)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 
@@ -555,7 +555,7 @@ def compute_pnp(
                 y = xp.asarray(f["y"])
             state_shape = gt_shape
             data_size = np.asarray(gt_shape) + np.asarray(kernel.shape, dtype=int) - 1
-            op = DftConvolution(np.asarray(gt_shape), kernel, data_size)
+            op = DftConvolution(np.asarray(gt_shape), data_size, kernel)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 
