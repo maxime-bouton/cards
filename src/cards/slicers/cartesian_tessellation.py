@@ -159,10 +159,10 @@ def local_split_range(
 
 
 def local_split_range_nd(
-    nchunks: int,
-    N: int,
+    nchunks: np.ndarray,
+    N: np.ndarray,
     index: np.ndarray,
-    overlap: int | None = None,
+    overlap: np.ndarray | None = None,
     backward: bool = True,
 ) -> np.ndarray:
     r"""Return the portion of :math:`\{ 0, \dotsc , N-1 \}` (nD range
@@ -210,9 +210,7 @@ def local_split_range_nd(
     if np.any(id_err_index):
         if np.any(nchunks[id_err_index] <= index[id_err_index]):
             raise ValueError(
-                r"Index should be taken in [0, ..., nchunks-1], with nchunks={0}".format(
-                    nchunks
-                )
+                f"Index should be taken in [0, ..., nchunks-1], with nchunks={nchunks}"
             )
     step = N / nchunks
     if overlap is not None:
@@ -261,9 +259,7 @@ def split_range_interleaved(nchunks: int, N: int) -> list[slice]:
 
     if nchunks > N:
         raise ValueError(
-            r"Number of segments nchunks={0} greater than the dimension N={1}".format(
-                nchunks, N
-            )
+            f"Number of segments nchunks={nchunks} greater than the dimension N={N}"
         )
 
     return [np.s_[k:N:nchunks] for k in range(nchunks)]
@@ -302,15 +298,11 @@ def local_split_range_interleaved(nchunks: int, N: int, index: int) -> slice:
 
     if nchunks <= index:
         raise ValueError(
-            r"Index should be taken in [0, ..., nchunks-1], with nchunks={0}".format(
-                nchunks
-            )
+            f"Index should be taken in [0, ..., nchunks-1], with nchunks={nchunks}"
         )
     if nchunks > N:
         raise ValueError(
-            r"Number of segments nchunks={0} greater than the dimension N={1}".format(
-                nchunks, N
-            )
+            f"Number of segments nchunks={nchunks} greater than the dimension N={N}"
         )
 
     return np.s_[index:N:nchunks]

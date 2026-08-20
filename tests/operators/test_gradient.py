@@ -63,13 +63,17 @@ def test_adjoint_mpi(comm, input_shape, seed):
     cart_comm.Bcast([X, MPI.DOUBLE], root=0)
     cart_comm.Bcast([Y, MPI.DOUBLE], root=0)
 
-    local_slice = grad_op.cart_comm.cartslicer.slice_global_buffer_to_tile
+    local_slice = grad_op.direct_communicator.cartslicer.slice_global_buffer_to_tile
 
     local_X = X[local_slice]
-    local_Y = xp.zeros((2, *grad_op.adj_cart_comm_h.cartslicer.tile_size))
-    local_adj = xp.zeros(grad_op.adj_cart_comm_h.cartslicer.tile_size)
-    local_slice_h = grad_op.adj_cart_comm_h.cartslicer.slice_global_buffer_to_tile
-    local_slice_v = grad_op.adj_cart_comm_v.cartslicer.slice_global_buffer_to_tile
+    local_Y = xp.zeros((2, *grad_op.adjoint_communicator_h.cartslicer.tile_size))
+    local_adj = xp.zeros(grad_op.adjoint_communicator_h.cartslicer.tile_size)
+    local_slice_h = (
+        grad_op.adjoint_communicator_h.cartslicer.slice_global_buffer_to_tile
+    )
+    local_slice_v = (
+        grad_op.adjoint_communicator_v.cartslicer.slice_global_buffer_to_tile
+    )
 
     slice_h = np.s_[0, *local_slice_h]
     slice_v = np.s_[1, *local_slice_v]

@@ -149,7 +149,7 @@ class SyncCartesianCommunicator(BaseCartesianCommunicator):
         backward: bool = True,
         tile_range: np.ndarray | None = None,
     ) -> None:
-        super(SyncCartesianCommunicator, self).__init__(
+        super().__init__(
             comm,
             grid_size,
             buffer_size,

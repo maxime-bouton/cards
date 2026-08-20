@@ -19,6 +19,54 @@ from cards.operators.linear_operator import LinearOperator
 
 
 class DistributedGradient2d(LinearOperator):
+    r"""Synchronous distributed implementation of a 2D discrete gradient operator.
+
+    Parameters
+    ----------
+    grid_shape : Sequence[int]
+        Number of MPI workers along each of axis of the communicator grid.
+    comm: mpi4py.MPI.Comm, optional
+        MPI communicator, by default MPI.COMM_WORLD.
+    enable_internal_buffer : bool, optional
+        Flag to enable interal storage of temporary buffers required for communication, by default True.
+    dtype : type, optional
+        Type of the entries in communicated arrays, by default xp.float64.
+
+    Attributes
+    ----------
+    dtype : type, optional
+        Type of the entries in communicated arrays, by default xp.float64.
+    image_size : np.ndarray[int]
+        Numpy array created from ``self.image_shape``.
+    grid_size : np.ndarray[int]
+        Numpy array created from ``grid_shape``.
+    comm : mpi4py.MPI.Comm
+        Underlying MPI communicator.
+    rank : int
+        Rank of the current MPI-process.
+    ranknd : numpy.ndarray[int]
+        Multi-linear rank of the current MPI-process in the Cartesian grid of
+        workers (nD setting).
+    direct_communicator : SyncCartesianCommunicator
+        Synchronous Cartesian communicator responsible for communications involved in the forward operator.
+    adjoint_communicator_v : SyncCartesianCommunicator
+        Synchronous Cartesian communicator responsible for communications associated to vertical differences involved in the adjoint operator.
+    adjoint_communicator_h : SyncCartesianCommunicator
+        Synchronous Cartesian communicator responsible for communications associated to horizontal differences involved in the adjoint operator.
+    is_first : np.ndarray[bool]
+        Flag indicating if current worker is in first position alogn each axis
+        of the Cartesian communication grid.
+    is_last : np.ndarray[bool]
+        Flag indicating if current worker is in first position alogn each axis
+        of the Cartesian communication grid.
+    forward_buffer : xp.ndarray
+        Temporary buffer to receive communications involved in the forward operator.
+    adjoint_buffer_h : xp.ndarray
+        Temporary buffer to receive communications involved in the adjoint operator (horizontal communicator).
+    adjoint_buffer_v : xp.ndarray
+        Temporary buffer to receive communications involved in the adjoint operator (vertical communicator).
+    """
+
     def __init__(
         self,
         image_shape: Sequence[int],
@@ -36,16 +84,16 @@ class DistributedGradient2d(LinearOperator):
 
         dim_extension = [0] * (len(self.grid_size) - 2)
         overlap = np.asarray(dim_extension + [1, 1])
-        self.cart_comm = SyncCartesianCommunicator(
+        self.direct_communicator = SyncCartesianCommunicator(
             self.comm,
             self.grid_size,
             self.image_size,
             overlap,
             overlap,
             backward=False,
-            dtype=dtype,
+            dtype=self.dtype,
         )
-        self.adj_cart_comm_v = SyncCartesianCommunicator(
+        self.adjoint_communicator_v = SyncCartesianCommunicator(
             self.comm,
             self.grid_size,
             self.image_size,
@@ -54,7 +102,7 @@ class DistributedGradient2d(LinearOperator):
             backward=True,
             dtype=self.dtype,
         )
-        self.adj_cart_comm_h = SyncCartesianCommunicator(
+        self.adjoint_communicator_h = SyncCartesianCommunicator(
             self.comm,
             self.grid_size,
             self.image_size,
@@ -64,28 +112,28 @@ class DistributedGradient2d(LinearOperator):
             dtype=self.dtype,
         )
 
-        self.rank = self.cart_comm.rank
-        self.ranknd = self.cart_comm.ranknd
-        grid_size = self.cart_comm.grid_size
+        # TODO: see if rank/ranknd is also needed on top of self.direct_communicator.rank/ranknd
+        self.rank = self.direct_communicator.rank
+        self.ranknd = self.direct_communicator.ranknd
+        self.grid_size = self.direct_communicator.grid_size
 
         # TODO: mutualize is_first/last -> communications ?
         self.is_first = self.ranknd == 0
-        self.is_last = self.ranknd == grid_size - 1
-        self.adj_shape = self.cart_comm.cartslicer.tile_size
+        self.is_last = self.ranknd == self.grid_size - 1
 
         if enable_internal_buffer:
-            self.local_buffer = xp.zeros(
-                self.cart_comm.cartslicer.facet_size, dtype=self.dtype
+            self.forward_buffer = xp.zeros(
+                self.direct_communicator.cartslicer.facet_size, dtype=self.dtype
             )
         self.adj_buffer = xp.zeros(
-            self.cart_comm.cartslicer.tile_size, dtype=self.dtype
+            self.direct_communicator.cartslicer.tile_size, dtype=self.dtype
         )
-        self.local_buffer_adj_v = xp.zeros(
-            self.adj_cart_comm_v.cartslicer.facet_size,
+        self.adjoint_buffer_v = xp.zeros(
+            self.adjoint_communicator_v.cartslicer.facet_size,
             dtype=self.dtype,
         )
-        self.local_buffer_adj_h = xp.zeros(
-            self.adj_cart_comm_h.cartslicer.facet_size,
+        self.adjoint_buffer_h = xp.zeros(
+            self.adjoint_communicator_h.cartslicer.facet_size,
             dtype=self.dtype,
         )
 
@@ -171,7 +219,7 @@ class DistributedGradient2d(LinearOperator):
             "gradient_2d_adjoint: Invalid input, expected len(uh.shape) == len(uv.shape)"
         )
 
-        # self.adj_buffer = xp.zeros(self.adj_shape, dtype=self.dtype)
+        # self.adj_buffer = xp.zeros(self.direct_communicator.cartslicer.tile_size, dtype=self.dtype)
         self.adj_buffer.fill(0)
 
         # vertical: uv = u[1, :, :, :]
@@ -204,33 +252,37 @@ class DistributedGradient2d(LinearOperator):
             else:
                 self.adj_buffer += uh[..., :-1] - uh[..., 1:]
 
-    def forward(self, local_image: xp.ndarray) -> xp.ndarray:
-        *_, h, w = self.cart_comm.cartslicer.tile_size
-        self.local_buffer[..., :h, :w] = local_image
+    def forward(self, image: xp.ndarray) -> xp.ndarray:
+        # NOTE: in this function, ``image`` refers to the local image tile handled by the current process
+        *_, h, w = self.direct_communicator.cartslicer.tile_size
+        self.forward_buffer[..., :h, :w] = image
 
-        self.cart_comm.update_borders(self.local_buffer)
+        self.direct_communicator.update_borders(self.forward_buffer)
 
-        return self._chunk_gradient_2d(self.local_buffer)
+        return self._chunk_gradient_2d(self.forward_buffer)
 
-    def adjoint(self, local_data: xp.ndarray) -> xp.ndarray:
-        *_, h, w = self.adj_cart_comm_v.cartslicer.tile_size
-        self.local_buffer_adj_v[..., -h:, -w:] = local_data[1]
-        self.local_buffer_adj_h[..., -h:, -w:] = local_data[0]
+    def adjoint(self, data: xp.ndarray) -> xp.ndarray:
+        # NOTE: in this function, ``data`` refers to the local data tile handled by the current process
+        *_, h, w = self.adjoint_communicator_v.cartslicer.tile_size
+        self.adjoint_buffer_v[..., -h:, -w:] = data[1]
+        self.adjoint_buffer_h[..., -h:, -w:] = data[0]
 
-        self.adj_cart_comm_v.update_borders(self.local_buffer_adj_v)
-        self.adj_cart_comm_h.update_borders(self.local_buffer_adj_h)
+        self.adjoint_communicator_v.update_borders(self.adjoint_buffer_v)
+        self.adjoint_communicator_h.update_borders(self.adjoint_buffer_h)
 
         self._chunk_gradient_2d_adjoint(
-            self.local_buffer_adj_h,
-            self.local_buffer_adj_v,
+            self.adjoint_buffer_h,
+            self.adjoint_buffer_v,
         )
         return self.adj_buffer
 
+    def forward_no_comm(self, image: xp.ndarray):
+        # NOTE: in this function, ``image`` refers to the local image tile handled by the current process
+        return self._chunk_gradient_2d(image)
+
+    # TODO: add this collection of features through inhteritance, instead of repeating it each time?
     def get_recv_size(self) -> np.ndarray:
-        return self.cart_comm.cartslicer.recv_size
+        return self.direct_communicator.cartslicer.recv_size
 
     def get_send_size(self) -> np.ndarray:
-        return self.cart_comm.cartslicer.send_size
-
-    def forward_no_comm(self, X: xp.ndarray):
-        return self._chunk_gradient_2d(X)
+        return self.direct_communicator.cartslicer.send_size

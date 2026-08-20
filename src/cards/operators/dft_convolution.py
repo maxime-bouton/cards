@@ -21,9 +21,9 @@ def fft_conv(x: xp.ndarray, fft_h: xp.ndarray, shape) -> xp.ndarray:
 
     Parameters
     ----------
-    x : numpy.ndarray
+    x : xp.ndarray
         Input array (of size :math:`N`).
-    fft_h : numpy.ndarray
+    fft_h : xp.ndarray
         Input kernel (of size
         :math:`\lfloor K/2 \rfloor + 1` if real, :math:`K` otherwise).
     shape : tuple[int, ...]
@@ -31,8 +31,8 @@ def fft_conv(x: xp.ndarray, fft_h: xp.ndarray, shape) -> xp.ndarray:
 
     Returns
     -------
-    y : numpy.ndarray
-        Convolution results.
+    y : xp.ndarray
+        Convolution result.
     """
     # turn shape into a list if only given as a scalar
     if xp.isscalar(shape):

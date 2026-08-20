@@ -14,6 +14,13 @@ class LinearOperator(ABC):
     r"""Base model class gathering the parameters of the measurement operator
     underlying the inverse problem to be solved.
 
+    Parameters
+    ----------
+    image_shape : Sequence[int]
+        Full image shape.
+    data_shape : Sequence[int]
+        Full output data shape.
+
     Attributes
     ----------
     image_shape : Sequence[int]

@@ -180,11 +180,11 @@ class DistributedGaussianDeconvolutionTvModel(
     def set_slices(self):
         """Describes which portion of the global buffer the current thread must handle."""
         self.slices["X"] = (
-            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
+            self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile
         )
         self.slices["Z"] = (
             np.s_[:],
-            *self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile,
+            *self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile,
         )
 
     def set_global_sizes(self):

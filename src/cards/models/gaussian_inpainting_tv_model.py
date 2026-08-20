@@ -164,11 +164,11 @@ class DistributedGaussianInpaintingTvModel(
             Dictionary containing the slices of the global buffer that this thread will handle.
         """
         self.slices["X"] = (
-            self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile
+            self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile
         )
         self.slices["Z"] = (
             np.s_[:],
-            *self.gradient_operator.cart_comm.cartslicer.slice_global_buffer_to_tile,
+            *self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile,
         )
 
     def set_global_sizes(self):
