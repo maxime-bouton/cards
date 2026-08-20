@@ -1,8 +1,8 @@
 import pytest
 import torch
-from cards.operators.distributed_torch_convolution import DistributedTorchConvolution
 
 import cards.backend as xp
+from cards.operators.distributed_torch_convolution import DistributedTorchConvolution
 from cards.utils.utils import torch2xp, xp2torch
 
 # FIXME: cleanse distributed test, avoid copying full array on all workers
