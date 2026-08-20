@@ -13,7 +13,7 @@ import cards.backend as xp
 from cards.estimators.base_estimator import BaseEstimator
 from cards.models.base_model import BaseModel
 from cards.operators.dft_convolution import DftConvolution
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
@@ -32,7 +32,7 @@ class BasePoissonDeconvolutionModel(BaseModel):
         self,
         estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
-        convolution_operator: DftConvolution | MpiDftConvolution,
+        convolution_operator: DftConvolution | DistributedDftConvolution,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,

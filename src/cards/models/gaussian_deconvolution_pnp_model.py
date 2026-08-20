@@ -20,7 +20,7 @@ from cards.models.base_gaussian_deconvolution_model import (
 )
 from cards.models.base_model import BaseDistributedModel
 from cards.operators.dft_convolution import DftConvolution
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.transition_kernels.base_transition_kernel import (
     BaseTransitionKernel,
 )
@@ -37,7 +37,7 @@ class BaseGaussianDeconvolutionPnpModel(BaseGaussianDeconvolutionModel):
         self,
         estimators: list[BaseEstimator],
         params: GaussianDeconvolutionPnpParams,
-        convolution_operator: DftConvolution | MpiDftConvolution,
+        convolution_operator: DftConvolution | DistributedDftConvolution,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
     ):
@@ -132,7 +132,7 @@ class DistributedGaussianDeconvolutionPnpModel(
         self,
         estimators: list[BaseEstimator],
         params: GaussianDeconvolutionPnpParams,
-        convolution_operator: MpiDftConvolution,
+        convolution_operator: DistributedDftConvolution,
         X: BaseTransitionKernel,
         denoiser: BaseDistributedDenoiser,
     ):

@@ -20,7 +20,7 @@ from cards.models.base_poisson_deconvolution_model import (
     PoissonDeconvolutionParameters,
 )
 from cards.operators.dft_convolution import DftConvolution
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 from cards.transition_kernels.gpu_pnp_sgla import GpuPnpSGLA
 from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
@@ -33,7 +33,7 @@ class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
         self,
         estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
-        convolution_operator: DftConvolution | MpiDftConvolution,
+        convolution_operator: DftConvolution | DistributedDftConvolution,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,
         Z2: BaseTransitionKernel,
@@ -161,7 +161,7 @@ class DistributedPoissonDeconvolutionPnpModel(
     def __init__(
         self,
         estimators: list[BaseEstimator],
-        convolution_operator: MpiDftConvolution,
+        convolution_operator: DistributedDftConvolution,
         params: PoissonDeconvolutionParameters,
         X: BaseTransitionKernel,
         Z1: BaseTransitionKernel,

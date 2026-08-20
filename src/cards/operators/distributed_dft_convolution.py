@@ -138,7 +138,7 @@ def slice_input2buffer_adjoint(
     return valid_coefficients
 
 
-class MpiDftConvolution(LinearOperator):
+class DistributedDftConvolution(LinearOperator):
     r"""Synchronous distributed implementation of a linear convolution operator.
 
     Parameters

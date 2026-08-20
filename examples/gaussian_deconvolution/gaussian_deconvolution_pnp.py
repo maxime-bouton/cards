@@ -27,7 +27,7 @@ from cards.models import (
 )
 from cards.models.gaussian_deconvolution_pnp_model import GaussianDeconvolutionPnpParams
 from cards.operators.dft_convolution import DftConvolution
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.random import create_rng
 from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
 from cards.utils.utils_img import read_dtype, read_img_shape
@@ -52,7 +52,7 @@ class PnpDeconvGeometry:
     grid_size: np.ndarray
     x_space: Space
     y_space: Space
-    H: DftConvolution | MpiDftConvolution
+    H: DftConvolution | DistributedDftConvolution
     D: BaseDenoiser
     kernel: xp.ndarray
 
@@ -63,9 +63,9 @@ def build_convolution_operator(
     grid_size: np.ndarray,
     ctx: ExecutionContext,
     tile_range: np.ndarray | None = None,
-) -> DftConvolution | MpiDftConvolution:
+) -> DftConvolution | DistributedDftConvolution:
     if ctx.is_mpi:
-        return MpiDftConvolution(
+        return DistributedDftConvolution(
             np.asarray(full_shape),
             kernel,
             ctx.comm,

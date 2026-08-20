@@ -26,7 +26,7 @@ from cards.models.gaussian_deconvolution_tv_model import (
     GaussianDeconvolutionTvParams,
 )
 from cards.operators.dft_convolution import DftConvolution
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.samplers import (
     DistributedCpuSampler,
     DistributedGpuSampler,
@@ -109,7 +109,9 @@ def generate_gaussian_deconvolution_observations(
         case "mpi":
             from mpi4py import MPI
 
-            from cards.operators.mpi_dft_convolution import MpiDftConvolution
+            from cards.operators.distributed_dft_convolution import (
+                DistributedDftConvolution,
+            )
 
             comm = MPI.COMM_WORLD
             rank = comm.Get_rank()
@@ -126,7 +128,9 @@ def generate_gaussian_deconvolution_observations(
             # MPI.Compute_dims(size, 2)
             grid_size = np.asarray([1] * (len(gt_shape) - 2) + [comm_size, 1])
 
-            convolution_operator = MpiDftConvolution(gt_size, kernel, comm, grid_size)
+            convolution_operator = DistributedDftConvolution(
+                gt_size, kernel, comm, grid_size
+            )
 
         case "serial":
             from cards.operators.dft_convolution import DftConvolution
@@ -350,7 +354,9 @@ def compute_tv(
             # MPI.Compute_dims(size, 2)
             grid_size = np.asarray([1] * (len(gt_shape) - 2) + [size, 1])
 
-            op = MpiDftConvolution(np.asarray(gt_shape), kernel, comm, grid_size)
+            op = DistributedDftConvolution(
+                np.asarray(gt_shape), kernel, comm, grid_size
+            )
             y = np.empty(
                 op.adjoint_communicator.cartslicer.tile_size, dtype=kernel.dtype
             )
@@ -483,7 +489,7 @@ def compute_pnp(
                         f"Unknown denoiser type: {denoiser_params['type']}"
                     )
 
-            op = MpiDftConvolution(
+            op = DistributedDftConvolution(
                 np.asarray(gt_shape), kernel, comm, grid_size, tile_range=tile_range
             )
             y = np.empty(

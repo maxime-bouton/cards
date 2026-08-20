@@ -4,7 +4,7 @@ from mpi4py import MPI
 
 import cards.backend as xp
 from cards.operators.dft_convolution import DftConvolution
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.utils.utils import expand_shape_left
 
 
@@ -72,7 +72,7 @@ def test_adjoint_mpi(
     Y = rng.random(output_size)
     kernel = rng.random(kernel_size)
 
-    convolution_handler = MpiDftConvolution(
+    convolution_handler = DistributedDftConvolution(
         input_shape,
         grid_shape,
         comm,
