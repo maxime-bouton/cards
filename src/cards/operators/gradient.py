@@ -32,45 +32,18 @@ def gradient_2d_adjoint(u: xp.ndarray) -> xp.ndarray:
 
 
 class Gradient2d(LinearOperator):
-    def __init__(self, image_size):
-        r"""Gradient2d constructor.
+    r"""Serial implementation of the 2d discrete gradient operator.
 
-        Parameters
-        ----------
-        image_size : numpy.ndarray of int, of size ``d``
-            Full image size.
-        """
-        super(Gradient2d, self).__init__(
-            image_size, xp.array([2, *image_size], dtype=int)
-        )
-        pass
+    Note
+    ----
+    The horizontal and vertical differences involved in the forward operator act along the last two dimension of the input tensor. Horizontal and vertical gradients are concatenated along axis 0 in the output tensor.
+    """
+
+    def __init__(self, image_shape):
+        super().__init__(image_shape, [2, *image_shape])
 
     def forward(self, input_image: xp.ndarray):
-        r"""forward Compute 2d discrete gradient.
-
-        Parameters
-        ----------
-        input_image : np.ndarray
-            Input image.
-
-        Returns
-        -------
-        np.ndarray
-            Discrete gradient.
-        """
         return gradient_2d(input_image)
 
     def adjoint(self, input_data: xp.ndarray):
-        """adjoint Compute the adjoint of the 2d gradient operator.
-
-        Parameters
-        ----------
-        input_data : np.ndarray
-            Input data.
-
-        Returns
-        -------
-        np.ndarray
-            Adjoint of the 2d discrete gradient.
-        """
         return gradient_2d_adjoint(input_data)
