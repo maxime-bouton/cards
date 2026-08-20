@@ -13,7 +13,7 @@ import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDistributedDenoiser
 from cards.denoisers.ddfb.network_ddfb import DFBLayer
 from cards.denoisers.denoiser_loader import load_pretrained_ddfb
-from cards.operators.mpi_torch_convolution import MpiTorchConvolution
+from cards.operators.distributed_torch_convolution import DistributedTorchConvolution
 
 # TODO: move forward_no_comm method to the base class (variant of __call__() which does not trigger communications for the input stage of the network, which can possibly be made in common with other operators)
 # FIXME: rename all internal convolution operators to make it clear they are private
@@ -45,7 +45,7 @@ class DistributedDDFB(BaseDistributedDenoiser):
         Number of DDFB layers.
     n_features: int
         Number of channels in the dual space of the convolution operators.
-    mpi_conv: MpiTorchConvolution
+    mpi_conv: DistributedTorchConvolution
         Internal distributed convolution operator implemented in torch.
     ddfb : DDFB
         Local DDFB denoiser.
@@ -81,7 +81,7 @@ class DistributedDDFB(BaseDistributedDenoiser):
         rng = torch.Generator(next(self.ddfb.parameters()).device).manual_seed(42)
         self.ddfb.update_lip(tuple(im_size[-3:]), rng=rng)
 
-        self.mpi_conv = MpiTorchConvolution(
+        self.mpi_conv = DistributedTorchConvolution(
             im_size,
             self.ddfb.D0.kernel_size,
             self.ddfb.D0.padding,  # type: ignore

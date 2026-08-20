@@ -61,7 +61,7 @@ def slice_input2buffer(
         return tuple([np.s_[: r or None] for r in R])
 
 
-class MpiTorchConvolution(LinearOperator):
+class DistributedTorchConvolution(LinearOperator):
     r"""Synchronous distributed implementation of a `torch.Conv2d` operator in
     the `same` padding mode.
 

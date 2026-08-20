@@ -30,8 +30,8 @@ class Masking(LinearOperator):
         super().__init__(mask.shape, mask.shape)
         self.mask = mask
 
-    def forward(self, image: xp.ndarray) -> xp.ndarray:
+    def forward(self, image: xp.ndarray, op=None) -> xp.ndarray:
         return self.mask * image
 
-    def adjoint(self, data: xp.ndarray) -> xp.ndarray:
+    def adjoint(self, data: xp.ndarray, adjoint_op=None) -> xp.ndarray:
         return self.mask * data

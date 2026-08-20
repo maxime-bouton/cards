@@ -80,8 +80,8 @@ class Gradient2d(LinearOperator):
     def __init__(self, image_shape):
         super().__init__(image_shape, [2, *image_shape])
 
-    def forward(self, image: xp.ndarray) -> xp.ndarray:
+    def forward(self, image: xp.ndarray, op=None) -> xp.ndarray:
         return gradient_2d(image)
 
-    def adjoint(self, data: xp.ndarray) -> xp.ndarray:
+    def adjoint(self, data: xp.ndarray, adjoint_op=None) -> xp.ndarray:
         return gradient_2d_adjoint(data)

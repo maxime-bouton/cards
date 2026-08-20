@@ -1,8 +1,8 @@
 import pytest
 import torch
+from cards.operators.distributed_torch_convolution import DistributedTorchConvolution
 
 import cards.backend as xp
-from cards.operators.mpi_torch_convolution import MpiTorchConvolution
 from cards.utils.utils import torch2xp, xp2torch
 
 # FIXME: cleanse distributed test, avoid copying full array on all workers
@@ -30,7 +30,7 @@ def test_mpi_torch_conv(input_shape, kernel_dims, padding, seed, comm, comm_size
     rng = xp.random.default_rng(seed)
 
     # define MPI convolution operator
-    conv = MpiTorchConvolution(
+    conv = DistributedTorchConvolution(
         input_shape,
         kernel_dims,
         padding,

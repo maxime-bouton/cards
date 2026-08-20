@@ -13,7 +13,7 @@ from mpi4py import MPI
 import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDistributedDenoiser
 from cards.denoisers.denoiser_loader import load_pretrained_drunet
-from cards.operators.mpi_torch_convolution import MpiTorchConvolution
+from cards.operators.distributed_torch_convolution import DistributedTorchConvolution
 from cards.utils.utils import torch2xp, xp2torch
 
 # TODO: add method equivalent to forward_no_comm in DDFB and DnCNN
@@ -37,11 +37,11 @@ class DistributedDRUNet(BaseDistributedDenoiser):
 
     Attributes
     ----------
-    conv1, conv2, conv3, conv4 : MpiTorchConvolution
+    conv1, conv2, conv3, conv4 : DistributedTorchConvolution
         Internal convolution operators used to defined the layers of the network (after different up-/down-sampling levels).
-    head_conv : MpiTorchConvolution
+    head_conv : DistributedTorchConvolution
         Convolution operator in the first layer of the network.
-    tail_conv : MpiTorchConvolution
+    tail_conv : DistributedTorchConvolution
         Convolution operator in the last layer of the network.
     drunet : DRUNet
         Internal DRUNet denoiser.
@@ -97,7 +97,7 @@ class DistributedDRUNet(BaseDistributedDenoiser):
         size4[-3] = size3[-3] * 2
         size4[-2:] = size3[-2:] // 2
 
-        self.conv1 = MpiTorchConvolution(
+        self.conv1 = DistributedTorchConvolution(
             size1,
             self.drunet.m_down1[0].res[0].kernel_size,
             self.drunet.m_down1[0].res[0].padding,
@@ -105,7 +105,7 @@ class DistributedDRUNet(BaseDistributedDenoiser):
             grid_size,
         )
 
-        self.conv2 = MpiTorchConvolution(
+        self.conv2 = DistributedTorchConvolution(
             size2,
             self.drunet.m_down2[0].res[0].kernel_size,
             self.drunet.m_down2[0].res[0].padding,
@@ -113,7 +113,7 @@ class DistributedDRUNet(BaseDistributedDenoiser):
             grid_size,
         )
 
-        self.conv3 = MpiTorchConvolution(
+        self.conv3 = DistributedTorchConvolution(
             size3,
             self.drunet.m_down3[0].res[0].kernel_size,
             self.drunet.m_down3[0].res[0].padding,
@@ -121,7 +121,7 @@ class DistributedDRUNet(BaseDistributedDenoiser):
             grid_size,
         )
 
-        self.conv4 = MpiTorchConvolution(
+        self.conv4 = DistributedTorchConvolution(
             size4,
             self.drunet.m_body[0].res[0].kernel_size,
             self.drunet.m_body[0].res[0].padding,
@@ -132,7 +132,7 @@ class DistributedDRUNet(BaseDistributedDenoiser):
         tile_range = self.conv1.adjoint_communicator.cartslicer.tile_range.copy()
         tile_range[-3] = [0, self.drunet.m_head.in_channels - 1]
 
-        self.head_conv = MpiTorchConvolution(
+        self.head_conv = DistributedTorchConvolution(
             size_in,
             self.drunet.m_head.kernel_size,
             self.drunet.m_head.padding,
@@ -143,7 +143,7 @@ class DistributedDRUNet(BaseDistributedDenoiser):
             tile_range=tile_range,
         )
 
-        self.tail_conv = MpiTorchConvolution(
+        self.tail_conv = DistributedTorchConvolution(
             size1,
             self.drunet.m_tail.kernel_size,
             self.drunet.m_tail.padding,
@@ -156,7 +156,7 @@ class DistributedDRUNet(BaseDistributedDenoiser):
     def _apply_res_layer(
         self,
         tile_u: xp.ndarray,
-        mpi_conv: MpiTorchConvolution,
+        mpi_conv: DistributedTorchConvolution,
         conv_forward: torch.nn.Conv2d,
         conv_adjoint: torch.nn.Conv2d,
     ) -> xp.ndarray:
@@ -170,7 +170,7 @@ class DistributedDRUNet(BaseDistributedDenoiser):
         self,
         tile_u: xp.ndarray,
         level: torch.nn.Module,
-        conv: MpiTorchConvolution,
+        conv: DistributedTorchConvolution,
     ) -> xp.ndarray:
         for res in level[:-1]:
             tile_u = self._apply_res_layer(tile_u, conv, res.res[0], res.res[2])
@@ -180,7 +180,7 @@ class DistributedDRUNet(BaseDistributedDenoiser):
         self,
         tile_u: xp.ndarray,
         level: torch.nn.Module,
-        conv: MpiTorchConvolution,
+        conv: DistributedTorchConvolution,
     ) -> xp.ndarray:
         tile_u = torch2xp(level[0](xp2torch(tile_u)))
         for res in level[1:]:

@@ -12,7 +12,7 @@ from mpi4py import MPI
 import cards.backend as xp
 from cards.denoisers.base_denoiser import BaseDistributedDenoiser
 from cards.denoisers.denoiser_loader import load_pretrained_dncnn
-from cards.operators.mpi_torch_convolution import MpiTorchConvolution
+from cards.operators.distributed_torch_convolution import DistributedTorchConvolution
 
 # FIXME: rename all internal convolution operators to make it clear they are private
 
@@ -34,9 +34,9 @@ class DistributedDnCNN(BaseDistributedDenoiser):
 
     Attributes
     ----------
-    core_mpi_conv : MpiTorchConvolution
+    core_mpi_conv : DistributedTorchConvolution
         Distributed convolution operator implemented in torch, corresponding to the inner layers of the network.
-    edge_mpi_conv : MpiTorchConvolution
+    edge_mpi_conv : DistributedTorchConvolution
         Distributed convolution operator implemented in torch, corresponding to the first and the last layer of the network.
     dncnn : DnCNN
         Local DnCNN denoiser.
@@ -63,7 +63,7 @@ class DistributedDnCNN(BaseDistributedDenoiser):
             weights_path=self.weights_path,
         )
 
-        self.edge_mpi_conv = MpiTorchConvolution(
+        self.edge_mpi_conv = DistributedTorchConvolution(
             image_size,
             self.dncnn.model[0].kernel_size,
             self.dncnn.model[0].padding,
@@ -81,7 +81,7 @@ class DistributedDnCNN(BaseDistributedDenoiser):
         )
         tile_range[-3] = [0, self.dncnn.model[0].out_channels - 1]
 
-        self.core_mpi_conv = MpiTorchConvolution(
+        self.core_mpi_conv = DistributedTorchConvolution(
             core_size,
             self.dncnn.model[0].kernel_size,
             self.dncnn.model[0].padding,

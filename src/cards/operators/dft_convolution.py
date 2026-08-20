@@ -88,11 +88,7 @@ class DftConvolution(LinearOperator):
         kernel,
     ):
         super().__init__(image_shape, data_shape)
-
-        # FIXME: size expected as a numpy array, not a tuple (given the current use throughout the library)! (currently inconsistent with what is required from image_size)
-        # if not isinstance(data_size, tuple):
-        #     data_size = tuple(data_size)
-        if not len(image_shape) == len(data_shape):
+        if not len(self.image_shape) == len(self.data_shape):
             raise ValueError(
                 "image_shape and data_shape must have the same number of elements"
             )
@@ -111,10 +107,10 @@ class DftConvolution(LinearOperator):
             [xp.s_[: self.image_shape[d]] for d in range(self.ndims)]
         )
 
-    def forward(self, image: xp.ndarray) -> xp.ndarray:
+    def forward(self, image: xp.ndarray, op=None) -> xp.ndarray:
         return fft_conv(image, self.fft_kernel, self.data_shape)
 
-    def adjoint(self, data: xp.ndarray) -> xp.ndarray:
+    def adjoint(self, data: xp.ndarray, adjoint_op=None) -> xp.ndarray:
         return fft_conv(data, xp.conj(self.fft_kernel), self.data_shape)[
             self.valid_coefficients
         ]
