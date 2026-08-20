@@ -15,14 +15,14 @@ class BaseCommSlicer(ABC):
 
     Parameters
     ----------
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Number of processes along each axis of the Cartesian grid, as returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
     global_buffer_size : np.array[int]
         Shape of a `d`-dimensional array (tensor) decomposed over the Cartesian grid of workers considered.
 
     Attributes
     ----------
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Number of processes along each axis of the Cartesian grid, as returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
     global_buffer_size : np.array[int]
         Shape of a `d`-dimensional array (tensor) decomposed over the Cartesian grid of workers considered.
@@ -41,5 +41,5 @@ class BaseCommSlicer(ABC):
         self.slice_global_buffer_to_tile = self._get_slice_global_buffer_to_tile()
 
     @abstractmethod
-    def _get_slice_global_buffer_to_tile(self) -> slice:
+    def _get_slice_global_buffer_to_tile(self) -> tuple[slice]:
         r"""Returns a slice to insert or extract a tile from the tensor tessellated across the workers."""

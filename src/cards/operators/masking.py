@@ -1,4 +1,4 @@
-r"""Implementation of the masking operator involved in inpainting problems."""
+"""Implementation of the masking operator involved in inpainting problems."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #

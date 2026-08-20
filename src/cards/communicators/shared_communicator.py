@@ -24,10 +24,10 @@ class SharedCommunicator:
     ----------
     comm : mpi4py.MPI.Comm
         Underlying MPI communicator.
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Shape of the communication grid along each axis of the problem, as
         returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
-    buffer_size : numpy.ndarray[int], of size ``d``
+    buffer_size : np.ndarray[int], of size ``d``
         Size of the ``d`` dimensional buffer decomposed over the Cartesian grid of workers considered. The number of elements handled by the
         current process is computed by an instance of the
         :class:`cards.slicer.cartesian_comm_slicer.CartesianCommSlicer`
@@ -44,9 +44,9 @@ class SharedCommunicator:
         current process is computed by an instance of the
         :class:`cards.slicer.cartesian_comm_slicer.CartesianCommSlicer`
         class.
-    _max_send_size : numpy.ndarray[int]
+    _max_send_size : np.ndarray[int]
         Largest extent of the buffer to be sent to a neighbor worker across each axis.
-    _max_recv_size : numpy.ndarray[int]
+    _max_recv_size : np.ndarray[int]
         Largest extent of the buffer to be received from a neighbor worker across each axis.
     _slice : dict
         Dictionary of slices corresponding to each operator. Each slice allows

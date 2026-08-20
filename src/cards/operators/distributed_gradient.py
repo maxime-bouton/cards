@@ -1,12 +1,8 @@
-"""Distributed implementation of the gradient as a linear operator.
-The computations can be done either on CPU or GPU depending on the settings.
-"""
+"""Distributed implementation of the 2D discrete gradient operator."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
-
-# TODO: documentation
 
 from collections.abc import Sequence
 
@@ -40,13 +36,6 @@ class DistributedGradient2d(LinearOperator):
         Numpy array created from ``self.image_shape``.
     grid_size : np.ndarray[int]
         Numpy array created from ``grid_shape``.
-    comm : mpi4py.MPI.Comm
-        Underlying MPI communicator.
-    rank : int
-        Rank of the current MPI-process.
-    ranknd : numpy.ndarray[int]
-        Multi-linear rank of the current MPI-process in the Cartesian grid of
-        workers (nD setting).
     direct_communicator : SyncCartesianCommunicator
         Synchronous Cartesian communicator responsible for communications involved in the forward operator.
     adjoint_communicator_v : SyncCartesianCommunicator
@@ -79,13 +68,12 @@ class DistributedGradient2d(LinearOperator):
         self.image_size = np.asarray(self.image_shape)
 
         self.dtype = dtype
-        self.comm = comm
         self.grid_size = np.asarray(grid_shape)
 
         dim_extension = [0] * (len(self.grid_size) - 2)
         overlap = np.asarray(dim_extension + [1, 1])
         self.direct_communicator = SyncCartesianCommunicator(
-            self.comm,
+            comm,
             self.grid_size,
             self.image_size,
             overlap,
@@ -93,8 +81,9 @@ class DistributedGradient2d(LinearOperator):
             backward=False,
             dtype=self.dtype,
         )
+        self.grid_size = self.direct_communicator.grid_size
         self.adjoint_communicator_v = SyncCartesianCommunicator(
-            self.comm,
+            comm,
             self.grid_size,
             self.image_size,
             np.asarray(dim_extension + [1, 0]),
@@ -103,7 +92,7 @@ class DistributedGradient2d(LinearOperator):
             dtype=self.dtype,
         )
         self.adjoint_communicator_h = SyncCartesianCommunicator(
-            self.comm,
+            comm,
             self.grid_size,
             self.image_size,
             np.asarray(dim_extension + [0, 1]),
@@ -112,14 +101,9 @@ class DistributedGradient2d(LinearOperator):
             dtype=self.dtype,
         )
 
-        # TODO: see if rank/ranknd is also needed on top of self.direct_communicator.rank/ranknd
-        self.rank = self.direct_communicator.rank
-        self.ranknd = self.direct_communicator.ranknd
-        self.grid_size = self.direct_communicator.grid_size
-
         # TODO: mutualize is_first/last -> communications ?
-        self.is_first = self.ranknd == 0
-        self.is_last = self.ranknd == self.grid_size - 1
+        self.is_first = self.direct_communicator.ranknd == 0
+        self.is_last = self.direct_communicator.ranknd == self.grid_size - 1
 
         if enable_internal_buffer:
             self.forward_buffer = xp.zeros(
@@ -280,7 +264,7 @@ class DistributedGradient2d(LinearOperator):
         # NOTE: in this function, ``image`` refers to the local image tile handled by the current process
         return self._chunk_gradient_2d(image)
 
-    # TODO: add this collection of features through inhteritance, instead of repeating it each time?
+    # TODO: add this collection of features through inheritance, instead of repeating it each time?
     def get_recv_size(self) -> np.ndarray:
         return self.direct_communicator.cartslicer.recv_size
 

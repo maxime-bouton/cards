@@ -20,11 +20,11 @@ def get_neighbour(ranknd: np.ndarray, grid_size: np.ndarray, disp: np.ndarray) -
 
     Parameters
     ----------
-    ranknd : numpy.ndarray[int]
+    ranknd : np.ndarray[int]
         Multi-dimensional rank of the current process in the Cartesian grid.
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Number of processes along each axis of the Cartesian grid.
-    disp : numpy.ndarray[int]
+    disp : np.ndarray[int]
         Displacement vector to obtain the rank of a neighbour process in the Cartesian grid.
 
     Returns
@@ -117,7 +117,7 @@ def local_split_range(
 
     Returns
     -------
-    numpy.ndarray[int]
+    np.ndarray[int]
         Start and end index of the segment: shape ``(2,)``.
 
     Raises
@@ -173,14 +173,14 @@ def local_split_range_nd(
 
     Parameters
     ----------
-    nchunks : numpy.ndarray[int]
+    nchunks : np.ndarray[int]
         Total number of segments along each dimension.
-    N : numpy.ndarray[int]
+    N : np.ndarray[int]
         Total number of indices along each dimension.
-    index : numpy.ndarray[int]
+    index : np.ndarray[int]
         Multi-dimensional rank of the current process in the Cartesian grid
         of processes.
-    overlap : numpy.ndarray[int], optional
+    overlap : np.ndarray[int], optional
         Overlap size between consecutive segments along each dimension, by
         default None.
     backward : bool, optional
@@ -189,7 +189,7 @@ def local_split_range_nd(
 
     Returns
     -------
-    numpy.ndarray[int]
+    np.ndarray[int]
         Start and end index of the nD segment along each dimension:
         shape ``(ndims, 2)``.
 

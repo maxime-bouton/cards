@@ -155,7 +155,7 @@ class ExecutionContext:
 
         Returns
         -------
-        numpy.ndarray
+        np.ndarray
            The size of the grid partitioning the data.
         """
         if not self.is_mpi:

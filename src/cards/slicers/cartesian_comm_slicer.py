@@ -26,15 +26,15 @@ def compute_local_buffer_size(
 
     Parameters
     ----------
-    ranknd : numpy.ndarray[int]
+    ranknd : np.ndarray[int]
         Multi-dimensional rank of the current process in the Cartesian grid
         of MPI processes.
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Number of processes along each axis of the Cartesian grid.
-    tile_size : numpy.ndarray[int]
+    tile_size : np.ndarray[int]
         Size of the non-overlapping image tile underlying the overlapping
         facets.
-    overlap_size : numpy.ndarray[int]
+    overlap_size : np.ndarray[int]
         Size of the overlap between consecutive facets along each axis of the
         Cartesian grid.
     backward : bool, optional
@@ -42,7 +42,7 @@ def compute_local_buffer_size(
 
     Returns
     -------
-    facet_size : numpy.ndarray[int]
+    facet_size : np.ndarray[int]
         Size of the overlapping facet handled by the current process.
     """
     if backward:
@@ -76,7 +76,7 @@ def create_slice_buffers(
         Size of the MPI Caretesian grid considered.
     tile_size : numpy.array[int]
         Shape of the tile array.
-    overlap_size : numpy.ndarray[int]
+    overlap_size : np.ndarray[int]
         Size of the overlap between consecutive facets along each axis of the
         Cartesian grid.
     backward : bool, optional
@@ -118,16 +118,16 @@ def create_slice_sync_send_recv(
 
     Parameters
     ----------
-    ranknd : numpy.ndarray[int]
+    ranknd : np.ndarray[int]
         Multi-dimensional rank of the current process in the nD Cartesian grid
         of MPI processes.
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Number of processes along each axis of the Cartesian grid
-    facet_size : numpy.ndarray[int]
+    facet_size : np.ndarray[int]
         Size of the overlapping facet.
-    send_size : numpy.ndarray[int]
+    send_size : np.ndarray[int]
         Size of overlap along each axis, used to determine the size of subarrays to be sent to contiguous workers in the Cartesian process grid.
-    recv_size : numpy.ndarray[int]
+    recv_size : np.ndarray[int]
         Size of overlap along each axis, used to determine the size of subarrays to be received from contiguous workers in the Cartesian process grid.
     backward : bool, optional
         Direction of the overlap between contiguous facets along each axis of the Cartesian grid (forward or backward overlap, opposite the direction of communications), by default `True`.
@@ -215,16 +215,16 @@ def create_slice_async_send_recv(
 
     Parameters
     ----------
-    ranknd : numpy.ndarray[int]
+    ranknd : np.ndarray[int]
         Multi-dimensional rank of the current process in the nD Cartesian grid
         of MPI processes.
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Number of processes along each axis of the Cartesian grid
-    facet_size : numpy.ndarray[int]
+    facet_size : np.ndarray[int]
         Size of the overlapping facet.
-    send_size : numpy.ndarray[int]
+    send_size : np.ndarray[int]
         Size of overlap along each axis, used to determine the size of subarrays to be sent to contiguous workers in the Cartesian process grid.
-    recv_size : numpy.ndarray[int]
+    recv_size : np.ndarray[int]
         Size of overlap along each axis, used to determine the size of subarrays to be received from contiguous workers in the Cartesian process grid.
     backward : bool, optional
         Direction of the overlap between contiguous facets along each axis of the Cartesian grid (forward or backward overlap, opposite the direction of communications), by default `True`.
@@ -352,39 +352,39 @@ class CartesianCommSlicer(BaseCommSlicer):
 
     Parameters
     ----------
-    ranknd : numpy.ndarray[int]
+    ranknd : np.ndarray[int]
         n-dimensional rank of the current process, i.e., rank along each
         axis of the Cartesian MPI process grid considered.
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Number of processes along each axis of the Cartesian MPI process
         grid considered.
-    global_buffer_size : numpy.ndarray[int]
+    global_buffer_size : np.ndarray[int]
         Shape of the global array split across the Cartesian grid of MPI
         processes considered.
-    send_size : numpy.ndarray[int]
+    send_size : np.ndarray[int]
         Dimensions of the subarray to be sent across each axis of the
         process grid.
-    recv_size : numpy.ndarray[int]
+    recv_size : np.ndarray[int]
         Dimensions of the subarray to be received across each axis of the
         process grid.
     backward : bool, optional
         Direction of the overlap (opposite of the direction of communications), by default True.
-    tile_range : numpy.ndarray[int] or None, optional
+    tile_range : np.ndarray[int] or None, optional
         Index of the elements from the global array exclusively handled by the current process, defining a subarray. By default None, so that it is directly specified by the object itself, dividing the global array evenly across the different workers.
 
     Attributes
     ----------
-    ranknd : numpy.ndarray[int]
+    ranknd : np.ndarray[int]
         n-dimensional rank of the current process, i.e., rank along each
         axis of the Cartesian MPI process grid considered.
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Number of processes along each axis of the Cartesian MPI process
         grid considered.
-    global_buffer_size : numpy.ndarray[int]
+    global_buffer_size : np.ndarray[int]
         Shape of the global array split across the Cartesian grid of     processes.
-    send_size : numpy.ndarray[int]
+    send_size : np.ndarray[int]
         Size of overlap along each axis, used to determine the size of subarrays to be sent to contiguous workers in the Cartesian process grid.
-    recv_size : numpy.ndarray[int]
+    recv_size : np.ndarray[int]
         Size of overlap along each axis, used to determine the size of subarrays to be received from contiguous workers in the Cartesian process grid.
     backward : bool, optional
         Direction of the overlap between contiguous facets along each axis of the Cartesian grid (forward or backward overlap, opposite the direction of communications), by default `True`.
@@ -392,9 +392,9 @@ class CartesianCommSlicer(BaseCommSlicer):
         Number of dimensions ("axes") of the arrays handled.
     tile_range : np.array[int, 2]
         Start and end index delimiting the portion of the global array handled by the current process.
-    tile_size : numpy.ndarray[int]
+    tile_size : np.ndarray[int]
         Size of the tile handled by the current process.
-    facet_size : numpy.ndarray[int]
+    facet_size : np.ndarray[int]
         Size of the facet handled by the current process.
     slice_send : tuple[slice]
         Slice used to extract subarrays to be sent to other workers from the
@@ -552,12 +552,12 @@ class CartesianCommSlicer(BaseCommSlicer):
             backward=self.backward,
         )
 
-        super(CartesianCommSlicer, self).__init__(
+        super().__init__(
             grid_size,
             global_buffer_size,
         )
 
-    def _get_slice_global_buffer_to_tile(self) -> slice:
+    def _get_slice_global_buffer_to_tile(self) -> tuple[slice]:
         # global_buffer[slice_local_range] = local_tile
         return tuple(
             [

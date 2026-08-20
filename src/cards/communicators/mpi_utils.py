@@ -29,12 +29,12 @@ def get_ranknd(
     ----------
     rank : int
         Linear rank of a process.
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Number of processes along each axis of the Cartesian grid.
 
     Returns
     -------
-    numpy.ndarray[int]
+    np.ndarray[int]
         Multi-dimensional rank of the current process in the Cartesian grid.
     """
     return np.array(np.unravel_index(rank, grid_size), dtype="i")
@@ -56,13 +56,13 @@ def mpi_create_subarray_type(
 
     Parameters
     ----------
-    array_size : numpy.ndarray[int]
+    array_size : np.ndarray[int]
         Size of the array from which a subarray needs to be extracted.
-    comm_rank : numpy.ndarray[int]
+    comm_rank : np.ndarray[int]
         List of process ranks with which the current process needs to communicate. Contains the value ``MPI_PROC_NULL`` for any invalid communication.
-    comm_starts : numpy.ndarray[int]
+    comm_starts : np.ndarray[int]
         nD index of the starting point of the subarray to be extracted.
-    comm_subsizes : numpy.ndarray[int]
+    comm_subsizes : np.ndarray[int]
         Shape of the subarray to be extracted.
     dtype : type, optional
         Type of the buffer over which the communicator is defined (required

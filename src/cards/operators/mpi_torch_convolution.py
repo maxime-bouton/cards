@@ -1,4 +1,8 @@
-"""Implementation of a linear operator that applies a torch convolution."""
+"""Distributed implementation of a pytorch linear convolution operator.
+
+The class is leveraged in the distributed implementation of denoisers encoded
+by convolutional neural networks (see :module:`cards.denoisers`)
+"""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
@@ -67,13 +71,13 @@ class MpiTorchConvolution(LinearOperator):
         Cartesian MPI communicator underlying the communications.
     rank : int
         Rank of the current MPI-process.
-    ranknd : numpy.ndarray[int]
+    ranknd : np.ndarray[int]
         Multi-linear rank of the current MPI-process in the Cartesian grid of
         workers (nD setting).
     grid_size : list of int, of size ``d``
         Number of workers along each of the ``d`` dimensions of the
         communicator grid.
-    overlap_size : numpy.ndarray[int]
+    overlap_size : np.ndarray[int]
         Size of the overlap between contiguous facets along each of the ``d``
         axes of the problem.
     slice_valid_coefficients : Slice
@@ -102,7 +106,7 @@ class MpiTorchConvolution(LinearOperator):
 
         Parameters
         ----------
-        image_size : numpy.ndarray[int], of size ``d``
+        image_size : np.ndarray[int], of size ``d``
             Full image size.
         kernel_size : tuple[int, int]
             Convolution kernel size.
@@ -110,7 +114,7 @@ class MpiTorchConvolution(LinearOperator):
             Padding size to be applied to the image.
         comm : mpi4py.MPI.Comm
             Underlying MPI communicator.
-        grid_size : numpy.ndarray[int]
+        grid_size : np.ndarray[int]
             Number of workers along each of the ``d`` dimensions of the
             communicator grid.
         Cout : int, optional

@@ -90,7 +90,7 @@ class MotionBlurKernel:
 
         Returns
         -------
-        numpy.ndarray
+        np.ndarray
             2D array representing the motion blur kernel, normalized to sum to 1.
         """
         path = self._generate_path()
@@ -136,7 +136,7 @@ class MotionBlurKernel:
 
         Returns
         -------
-        numpy.ndarray
+        np.ndarray
             The motion blur kernel.
         """
         return self._kernel

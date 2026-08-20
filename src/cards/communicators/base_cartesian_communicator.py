@@ -8,13 +8,13 @@ The class underlies all the computations conducted within the distributed operat
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 # TODO: keep Tuple[int, ...] for all shapes, convert to numpy arrays only internally (and temporarily)
-# TODO: check typing (xp.ndarray or np.ndarray)
 
 from abc import ABC, abstractmethod
 
 import numpy as np
 from mpi4py import MPI
 
+import cards.backend as xp
 from cards.communicators.mpi_utils import get_ranknd
 from cards.slicers.cartesian_comm_slicer import CartesianCommSlicer
 
@@ -26,38 +26,38 @@ class BaseCartesianCommunicator(ABC):
     ----------
     comm : mpi4py.MPI.Comm
         MPI communicator.
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Number of processes along each axis of the Cartesian grid, as returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
-    buffer_size : numpy.ndarray[int], of size ``d``
+    buffer_size : np.ndarray[int], of size ``d``
         Shape of the ``d``-dimensional buffer decomposed over the Cartesian grid of workers considered. The number of elements handled by the
         current process is computed by an instance of the
         :class:`cards.slicer.cartesian_comm_slicer.CartesianCommSlicer`
         class.
-    send_size : numpy.ndarray[int], of size ``d``
+    send_size : np.ndarray[int], of size ``d``
         Extent of the ghost cell to be sent to contiguous facets along each axis of the Cartesian grid.
-    recv_size : numpy.ndarray[int], of size ``d``
+    recv_size : np.ndarray[int], of size ``d``
         Extent of the ghost cell to be received from contiguous facets along each axis of the Cartesian grid.
     dtype : type, optional
         Type of the buffer over which the communicator is defined, by default np.float64. The `type` is required to define sub-arrays using `MPI.Datatype`.
     backward : bool, optional
         Direction of the overlap between contiguous facets along each axis of the Cartesian grid (forward or backward overlap), by default `True`.
-    tile_range : numpy.ndarray[int] or None, optional
+    tile_range : np.ndarray[int] or None, optional
         Index of the elements from the global array exclusively handled by the current process, defining a subarray. By default `None`, corresponding to an even tessellation of an array across the workers.
 
     Attributes
     ----------
     comm : mpi4py.MPI.Comm
             Underlying MPI communicator.
-    grid_size : numpy.ndarray[int]
+    grid_size : np.ndarray[int]
         Shape of the communication grid along each axis of the problem, as
         returned by ``np.array(MPI.Compute_dims(size, ndims), dtype="i")``.
-    buffer_size : numpy.ndarray[int], of size ``d``
+    buffer_size : np.ndarray[int], of size ``d``
         Shape of the ``d``-dimensional buffer decomposed over the Cartesian grid of workers considered. The number of elements handled by the
         current process is computed by an instance of the
         :class:`cards.slicer.cartesian_comm_slicer.CartesianCommSlicer` class.
-    send_size : numpy.ndarray[int], of size ``d``
+    send_size : np.ndarray[int], of size ``d``
         Extent of the ghost cell to be sent to contiguous facets along each axis of the Cartesian grid.
-    recv_size : numpy.ndarray[int], of size ``d``
+    recv_size : np.ndarray[int], of size ``d``
         Extent of the ghost cell to be received from contiguous facets along each axis of the Cartesian grid.
     dtype : type, optional
         Type of the buffer over which the communicator is defined, by default np.float64. The ``dtype`` is required to define sub-arrays using `MPI.Datatype`.
@@ -67,7 +67,7 @@ class BaseCartesianCommunicator(ABC):
         Number of axes of the arrays to be exchanged.
     rank : int
         Linear rank of the process.
-    ranknd : numpy.ndarray[int]
+    ranknd : np.ndarray[int]
         nD rank of the process.
     cartslicer : cards.slicer.cartesian_comm_slicer.CartesianCommSlicer
         Slicer used to define and extract messages received to / sent from the
@@ -158,7 +158,7 @@ class BaseCartesianCommunicator(ABC):
         """
 
     @abstractmethod
-    def update_borders(self, local_array) -> None:  # pragma: no cover
+    def update_borders(self, local_array: xp.ndarray) -> None:  # pragma: no cover
         r"""Send and receive data from a given buffer."""
 
     @abstractmethod

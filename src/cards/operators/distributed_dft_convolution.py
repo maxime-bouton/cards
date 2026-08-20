@@ -1,6 +1,4 @@
-"""Distributed implementation of the convolution product as a linear operator, computed via the DFT.
-The computations can be done either on CPU or GPU depending on the settings.
-"""
+"""Distributed implementation of an FFT-based convolution operator."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
@@ -16,8 +14,8 @@ import cards.communicators.sync_cartesian_communicator as comms
 from cards.operators.dft_convolution import fft_conv
 from cards.operators.linear_operator import LinearOperator
 
-# TODO: documentation
-# TODO: check slices, does not currently rely on the slicer included in the communicator
+# TODO: check slices, does not currently rely on the slicer included in the communicator : use a Slicer instead?
+# FIXME: reduce redundancy between slice generating functions below
 
 
 def slice_valid_direct_convolution(
@@ -34,7 +32,7 @@ def slice_valid_direct_convolution(
     ranknd : np.ndarray[int]
         Rank of the process in a Cartesian nD grid of MPI processes.
     grid_size : np.ndarray[int]
-        Size of the MPI process grid.
+        Number of MPI workers along each of axis of the communicator grid.
     overlap_size : np.ndarray[int]
         Overlap between contiguous facets along each dimension.
 
@@ -83,6 +81,28 @@ def slice_valid_direct_convolution(
 def slice_input2buffer_forward(
     ranknd: np.ndarray, grid_size: np.ndarray, overlap_size: np.ndarray
 ) -> tuple[slice]:
+    r"""Generate slices to place the local image-tile into the local image-facet buffer for the forward operator.
+
+    Parameters
+    ----------
+    ranknd : np.ndarray
+        Multi-linear rank of the current MPI-process in the Cartesian grid of
+        workers.
+    grid_size : np.ndarray
+        Number of MPI workers along each of axis of the communicator grid.
+    overlap_size : np.ndarray
+        Size of the overlap between contiguous image facets along each axis.
+
+    Returns
+    -------
+    tuple[slice]
+        Output slices.
+
+    Raises
+    ------
+    AssertionError
+        `ranknd`, `grid_size` and `overlap_size` must have the save shape
+    """
     ndims = ranknd.size
 
     if not (grid_size.size == ndims and overlap_size.size == ndims):
@@ -112,6 +132,28 @@ def slice_input2buffer_forward(
 def slice_input2buffer_adjoint(
     ranknd: np.ndarray, grid_size: np.ndarray, overlap_size: np.ndarray
 ) -> tuple[slice]:
+    r"""Generate slices to place the local data-tile into the local data-facet buffer for the forward operator.
+
+    Parameters
+    ----------
+    ranknd : np.ndarray
+        Multi-linear rank of the current MPI-process in the Cartesian grid of
+        workers.
+    grid_size : np.ndarray
+        Number of MPI workers along each of axis of the communicator grid.
+    overlap_size : np.ndarray
+        Size of the overlap between contiguous image facets along each axis.
+
+    Returns
+    -------
+    tuple[slice]
+        Output slices.
+
+    Raises
+    ------
+    AssertionError
+        `ranknd`, `grid_size` and `overlap_size` must have the save shape
+    """
     ndims = ranknd.size
 
     if not (grid_size.size == ndims and overlap_size.size == ndims):
@@ -178,14 +220,7 @@ class DistributedDftConvolution(LinearOperator):
         Numpy array created from ``self.data_shape``.
     grid_size : np.ndarray[int]
         Numpy array created from ``grid_shape``.
-    comm : mpi4py.MPI.Comm
-        Underlying MPI communicator.
-    rank : int
-        Rank of the current MPI-process.
-    ranknd : numpy.ndarray[int]
-        Multi-linear rank of the current MPI-process in the Cartesian grid of
-        workers (nD setting).
-    overlap_size : numpy.ndarray[int]
+    overlap_size : np.ndarray[int]
         Size of the overlap between contiguous facets along each of the ``d``
         axes of the problem.
     direct_communicator : cards.communicators.sync_cartesian_communicator.SyncCartesianCommunicator
@@ -198,9 +233,9 @@ class DistributedDftConvolution(LinearOperator):
         Fourier transform of the convolution kernel for the local forward convolution.
     adjoint_fft_kernel : xp.ndarray
         Fourier transform of the convolution kernel for the local forward convolution.
-    direct_conv_size : numpy.ndarray[int]
+    direct_conv_size : np.ndarray[int]
         Size of the local forward convolution performed on the current worker.
-    adjoint_conv_size : numpy.ndarray[int]
+    adjoint_conv_size : np.ndarray[int]
         Size of the local adjoint convolution performed on the current worker.
     slice_valid_direct_convolution : Slice
         Slice to extract valid coefficients from the local forward convolution.
@@ -239,7 +274,6 @@ class DistributedDftConvolution(LinearOperator):
 
         self.dtype = dtype
         self.grid_size = np.asarray(grid_shape)
-        self.comm = comm
 
         # * useful dimensions
         if not len(kernel.shape) == self.ndims:
@@ -251,7 +285,7 @@ class DistributedDftConvolution(LinearOperator):
 
         # * communicator for the distributed direct operator
         self.direct_communicator = comms.SyncCartesianCommunicator(
-            self.comm,
+            comm,
             self.grid_size,
             self.image_size,
             self.overlap_size,
@@ -260,10 +294,6 @@ class DistributedDftConvolution(LinearOperator):
             backward=backward,
             tile_range=tile_range,
         )
-
-        # TODO: see if rank/ranknd is also needed on top of self.direct_communicator.rank/ranknd
-        self.rank = self.direct_communicator.rank
-        self.ranknd = self.direct_communicator.ranknd
         self.grid_size = self.direct_communicator.grid_size
 
         # kernel and slice to extract valid coefficients from the local forward
@@ -275,7 +305,7 @@ class DistributedDftConvolution(LinearOperator):
             kernel, self.direct_conv_size, axes=range(len(kernel.shape))
         )
         self.slice_valid_direct_convolution = slice_valid_direct_convolution(
-            self.ranknd, self.grid_size, self.overlap_size
+            self.direct_communicator.ranknd, self.grid_size, self.overlap_size
         )
 
         # * communicator for the distributed adjoint operator
@@ -283,15 +313,16 @@ class DistributedDftConvolution(LinearOperator):
         if backward:
             local_data_size = (
                 self.direct_communicator.cartslicer.tile_size
-                + (self.ranknd == self.grid_size - 1) * self.overlap_size
+                + (self.direct_communicator.ranknd == self.grid_size - 1)
+                * self.overlap_size
             )
             offset_id = 0
         else:
             local_data_size = (
                 self.direct_communicator.cartslicer.tile_size
-                + (self.ranknd == 0) * self.overlap_size
+                + (self.direct_communicator.ranknd == 0) * self.overlap_size
             )
-            offset_id = (self.ranknd > 0) * self.overlap_size
+            offset_id = (self.direct_communicator.ranknd > 0) * self.overlap_size
 
         tile_data = np.zeros((self.ndims, 2), dtype="i")
         tile_data[:, 0] = (
@@ -301,7 +332,7 @@ class DistributedDftConvolution(LinearOperator):
         tile_data[:, 1] = tile_data[:, 0] + local_data_size - 1
 
         self.adjoint_communicator = comms.SyncCartesianCommunicator(
-            self.comm,
+            comm,
             self.grid_size,
             self.data_size,
             self.overlap_size,
@@ -337,10 +368,10 @@ class DistributedDftConvolution(LinearOperator):
         )
 
         self.forward_input_slice = slice_input2buffer_forward(
-            self.ranknd, self.grid_size, self.overlap_size
+            self.direct_communicator.ranknd, self.grid_size, self.overlap_size
         )
         self.adjoint_input_slice = slice_input2buffer_adjoint(
-            self.ranknd, self.grid_size, self.overlap_size
+            self.direct_communicator.ranknd, self.grid_size, self.overlap_size
         )
 
     def forward(self, image: xp.ndarray) -> xp.ndarray:

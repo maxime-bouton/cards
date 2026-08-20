@@ -1,6 +1,4 @@
-"""Implementation of the convolution product as a linear operator, computed via the DFT.
-The computations can be done either on CPU or GPU depending on the settings.
-"""
+"""Serial implementation of an FFT-based convolution operator."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
