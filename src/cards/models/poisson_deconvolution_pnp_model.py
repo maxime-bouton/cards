@@ -24,8 +24,8 @@ from cards.operators.dft_convolution import DftConvolution
 from cards.operators.mpi_dft_convolution import MpiDftConvolution
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 from cards.transition_kernels.gpu_pnp_sgla import GpuPnpSGLA
-from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
 from cards.transition_kernels.gpu_psgla import GpuPSGLA
+from cards.transition_kernels.pnp_ula import GpuPnpULA
 from cards.transition_kernels.psgla import PSGLA
 
 
