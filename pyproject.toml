@@ -136,3 +136,9 @@ tests_cpu = { cmd = """
 pytest tests
 mpirun -np 2 pytest tests --mode mpi
 """, default-environment = "test" }
+tests_gpu = { cmd = """
+pytest tests --device gpu
+mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 pytest tests --mode mpi --device gpu
+""", default-environment = "test" }
+test_mpi_cpu = { cmd = " mpiexec -n 2 python -m mpi4py -m pytest --mode mpi --device cpu ", default-environment = "test" }
+test_mpi_gpu = { cmd = " mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 pytest --mode mpi --device gpu ", default-environment = "test" }
