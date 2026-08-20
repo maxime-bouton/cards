@@ -254,7 +254,7 @@ class DistributedDftConvolution(LinearOperator):
     def __init__(
         self,
         image_shape: Sequence[int],
-        grid_shape: xp.ndarray,
+        grid_shape: Sequence[int],
         comm: MPI.Comm,
         kernel: xp.ndarray,
         enable_internal_buffer: bool = True,
@@ -278,7 +278,7 @@ class DistributedDftConvolution(LinearOperator):
         # * useful dimensions
         if not len(kernel.shape) == self.ndims:
             raise ValueError("kernel should have ndims = len(image_size) dimensions")
-        # TODO: see if this is stil the case
+        # TODO: see if this is still the case
         if kernel.dtype.kind == "c":
             raise TypeError("only real-valued kernel supported")
         self.overlap_size = np.asarray(kernel.shape) - 1
@@ -374,7 +374,7 @@ class DistributedDftConvolution(LinearOperator):
             self.direct_communicator.ranknd, self.grid_size, self.overlap_size
         )
 
-    def forward(self, image: xp.ndarray) -> xp.ndarray:
+    def forward(self, image: xp.ndarray, op=None) -> xp.ndarray:
         # NOTE: in this function, ``image`` refers to the local image tile handled by the current process
         # NOTE: The input buffer ``input_image`` is copied inside forward_buffer, on GPU. This intern buffer will be used for the communications and the computations.
         self.forward_buffer[self.forward_input_slice] = image
@@ -386,7 +386,7 @@ class DistributedDftConvolution(LinearOperator):
         )[self.slice_valid_direct_convolution]
         return y
 
-    def adjoint(self, data: xp.ndarray) -> xp.ndarray:
+    def adjoint(self, data: xp.ndarray, adjoint_op=None) -> xp.ndarray:
         # NOTE: in this function, ``data`` refers to the local data tile handled by the current process
         # NOTE: The input is copied inside adjoint_buffer, on GPU. This intern buffer will be used for the communications and the computations.
         self.adjoint_buffer[self.adjoint_input_slice] = data

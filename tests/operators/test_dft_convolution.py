@@ -7,6 +7,8 @@ from cards.operators.dft_convolution import DftConvolution
 from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.utils.utils import expand_shape_left
 
+# FIXME: cleanse distributed test, avoid copying full array on all workers
+
 
 @pytest.fixture
 def kernel_size(input_shape) -> np.ndarray:

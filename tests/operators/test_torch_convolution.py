@@ -1,10 +1,11 @@
-import numpy as np
 import pytest
 import torch
 
 import cards.backend as xp
 from cards.operators.mpi_torch_convolution import MpiTorchConvolution
 from cards.utils.utils import torch2xp, xp2torch
+
+# FIXME: cleanse distributed test, avoid copying full array on all workers
 
 
 @pytest.fixture
@@ -24,17 +25,17 @@ def test_mpi_torch_conv(input_shape, kernel_dims, padding, seed, comm, comm_size
     corresponding tile of the serial version.
     """
     # grid_dims = np.asarray([1, *MPI.Compute_dims(comm_size, 2)])
-    grid_dims = np.asarray([1, comm_size, 1])
+    grid_dims = (1, comm_size, 1)
     Cin = input_shape[0]
     rng = xp.random.default_rng(seed)
 
     # define MPI convolution operator
     conv = MpiTorchConvolution(
-        np.asarray(input_shape),
+        input_shape,
         kernel_dims,
         padding,
-        comm=comm,
-        grid_size=grid_dims,
+        comm,
+        grid_dims,
     )
 
     # generate random kernel for convolution (same for serial and MPI)

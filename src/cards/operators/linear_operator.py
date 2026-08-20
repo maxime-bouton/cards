@@ -6,6 +6,7 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from typing import Any
 
 import cards.backend as xp
 
@@ -44,13 +45,17 @@ class LinearOperator(ABC):
         self.ndims_adjoint = len(data_shape)
 
     @abstractmethod
-    def forward(self, image: xp.ndarray) -> xp.ndarray:  # pragma: no cover
+    def forward(
+        self, image: xp.ndarray, op: Any | None = None
+    ) -> xp.ndarray:  # pragma: no cover
         r"""Implementation of the direct operator (from image to data space).
 
         Parameters
         ----------
         image : xp.ndarray
             Input tensor (image space).
+        op : Callable[[Any], Any] | None, optional
+            Optional callable, by default None.
 
         Returns
         -------
@@ -59,13 +64,17 @@ class LinearOperator(ABC):
         """
 
     @abstractmethod
-    def adjoint(self, data: xp.ndarray) -> xp.ndarray:  # pragma: no cover
+    def adjoint(
+        self, data: xp.ndarray, adjoint_op: Any | None = None
+    ) -> xp.ndarray:  # pragma: no cover
         r"""Implementation of the adjoint operator (from data to image space).
 
         Parameters
         ----------
         data : xp.ndarray
             Input tensor (data space).
+        adjoint_op : Callable[[Any], Any] | None, optional
+            Optional callable, by default None.
 
         Returns
         -------

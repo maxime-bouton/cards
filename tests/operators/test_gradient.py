@@ -6,6 +6,8 @@ import cards.backend as xp
 from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
 
+# FIXME: cleanse distributed test, avoid copying full array on all workers
+
 
 @pytest.mark.serial
 def test_basic_check(input_shape):
@@ -39,7 +41,6 @@ def test_adjoint(seed, input_shape):
     xp.testing.assert_allclose(Hxy, xHy)
 
 
-# FIXME: cleanse test, avoid copying full array on all workers
 @pytest.mark.mpi
 def test_adjoint_mpi(comm, input_shape, seed):
     """

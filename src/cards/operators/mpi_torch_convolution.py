@@ -19,6 +19,8 @@ import cards.communicators.sync_cartesian_communicator as comms
 from cards.operators.linear_operator import LinearOperator
 from cards.utils.utils import torch2xp, xp2torch
 
+# FIXME: find cleaner approach to accommodate conv/adj_conv in forward and adjoint methods while compatiable byth LinearOperator class
+
 
 def slice_valid_coefficients(
     ranknd: np.ndarray,
@@ -60,23 +62,58 @@ def slice_input2buffer(
 
 
 class MpiTorchConvolution(LinearOperator):
-    r"""Synchronous distributed implementation of a `torch.Conv2d` operator in the
-    `same` padding mode.
+    r"""Synchronous distributed implementation of a `torch.Conv2d` operator in
+    the `same` padding mode.
+
+    Parameters
+    ----------
+    image_size : np.ndarray[int], of size ``d``
+        Full image size.
+    kernel_shape : tuple[int, int]
+        Convolution kernel size.
+    padding : tuple[int, int]
+        Padding size to be applied to the image.
+    comm : mpi4py.MPI.Comm
+        Underlying MPI communicator.
+    grid_shape : Sequence[int]
+        Number of MPI workers along each of axis of the communicator grid.
+    Cout : int, optional
+        Number of channels in the output data. By default 0.
+    tile_range : np.ndarray | None, optional
+        Range of global indices defining the local image tile handled by the current worker, by default None. The global array is divided evenly across the different workers when ``tile_range`` is ``None``.
+    backward : bool, optional
+        Direction of the overlap between facets along all the axis for the direct operator (True for backward overlap, False for forward overlap). By default False.
+    enable_internal_buffer : bool, optional
+        Flag to enable interal storage of temporary buffers required for communication, by default True.
+
+    Raises
+    ------
+    ValueError
+        ``image_size`` and ``data_size`` must have the same number of
+        elements.
+    ValueError
+        ``kernel`` should have ``ndims = len(image_size)`` dimensions.
+    TypeError
+        Only real-valued kernel supported.
 
     Attributes
     ----------
-    comm : mpi4py.MPI.Comm
-        Underlying MPI communicator.
-    cartcomm : mpi4py.MPI.Cartcomm
-        Cartesian MPI communicator underlying the communications.
-    rank : int
-        Rank of the current MPI-process.
-    ranknd : np.ndarray[int]
-        Multi-linear rank of the current MPI-process in the Cartesian grid of
-        workers (nD setting).
-    grid_size : list of int, of size ``d``
-        Number of workers along each of the ``d`` dimensions of the
-        communicator grid.
+    dtype : type, optional
+        Type of the entries in communicated arrays (np.float32).
+    image_size : np.ndarray[int]
+        Numpy array created from ``self.image_shape``.
+    data_size : np.ndarray[int]
+        Numpy array created from ``self.data_shape``.
+    kernel_size : np.ndarray[int]
+        Numpy array created from ``self.kernel_shape``.
+    grid_size : np.ndarray[int]
+        Numpy array created from ``grid_shape``.
+    padding : np.ndarray(int)
+        Padding size to be applied to the image.
+    overlap_size : np.ndarray[int]
+        Size of the overlap between contiguous facets along each of the ``d``
+        axes of the problem.
+
     overlap_size : np.ndarray[int]
         Size of the overlap between contiguous facets along each of the ``d``
         axes of the problem.
@@ -92,87 +129,48 @@ class MpiTorchConvolution(LinearOperator):
 
     def __init__(
         self,
-        image_size: np.ndarray,
-        kernel_size: tuple[int, ...],
+        image_shape: tuple[int, ...],
+        kernel_shape: tuple[int, ...],
         padding: tuple[int, ...],
         comm: MPI.Comm,
-        grid_size: np.ndarray,
+        grid_shape: tuple[int, ...],
         Cout: int = 0,
         backward=False,
         tile_range: np.ndarray | None = None,
+        enable_internal_buffer: bool = True,
     ):
-        r"""Synchronous distributed implementation of a `torch.Conv2d` operator in the
-        `same` padding mode.
-
-        Parameters
-        ----------
-        image_size : np.ndarray[int], of size ``d``
-            Full image size.
-        kernel_size : tuple[int, int]
-            Convolution kernel size.
-        padding : tuple[int, int]
-            Padding size to be applied to the image.
-        comm : mpi4py.MPI.Comm
-            Underlying MPI communicator.
-        grid_size : np.ndarray[int]
-            Number of workers along each of the ``d`` dimensions of the
-            communicator grid.
-        Cout : int, optional
-            Number of channels in the output data. By default 0.
-        backward : bool, optional
-            Direction of the overlap between facets along all the axis for the direct operator (True for backward overlap, False for forward overlap). By default False.
-
-        Raises
-        ------
-        ValueError
-            ``image_size`` and ``data_size`` must have the same number of
-            elements.
-        ValueError
-            ``kernel`` should have ``ndims = len(image_size)`` dimensions.
-        TypeError
-            Only real-valued kernel supported.
-        """
-        self.dtype = np.float32
-        self.kernel_size = np.array((1,) * (image_size.size - 2) + kernel_size)
-        self.padding = np.array((0,) * (image_size.size - 2) + padding)
-        data_size = image_size + 2 * self.padding - self.kernel_size + 1
-        if not image_size.size == data_size.size:
+        self.image_size = np.asarray(image_shape)
+        self.kernel_size = np.array((1,) * (self.image_size.size - 2) + kernel_shape)
+        self.padding = np.array((0,) * (self.image_size.size - 2) + padding)
+        self.data_size = self.image_size + 2 * self.padding - self.kernel_size + 1
+        if not self.image_size.size == self.data_size.size:
             raise ValueError(
                 "image_size and data_size must have the same number of elements"
             )
-        if data_size.size > 2 and Cout:
-            data_size[-3] = Cout
-        super().__init__(image_size, data_size)
-        self.grid_size = grid_size
-        self.comm = comm
-        self.rank = self.comm.Get_rank()
+        if self.data_size.size > 2 and Cout:
+            self.data_size[-3] = Cout
+        super().__init__(image_shape, (*self.data_size,))
 
-        # * Cartesian communicator and nd rank
-        self.cartcomm = self.comm.Create_cart(
-            dims=grid_size,
-            periods=self.ndims * [False],
-            reorder=False,
-        )
-        self.ranknd = np.array(self.cartcomm.Get_coords(self.rank), dtype="i")
-
+        self.dtype = np.float32
+        self.grid_size = np.asarray(grid_shape)
         self.overlap_size = self.kernel_size - 1
 
         # * communicator for the distributed direct operator
         self.direct_communicator = comms.SyncCartesianCommunicator(
-            self.comm,
+            comm,
             self.grid_size,
             self.image_size,
             self.overlap_size,
             self.overlap_size,
             backward=backward,
-            dtype=np.float32,
+            dtype=self.dtype,
             tile_range=tile_range,
         )
-        # kernel and slice to extract valid coefficients from the local forward
-        # convolution output
 
+        # slice to extract valid coefficients from the local forward
+        # convolution output
         self.slice_valid_coefficients = slice_valid_coefficients(
-            self.ranknd,
+            self.direct_communicator.ranknd,
             self.grid_size,
             self.padding,
         )
@@ -188,15 +186,21 @@ class MpiTorchConvolution(LinearOperator):
         )
 
         # when distributed (grid_size > 1)
-        local_data_size -= self.padding * (self.ranknd > 0)
-        local_data_size -= self.padding * (self.ranknd < grid_size - 1)
+        local_data_size -= self.padding * (self.direct_communicator.ranknd > 0)
+        local_data_size -= self.padding * (
+            self.direct_communicator.ranknd < self.grid_size - 1
+        )
 
         if backward:
-            local_data_size += self.overlap_size * (self.ranknd > 0)
-            offset_id = (self.ranknd > 0) * (self.padding - self.overlap_size)
+            local_data_size += self.overlap_size * (self.direct_communicator.ranknd > 0)
+            offset_id = (self.direct_communicator.ranknd > 0) * (
+                self.padding - self.overlap_size
+            )
         else:
-            local_data_size += self.overlap_size * (self.ranknd < grid_size - 1)
-            offset_id = (self.ranknd > 0) * self.padding
+            local_data_size += self.overlap_size * (
+                self.direct_communicator.ranknd < self.grid_size - 1
+            )
+            offset_id = (self.direct_communicator.ranknd > 0) * self.padding
 
         if local_data_size.size > 2 and Cout:
             local_data_size[-3] = Cout
@@ -209,38 +213,47 @@ class MpiTorchConvolution(LinearOperator):
         tile_data[:, 1] = tile_data[:, 0] + local_data_size - 1
 
         self.adjoint_communicator = comms.SyncCartesianCommunicator(
-            self.comm,
+            comm,
             self.grid_size,
             self.data_size,
             self.overlap_size,
             self.overlap_size,
             backward=not backward,
-            dtype=np.float32,
+            dtype=self.dtype,
             tile_range=tile_data,
         )
 
-        self.forward_buffer = xp.zeros(
-            self.direct_communicator.cartslicer.facet_size, dtype=xp.float32
-        )
+        if enable_internal_buffer:
+            self.forward_buffer = xp.zeros(
+                self.direct_communicator.cartslicer.facet_size, dtype=xp.float32
+            )
         self.adjoint_buffer = xp.zeros(
             self.adjoint_communicator.cartslicer.facet_size, dtype=xp.float32
         )
 
         self.forward_input_slice = slice_input2buffer(
-            self.ranknd, self.grid_size, self.overlap_size, backward=backward
+            self.direct_communicator.ranknd,
+            self.grid_size,
+            self.overlap_size,
+            backward=backward,
         )
         self.adjoint_input_slice = slice_input2buffer(
-            self.ranknd, self.grid_size, self.overlap_size, backward=not backward
+            self.direct_communicator.ranknd,
+            self.grid_size,
+            self.overlap_size,
+            backward=not backward,
         )
 
-    def forward(self, input_image: xp.ndarray, conv: torch.nn.Conv2d):
+    def forward(self, image: xp.ndarray, op: torch.nn.Conv2d | None = None):
         r"""Implementation of the direct operator to update the input array
-        ``input_image`` (from image to data space).
+        ``image`` (from image to data space).
 
         Parameters
         ----------
-        input_image : ndarray[float]
+        image : ndarray[float]
             Input buffer array (image space), of size ``self.direct_communicator.cartslicer.tile_size``.
+        op : torch.nn.Conv2d (Callable[[torch.Tensor], torch.Tensor])
+            Torch convolution operator.
 
         Returns
         -------
@@ -250,13 +263,13 @@ class MpiTorchConvolution(LinearOperator):
 
         Note
         ----
-        The input buffer ``input_image`` is copied inside forward_buffer, on GPU. This intern buffer will be used for the communications and the computations.
+        The input buffer ``image`` is copied inside forward_buffer, on GPU. This intern buffer will be used for the communications and the computations.
         """
 
-        self.forward_buffer[self.forward_input_slice] = input_image
+        self.forward_buffer[self.forward_input_slice] = image
         self.direct_communicator.update_borders(self.forward_buffer)
         with torch.no_grad():
-            return torch2xp(conv(xp2torch(self.forward_buffer)))[
+            return torch2xp(op(xp2torch(self.forward_buffer)))[
                 self.slice_valid_coefficients
             ]
 
@@ -277,20 +290,18 @@ class MpiTorchConvolution(LinearOperator):
         with torch.no_grad():
             return torch2xp(conv(xp2torch(input_array)))[self.slice_valid_coefficients]
 
-    def get_recv_size(self) -> np.ndarray:
-        return self.direct_communicator.cartslicer.recv_size
-
-    def get_send_size(self) -> np.ndarray:
-        return self.direct_communicator.cartslicer.send_size
-
-    def adjoint(self, input_data: xp.ndarray, conv_adj: torch.nn.ConvTranspose2d):
+    def adjoint(
+        self, data: xp.ndarray, adjoint_op: torch.nn.ConvTranspose2d | None = None
+    ):
         r"""Implementation of the adjoint operator to update the input array
-        ``input_data`` (from data to image space).
+        ``data`` (from data to image space).
 
         Parameters
         ----------
-        input_data : ndarray[float]
+        data : ndarray[float]
             Input buffer array (data space), of size ``self.adjoint_communicator.cartslicer.tile_size``.
+        adjoint_op : torch.nn.ConvTranspose2d (Callable[[torch.Tensor], torch.Tensor])
+            Torch adjoint convolution operator.
 
         Returns
         -------
@@ -303,9 +314,15 @@ class MpiTorchConvolution(LinearOperator):
         The input is copied inside adjoint_buffer, on GPU. This intern buffer will be used for the communications and the computations.
         """
 
-        self.adjoint_buffer[self.adjoint_input_slice] = input_data
+        self.adjoint_buffer[self.adjoint_input_slice] = data
         self.adjoint_communicator.update_borders(self.adjoint_buffer)
         with torch.no_grad():
-            return torch2xp(conv_adj(xp2torch(self.adjoint_buffer)))[
+            return torch2xp(adjoint_op(xp2torch(self.adjoint_buffer)))[
                 self.slice_valid_coefficients
             ]
+
+    def get_recv_size(self) -> np.ndarray:
+        return self.direct_communicator.cartslicer.recv_size
+
+    def get_send_size(self) -> np.ndarray:
+        return self.direct_communicator.cartslicer.send_size

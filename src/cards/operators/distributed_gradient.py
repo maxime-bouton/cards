@@ -236,7 +236,7 @@ class DistributedGradient2d(LinearOperator):
             else:
                 self.adj_buffer += uh[..., :-1] - uh[..., 1:]
 
-    def forward(self, image: xp.ndarray) -> xp.ndarray:
+    def forward(self, image: xp.ndarray, op=None) -> xp.ndarray:
         # NOTE: in this function, ``image`` refers to the local image tile handled by the current process
         *_, h, w = self.direct_communicator.cartslicer.tile_size
         self.forward_buffer[..., :h, :w] = image
@@ -245,7 +245,7 @@ class DistributedGradient2d(LinearOperator):
 
         return self._chunk_gradient_2d(self.forward_buffer)
 
-    def adjoint(self, data: xp.ndarray) -> xp.ndarray:
+    def adjoint(self, data: xp.ndarray, adjoint_op=None) -> xp.ndarray:
         # NOTE: in this function, ``data`` refers to the local data tile handled by the current process
         *_, h, w = self.adjoint_communicator_v.cartslicer.tile_size
         self.adjoint_buffer_v[..., -h:, -w:] = data[1]
