@@ -158,13 +158,13 @@ class DistributedGradient2d(LinearOperator):
 
         Parameters
         ----------
-        uh : cupy.ndarray[float64 or complex128], 2d
+        uh : xp.ndarray
             Local chunk of the horizontal difference.
-        uv : cupy.ndarray[float64 or complex128], 2d
+        uv : xp.ndarray
             Local chunk of the vertical difference.
 
         ..note::
-            The array ``x`` is updated in-place. Backward overlap is expected.
+            Backward overlap is expected.
         """
         # TODO: need to check size of u?
         assert len(uh.shape) >= 2 and len(uh.shape) == len(uv.shape), (

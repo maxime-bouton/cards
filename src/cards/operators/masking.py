@@ -1,20 +1,37 @@
-"""Implementation of the loss operator for an inpainting problem."""
+r"""Implementation of the masking operator involved in inpainting problems."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
-# TODO: documentation
-
+import cards.backend as xp
 from cards.operators.linear_operator import LinearOperator
 
 
 class Masking(LinearOperator):
-    def __init__(self, mask):
+    r"""Implementation of a masking operator as involved in inpainting problems.
+
+    Parameters
+    ----------
+    mask : xp.ndarray
+        Mask tensor, with 0 corresponding to masked entries, 1 to observed entries.
+
+    Attributes
+    ----------
+    mask : xp.ndarray
+        Mask tensor, with 0 corresponding to masked entries, 1 to observed entries.
+
+    Note
+    ----
+    Masking is implemented as a Hadamard product, and not as a scropping operator (i.e., retaining only non-masked entries from an input tensor).
+    """
+
+    def __init__(self, mask: xp.ndarray):
+        super().__init__(mask.shape, mask.shape)
         self.mask = mask
 
-    def forward(self, input):
-        return self.mask * input
+    def forward(self, image: xp.ndarray) -> xp.ndarray:
+        return self.mask * image
 
-    def adjoint(self, input):
-        return self.mask * input
+    def adjoint(self, data: xp.ndarray) -> xp.ndarray:
+        return self.mask * data
