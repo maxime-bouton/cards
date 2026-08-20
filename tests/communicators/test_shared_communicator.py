@@ -36,9 +36,9 @@ def grid_shape(
 @pytest.mark.mpi
 def test_shared_comm(
     comm: MPI.Comm,
-    grid_shape,  #: tuple[int, ...],
-    input_shape,  #: tuple[int, ...],
-    kernel_shape,  #: tuple[int, ...],
+    grid_shape,
+    input_shape,
+    kernel_shape,
     seed: int,
 ) -> None:
     """
@@ -58,8 +58,8 @@ def test_shared_comm(
 
     kernel = rng.random(kernel_size, dtype=xp.float32)
 
-    grad_op = DistributedGradient2d(input_size, grid_size, comm)
-    conv_op = DistributedDftConvolution(input_size, kernel, comm, grid_size)
+    grad_op = DistributedGradient2d(input_shape, grid_shape, comm)
+    conv_op = DistributedDftConvolution(input_shape, grid_shape, comm, kernel)
 
     shared_comm = SharedCommunicator(
         comm,
