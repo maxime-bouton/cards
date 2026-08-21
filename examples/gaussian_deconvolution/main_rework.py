@@ -1,7 +1,3 @@
-import warnings
-
-warnings.filterwarnings("ignore", category=UserWarning, module="h5py")
-
 from gaussian_deconvolution_pnp import (
     GaussianDeconvObservationsHook,
     GaussianDeconvPnpMcmcHook,
