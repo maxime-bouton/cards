@@ -295,13 +295,38 @@ def compute_step_sizes_gaussian_deconvolution_pnp(
 
 
 class GaussianDeconvPnpMcmcHook:
+    def build_estimators(
+        self,
+        geom: PnpDeconvGeometry,
+        obs: GaussianDeconvObs,
+    ) -> tuple[dict[str, Variable], list[BaseEstimator]]:
+
+        y_var = Variable(
+            layout=geom.layout_y,
+            name="Y",
+            state=obs.y,
+            dtype=obs.y.dtype,
+        )
+
+        x_var = Variable(
+            layout=geom.layout_x,
+            name="X",
+            dtype=obs.x.dtype,
+        )
+
+        variables = {"X": x_var, "Y": y_var}
+        estimators: list[BaseEstimator] = [MMSEVar(x_var), CI(x_var, all_samples=True)]
+
+        return variables, estimators
+
     def build_model(
         self,
         ctx: ExecutionContext,
         cfg: dict,
         geom: PnpDeconvGeometry,
         obs: GaussianDeconvObs,
-    ) -> tuple[BaseModel, list[BaseEstimator]]:
+        vars_: dict[str, Variable],
+    ) -> BaseModel:
 
         reg_coef = cfg["parameters"]["reg_coef"]
         denoiser_params = cfg["parameters"]["denoiser"]
@@ -319,18 +344,8 @@ class GaussianDeconvPnpMcmcHook:
             eps,
         )
 
-        y_var = Variable(
-            layout=geom.layout_y,
-            name="Y",
-            state=obs.y,
-            dtype=obs.y.dtype,
-        )
-
-        x_var = Variable(
-            layout=geom.layout_x,
-            name="X",
-            dtype=obs.x.dtype,
-        )
+        x_var = vars_["X"]
+        y_var = vars_["Y"]
 
         model_params = GaussianDeconvolutionPnpParams(
             sigma2=obs.sigma2, reg_coeff=reg_coef
@@ -351,14 +366,10 @@ class GaussianDeconvPnpMcmcHook:
         else:
             Model = GaussianDeconvolutionPnpModel
 
-        model = Model(
+        return Model(
             params=model_params,
             convolution_operator=geom.H,
             y=y_var,
             X=X,
             denoiser=geom.D,
         )
-
-        estimators: list[BaseEstimator] = [MMSEVar(x_var), CI(x_var, all_samples=True)]
-
-        return model, estimators
