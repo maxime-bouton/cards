@@ -14,7 +14,6 @@ import numpy as np
 from mpi4py import MPI
 
 import cards.backend as xp
-from cards.estimators.base_estimator import BaseEstimator
 from cards.functionals.prox import l21_norm, prox_l21norm, prox_nonegativity
 from cards.models.base_gaussian_inpainting_model import (
     BaseGaussianInpaintingModel,
@@ -38,7 +37,6 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
 
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: GaussianInpaintingTvParameters,
         X: BaseTransitionKernel,
         Z: BaseTransitionKernel,
@@ -46,7 +44,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
         self.Z = Z
         self.split_coeff = params.split_coeff
         self.gradX = xp.zeros_like(X.current_state)
-        super().__init__(estimators, params, X)
+        super().__init__(params, X)
 
     def set_conditionals(self) -> None:
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
@@ -123,14 +121,13 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
 class GaussianInpaintingTvModel(BaseGaussianInpaintingTvModel):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: GaussianInpaintingTvParameters,
         X: BaseTransitionKernel,
         Z: BaseTransitionKernel,
     ):
         self.gradient_operator = Gradient2d(np.array([*X.current_state.shape]))
 
-        super().__init__(estimators, params, X, Z)
+        super().__init__(params, X, Z)
 
 
 class DistributedGaussianInpaintingTvModel(
@@ -139,7 +136,6 @@ class DistributedGaussianInpaintingTvModel(
 ):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: GaussianInpaintingTvParameters,
         X: BaseTransitionKernel,
         Z: BaseTransitionKernel,
@@ -153,7 +149,7 @@ class DistributedGaussianInpaintingTvModel(
         self.gradient_operator = DistributedGradient2d(
             self.full_size, grid_size, self.comm
         )
-        super().__init__(estimators, params, X, Z)
+        super().__init__(params, X, Z)
 
     def set_slices(self):
         """set_slices Describes which portion of the global buffer the current thread must handle.

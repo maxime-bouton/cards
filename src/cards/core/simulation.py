@@ -17,7 +17,6 @@ from cards.io.io_manager import IOManager
 from cards.io.path_builder import PathBuilder
 from cards.io.utils import read_json
 from cards.logger import build_logger
-from cards.models import BaseDistributedModel, BaseModel
 from cards.samplers import SamplerParameters
 from cards.samplers.sampler import Sampler
 
@@ -74,9 +73,7 @@ class Simulation(Generic[G, Obs]):
         try:
             geometry = self._run_geometry_phase()
             obs = self._run_observations_phase(geometry)
-            # FIXME: variable assigned but never used for now, teporarily commented
-            __ = self._run_mcmc_phase(geometry, obs)
-            # model = self._run_mcmc_phase(geometry, obs)
+            self._run_mcmc_phase(geometry, obs)
             # self._run_analysis_phase(model, sampler)
             self._log_phase("END")
         except Exception:
@@ -118,20 +115,17 @@ class Simulation(Generic[G, Obs]):
                 )
         return obs
 
-    def _run_mcmc_phase(
-        self, geometry: G, obs: Obs
-    ) -> BaseModel | BaseDistributedModel:
+    def _run_mcmc_phase(self, geometry: G, obs: Obs) -> None:
         self._log_phase("MCMC")
         with self._log_step("Build model"):
-            model = self.mcmc_hk.build_model(self.ctx, self.cfg, geometry, obs)
+            model, estim = self.mcmc_hk.build_model(self.ctx, self.cfg, geometry, obs)
         with self._log_step("Build sampler"):
             s_params = self.create_sampler_params()
             sampler = Sampler.create_from_context(
-                self.ctx, self.io_mng, model, s_params, self.log
+                self.ctx, self.io_mng, model, estim, s_params, self.log
             )
         with self._log_step("Run MCMC"):
             sampler.sample()
-        return model
 
     # def _run_analysis_phase(self, model: M, sampler: S) -> None:
     #     self._log_phase("ANALYSIS")

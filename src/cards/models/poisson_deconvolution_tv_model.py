@@ -9,7 +9,6 @@ r"""Implementation of a Poisson deconvolution model using a TV prior to reproduc
 import numpy as np
 
 import cards.backend as xp
-from cards.estimators.base_estimator import BaseEstimator
 from cards.functionals.prox import (
     KL,
     l21_norm,
@@ -34,7 +33,6 @@ from cards.transition_kernels.psgla import PSGLA
 class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DftConvolution | DistributedDftConvolution,
         gradient_operator: Gradient2d | DistributedGradient2d,
@@ -45,7 +43,7 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
         self.gradient_operator = gradient_operator
 
         self.gradX = xp.zeros_like(X.current_state)
-        super().__init__(estimators, params, convolution_operator, X, Z1, Z2)
+        super().__init__(params, convolution_operator, X, Z1, Z2)
 
     def set_conditionals(self) -> None:
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
@@ -148,7 +146,6 @@ class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
 class PoissonDeconvolutionTvModel(BasePoissonDeconvolutionTvModel):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DftConvolution,
         X: BaseTransitionKernel,
@@ -157,15 +154,7 @@ class PoissonDeconvolutionTvModel(BasePoissonDeconvolutionTvModel):
     ):
         gradient_operator = Gradient2d(np.array([*X.current_state.shape]))
 
-        super().__init__(
-            estimators,
-            params,
-            convolution_operator,
-            gradient_operator,
-            X,
-            Z1,
-            Z2,
-        )
+        super().__init__(params, convolution_operator, gradient_operator, X, Z1, Z2)
 
 
 class DistributedPoissonDeconvolutionTvModel(
@@ -174,7 +163,6 @@ class DistributedPoissonDeconvolutionTvModel(
 ):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DistributedDftConvolution,
         X: BaseTransitionKernel,
@@ -189,15 +177,7 @@ class DistributedPoissonDeconvolutionTvModel(
             convolution_operator.comm,
         )
 
-        super().__init__(
-            estimators,
-            params,
-            convolution_operator,
-            gradient_operator,
-            X,
-            Z1,
-            Z2,
-        )
+        super().__init__(params, convolution_operator, gradient_operator, X, Z1, Z2)
 
     def set_slices(self):
         """set_slices Describes which portion of the global buffer the current thread must handle.

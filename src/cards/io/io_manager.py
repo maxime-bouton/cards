@@ -373,23 +373,17 @@ class IOManager:
         slices : dict, optional
             Dictionary containing the slicer objects delimiting the position
             of the local buffers in the global buffers.
-
-        Notes
-        -----
-        Supports prefix splitting (e.g., variables "var_1", "var_2" will use
-        the shape and slice definitions mapped to the key "var").
         """
         global_shapes = global_shapes or {}
         slices = slices or {}
 
         for key, data in data_dict.items():
-            var_base = key.split("_")[0]
             self.write_array(
                 file=file,
                 name=key,
                 data=data,
-                global_shape=global_shapes.get(var_base),
-                dest_slice=slices.get(var_base),
+                global_shape=global_shapes.get(key),
+                dest_slice=slices.get(key),
             )
 
     def read_dict(
@@ -423,11 +417,10 @@ class IOManager:
 
         results = {}
         for key in keys:
-            var_base = key.split("_")[0]
             results[key] = self.read_array(
                 file=file,
                 name=key,
-                source_slice=slices.get(var_base),
+                source_slice=slices.get(key),
                 out=out_buffers.get(key),
             )
         return results

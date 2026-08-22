@@ -24,10 +24,10 @@ imageio = ">=2.37.0,<3"
 jupyter = ">=1.1.1,<2"
 matplotlib = ">=3.11.1,<4"
 mpi4py = ">=4.1.2,<5"
-numba = ">=0.66.0,<0.67"
-numpy = ">=2.4.6,<3"
+numba = ">=0.67.0,<0.68"
+numpy = ">=2.5.2,<3"
 scikit-image = ">=0.26.0,<0.27"
-scipy = ">=1.16.3,<2"
+scipy = ">=1.17.1,<2"
 tqdm = ">=4.70.0,<5"
 
 [tool.pixi.pypi-dependencies]
@@ -48,7 +48,7 @@ torchvision = ">=0.28.0,<0.29"
 platforms = ["linux-64-cuda-12"]
 
 [tool.pixi.feature.gpu.dependencies]
-cupy = ">=14.1.1,<15"
+cupy = ">=14.2.0,<15"
 pytorch = { version = ">=2.13.0,<3", build = "*cuda*" }
 torchvision = { version = ">=0.28.0,<0.29", build = "*cuda*" }
 ucx = ">=1.20.1,<2"
@@ -73,11 +73,11 @@ wily = ">=1.25.0, <2"
 
 [tool.pixi.feature.dev.dependencies]
 anaconda-client = ">=1.14.1,<2"
-conda-build = ">=26.7.0,<27"
+conda-build = ">=26.7.1,<27"
 isort = ">=8.0.1,<9"
-ruff = ">=0.16.2,<0.17"
-ty = ">=0.0.70,<0.0.71"
 prek = ">=0.4.8,<0.5"
+ruff = ">=0.16.4,<0.17"
+ty = ">=0.0.73,<0.0.74"
 
 [tool.pixi.package]
 name = { workspace = true }

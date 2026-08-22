@@ -13,8 +13,7 @@ samplers inherit.
 from abc import abstractmethod
 from dataclasses import dataclass
 
-import cards.backend as xp
-from cards.estimators.base_estimator import BaseEstimator
+from cards.core.variable import Variable
 from cards.models.base_model import BaseModel
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.distributed_dft_convolution import DistributedDftConvolution
@@ -28,12 +27,6 @@ class GaussianDeconvolutionParams:
     This data class encapsulates the known variables and hyperparameters required to
     define the forward model of this inverse problem.
     """
-
-    observations: xp.ndarray
-    r"""The observed degraded signal or image, often denoted as :math:`\mathbf{y}`."""
-
-    # kernel: xp.ndarray
-    # r"""The blur kernel defining the convolution operator."""
 
     sigma2: float
     r"""The variance of the additive white Gaussian noise, :math:`\sigma^2`."""
@@ -63,25 +56,24 @@ class BaseGaussianDeconvolutionModel(BaseModel):
 
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: GaussianDeconvolutionParams,
         convolution_operator: DftConvolution | DistributedDftConvolution,
+        y: Variable,
         X: BaseTransitionKernel,
+        *other_kernels: BaseTransitionKernel,
     ):
-        self.X = X
-        super().__init__(estimators)
+        super().__init__(X.var, *[k.var for k in other_kernels])
+        self.params = params
 
-        self.observations = params.observations
-        self.convolution_operator = convolution_operator
-
-        # model hyperparameters
         self.reg_coeff = params.reg_coeff
         self.sigma2 = params.sigma2
 
-        # internal buffers
-        self.convX = xp.zeros_like(self.observations)
+        self.H = convolution_operator
 
-        self.set_conditionals()
+        self.y = y
+        self.X = X
+
+        self.Hx = self.H.forward(self.X.state)
 
     @abstractmethod
     def set_conditionals(self) -> None:
@@ -92,3 +84,6 @@ class BaseGaussianDeconvolutionModel(BaseModel):
         kernels update their respective variables based on the specific
         inference algorithm (e.g., Gibbs sampling or PnP-ULA).
         """
+
+    def compile(self) -> None:
+        self.set_conditionals()

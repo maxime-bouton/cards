@@ -6,54 +6,36 @@ r"""Abstract class to implement probability transition kernels."""
 
 from abc import ABC, abstractmethod
 
+import numpy as np
+import torch
+
 import cards.backend as xp
+from cards.core.variable import Variable
 
 
 class BaseTransitionKernel(ABC):
     r"""Abstract transition kernel class to support the development of generic
     MCMC algorithms.
 
-    Attributes
+    Parameters
     ----------
-    current_state : cards.backend.xp.ndarray
-        Current state of the parameter handled by the transition kernel.
-    dtype : cards.backend.xp.dtype
-        Numeric type for the state, by default None (default configuration).
+    var : ~cards.core.variable.Variable
+        Variable to be sampled by the transition kernel.
 
     Methods
     -------
     mc_step()
         Update the state of the parameter.
-    get_state()
-        Return current state of the parameter.
     """
 
-    def __init__(
-        self,
-        state_shape: tuple[int, ...],
-        initial_value: xp.ndarray | None = None,
-        dtype: xp.dtype | None = None,
-    ) -> None:
-        r"""
-        Parameters
-        ----------
-        state_shape : Tuple[int, ...]
-            Shape of the parameter handled by the transition kernel.
-        initial_value : xp.ndarray | None, optional
-            Initial state value, by default None.
-        dtype : cards.backend.xp.dtype | None, optional
-            Parameter type, by default None.
-        """
-        self.dtype = dtype
-        if initial_value is not None:
-            self.current_state = initial_value.astype(self.dtype)
-        else:
-            self.current_state = xp.zeros(state_shape, dtype=self.dtype)
+    def __init__(self, var: Variable) -> None:
+        self.var = var
 
     @abstractmethod
-    def mc_step(self, rng) -> None:
+    def mc_step(self, rng: np.random.Generator | torch.Generator) -> None:
         r"""Update the state of the parameter."""
 
-    def get_state(self) -> xp.ndarray | None:
+    @property
+    def state(self) -> xp.ndarray:
         r"""Return current state of the parameter."""
-        return self.current_state
+        return self.var.state

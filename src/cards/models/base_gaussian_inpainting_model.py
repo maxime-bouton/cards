@@ -10,7 +10,6 @@ from abc import abstractmethod
 from dataclasses import dataclass
 
 import cards.backend as xp
-from cards.estimators.base_estimator import BaseEstimator
 from cards.models.base_model import BaseModel
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
@@ -26,12 +25,11 @@ class GaussianInpaintingParameters:
 class BaseGaussianInpaintingModel(BaseModel):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: GaussianInpaintingParameters,
         X: BaseTransitionKernel,
     ):
         self.X = X
-        super().__init__(estimators)
+        super().__init__()
 
         self.observations = params.observations
         self.mask = params.mask

@@ -10,7 +10,6 @@ from abc import abstractmethod
 from dataclasses import dataclass
 
 import cards.backend as xp
-from cards.estimators.base_estimator import BaseEstimator
 from cards.models.base_model import BaseModel
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.distributed_dft_convolution import DistributedDftConvolution
@@ -30,7 +29,6 @@ class PoissonDeconvolutionParameters:
 class BasePoissonDeconvolutionModel(BaseModel):
     def __init__(
         self,
-        estimators: list[BaseEstimator],
         params: PoissonDeconvolutionParameters,
         convolution_operator: DftConvolution | DistributedDftConvolution,
         X: BaseTransitionKernel,
@@ -41,7 +39,7 @@ class BasePoissonDeconvolutionModel(BaseModel):
         self.Z1 = Z1
         self.Z2 = Z2
         self.convolution_operator = convolution_operator
-        super().__init__(estimators)
+        super().__init__()
 
         self.observations = params.observations
 
