@@ -103,7 +103,7 @@ def test_mpi_save_and_load(
     """
     sync_comm = SyncCartesianCommunicator(
         ctx.comm,
-        ctx.generate_grid_size(3),
+        np.asarray(ctx.generate_grid_shape(3)),
         np.asarray(input_shape),
         np.zeros(len(input_shape)),
         np.zeros(len(input_shape)),
