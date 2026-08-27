@@ -13,6 +13,9 @@ import cards.backend as xp
 from cards.communicators.sync_cartesian_communicator import SyncCartesianCommunicator
 from cards.operators.linear_operator import LinearOperator
 
+# FIXME: add slicer to recover chunks from output parameter
+# adjoint_cartslicer
+
 
 class DistributedGradient2d(LinearOperator):
     r"""Synchronous distributed implementation of a 2D discrete gradient operator.
@@ -99,6 +102,18 @@ class DistributedGradient2d(LinearOperator):
             np.asarray(dim_extension + [0, 1]),
             backward=True,
             dtype=self.dtype,
+        )
+        self.adjoint_slice_global_buffer_to_tile = (
+            np.s_[:],
+            *self.direct_communicator.cartslicer.slice_global_buffer_to_tile,
+        )
+        self.adjoint_tile_size = (
+            np.asarray(
+                [
+                    2,
+                    *self.direct_communicator.cartslicer.tile_size,
+                ]
+            ),
         )
 
         # TODO: mutualize is_first/last -> communications ?

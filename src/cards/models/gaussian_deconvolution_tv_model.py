@@ -10,8 +10,10 @@ from abc import ABC
 from dataclasses import dataclass
 
 import numpy as np
+import torch
 
 import cards.backend as xp
+from cards.core.variable import Variable
 from cards.functionals.prox import l21_norm, prox_l21norm, prox_nonegativity
 from cards.models.base_gaussian_deconvolution_model import (
     BaseGaussianDeconvolutionModel,
@@ -22,6 +24,7 @@ from cards.operators.dft_convolution import DftConvolution
 from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
+from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 from cards.transition_kernels.gpu_psgla import GpuPSGLA
 from cards.transition_kernels.psgla import PSGLA
 
@@ -31,83 +34,59 @@ class GaussianDeconvolutionTvParams(GaussianDeconvolutionParams):
     split_coeff: float
 
 
-class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
+class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
     def __init__(
         self,
         params: GaussianDeconvolutionTvParams,
         convolution_operator: DftConvolution | DistributedDftConvolution,
         gradient_operator: Gradient2d | DistributedGradient2d,
-        X: PSGLA | GpuPSGLA,
-        Z: PSGLA | GpuPSGLA,
+        y: Variable,
+        X: BaseTransitionKernel,
+        Z: BaseTransitionKernel,
     ):
-        self.gradient_operator = gradient_operator
+        super().__init__(params, convolution_operator, y, X, Z)
+        self.G = gradient_operator
 
-        self.Z = Z
         self.split_coeff = params.split_coeff
-        self.gradX = xp.zeros_like(X.current_state)
-        super().__init__(params, convolution_operator, X)
+        self.Gx = xp.zeros_like(self.X.current_state)
 
     def set_conditionals(self):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
-        if (type(self.X) is PSGLA) or (type(self.X) is GpuPSGLA):
+        if isinstance(self.X, (PSGLA, GpuPSGLA)):
             self.X.prox = prox_nonegativity
             self.X.grad = lambda state: (
-                self.convolution_operator.adjoint(self.convX - self.observations)
-                / self.sigma2
-                + self.gradient_operator.adjoint(self.gradX - self.Z.current_state)
-                / self.split_coeff
+                self.H.adjoint(self.Hx - self.y) / self.sigma2
+                + self.G.adjoint(self.Gx - self.Z.current_state) / self.split_coeff
             )
         else:
             raise ValueError("Kernel type not yet supported by this model.")
 
-        if (type(self.Z) is PSGLA) or (type(self.Z) is GpuPSGLA):
+        if isinstance(self.Z, (PSGLA, GpuPSGLA)):
             self.Z.prox = lambda state: prox_l21norm(
                 state, lam=self.Z.step_size * self.reg_coeff
             )
-            self.Z.grad = lambda state: (state - self.gradX) / self.split_coeff
+            self.Z.grad = lambda state: (state - self.Gx) / self.split_coeff
         else:
             raise ValueError("Kernel type not yet supported by this model.")
 
-    def get_states(self) -> dict:
-        """Extracts the current state of the transition kernel and other variables of interest and return the in a dictionary.
+    def _on_states_updated(self):
+        self.Hx = self.H.forward(self.X.state)
+        self.Gx = self.G.forward(self.X.state)
 
-        Returns
-        -------
-        dict
-            Dictionary containing the curent states of the variables.
-        """
-        return {"X": self.X.get_state(), "Z": self.Z.get_state()}
-
-    def set_states(self, states):
-        """Read the dictionary given in entry and set the variables of the model to the values contained in it.
-        The keys used by the dictionary must be the same as in "get_states"
-
-        Parameters
-        ----------
-        states : dict
-            Dictionary containing new values for the variables of the model.
-        """
-
-        self.X.current_state = xp.asarray(states["X"], dtype=self.X.current_state.dtype)
-        self.Z.current_state = xp.asarray(states["Z"], dtype=self.Z.current_state.dtype)
-
-        self.gradX = self.gradient_operator.forward(self.X.current_state)
-        self.convX = self.convolution_operator.forward(self.X.current_state)
-
-    # TODO: revise typing here
-    def update(self, rng: np.random.Generator):
+    def update(self, rng: np.random.Generator | torch.Generator):
         """Gobal update of the model. Updates every kernel used by the model and computes annex variables.
 
         Parameters
         ----------
-        rng : np.random.Generator
+        rng : np.random.Generator | torch.Generator
             Random number generator, given by the sampler.
         """
 
         self.X.mc_step(rng)
-        # update cached buffer related to X
-        self.gradX = self.gradient_operator.forward(self.X.current_state)
-        self.convX = self.convolution_operator.forward(self.X.current_state)
+
+        # update cached buffers related to X
+        self.Hx = self.H.forward(self.X.current_state)
+        self.Gx = self.G.forward(self.X.current_state)
 
         self.Z.mc_step(rng)
 
@@ -119,61 +98,13 @@ class BaseGaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         float
             Potential of the targeted distribution.
         """
-        p = (0.5 / self.sigma2) * xp.sum((self.observations - self.convX) ** 2)
-        p += xp.sum((self.gradX - self.Z.current_state) ** 2) * (0.5 / self.split_coeff)
+        p = (0.5 / self.sigma2) * xp.sum((self.y - self.Hx) ** 2)
+        p += xp.sum((self.Gx - self.Z.current_state) ** 2) * (0.5 / self.split_coeff)
         p += self.reg_coeff * l21_norm(self.Z.current_state)
         return p
 
 
-class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionTvModel):
-    def __init__(
-        self,
-        params: GaussianDeconvolutionTvParams,
-        convolution_operator: DftConvolution,
-        X: PSGLA | GpuPSGLA,
-        Z: PSGLA | GpuPSGLA,
-    ):
-        gradient_operator = Gradient2d(np.asarray(X.current_state.shape))
-
-        super().__init__(params, convolution_operator, gradient_operator, X, Z)
-
-
 class DistributedGaussianDeconvolutionTvModel(
-    BaseGaussianDeconvolutionTvModel,
+    GaussianDeconvolutionTvModel,
     BaseDistributedModel,
-):
-    def __init__(
-        self,
-        params: GaussianDeconvolutionTvParams,
-        convolution_operator: DistributedDftConvolution,
-        X: PSGLA | GpuPSGLA,
-        Z: PSGLA | GpuPSGLA,
-    ):
-        self.full_size = convolution_operator.image_size
-
-        gradient_operator = DistributedGradient2d(
-            convolution_operator.image_size,
-            convolution_operator.grid_size,
-            convolution_operator.comm,
-        )
-
-        super().__init__(params, convolution_operator, gradient_operator, X, Z)
-
-    def set_slices(self):
-        """Describes which portion of the global buffer the current thread must handle."""
-        self.slices["X"] = (
-            self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile
-        )
-        self.slices["Z"] = (
-            np.s_[:],
-            *self.gradient_operator.direct_communicator.cartslicer.slice_global_buffer_to_tile,
-        )
-
-    def set_global_sizes(self):
-        """Describe the global sizes of several global buffers."""
-        self.global_sizes["X"] = np.asarray(self.full_size, dtype=int)
-        self.global_sizes["Z"] = np.asarray([2, *self.full_size], dtype=int)
-
-    def set_local_sizes(self):
-        self.local_sizes["X"] = self.X.current_state.shape
-        self.local_sizes["Z"] = self.Z.current_state.shape
+): ...

@@ -8,12 +8,16 @@ Algorithm (PSGLA) :cite:p:`Salim2020`.
 #
 # adpated from: https://gitlab.cristal.univ-lille.fr/pthouven/dsgs
 
-# TODO: fuse with GpuPSGLA if possible
+from abc import abstractmethod
 
-from typing import Optional
+import numpy as np
+import torch
 
 import cards.backend as xp
+from cards.core.variable import Variable
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
+
+# TODO: update documentation
 
 
 class PSGLA(BaseTransitionKernel):
@@ -27,35 +31,27 @@ class PSGLA(BaseTransitionKernel):
     and :math:`g: \mathbb{R}^N \mapsto (-\infty, +\infty]` with a known
     proximal operator.
 
+    Parameters
+    ----------
+    var : Variable
+        Shape of the parameter handled by the transition kernel.
+    step_size : float
+        Step-size value used in the transition.
+
     Attributes
     ----------
+    var : Variable
+        Shape of the parameter handled by the transition kernel.
     step_size : float
         Step-size value used in the PSGLA transition.
     """
 
     def __init__(
         self,
-        state_shape: tuple[int, ...],
+        var: Variable,
         step_size: float,
-        dtype: Optional[xp.dtype] = None,
-        initial_value: Optional[xp.ndarray] = None,
     ) -> None:
-        r"""PSGLA constructor.
-
-        Parameters
-        ----------
-        state_shape : tuple[int, ...]
-            Shape of the parameter handled by the transition kernel.
-        step_size : float
-            Step-size value used in the transition.
-        dtype : cards.backend.xp.dtype | None, optional
-            Parameter type, by default None.
-        initial_value: cards.backend.xp.ndarray | None, optional
-            Initial state value, by default None.
-        """
-        super(PSGLA, self).__init__(
-            state_shape, dtype=dtype, initial_value=initial_value
-        )
+        super().__init__(var)
         self.step_size = step_size
 
     # NOTE: prox and grad should be defined by the user
@@ -73,10 +69,38 @@ class PSGLA(BaseTransitionKernel):
         """
         raise ValueError("Gradient function not defined.")
 
-    def mc_step(self, rng: xp.random.Generator) -> None:
-        self.current_state = self.prox(
-            self.current_state
-            + (2 * self.step_size) ** 0.5
-            * rng.standard_normal(self.current_state.shape, dtype=self.dtype)
-            - self.step_size * self.grad(self.current_state)
+    @abstractmethod
+    def _noise(
+        self,
+        state: xp.ndarray,
+        rng,
+    ) -> xp.ndarray: ...
+
+    def mc_step(self, rng):
+        state = self.var.state
+
+        grad = self.grad(state)
+        noise = self._noise(state, rng)
+
+        self.var.state = self.prox(
+            state - self.step_size * grad + (2 * self.step_size) ** 0.5 * noise
+        )
+
+
+class CpuPSGLA(PSGLA):
+    def _noise(self, state: xp.ndarray, rng: np.random.Generator) -> xp.ndarray:
+        return rng.standard_normal(state.shape, dtype=state.dtype)
+
+
+class GpuPSGLA(PSGLA):
+    def _noise(self, state: xp.ndarray, rng: torch.Generator) -> xp.ndarray:
+        return xp.asarray(
+            torch.normal(
+                mean=0.0,
+                std=1.0,
+                size=state.shape,
+                generator=rng,
+                device=rng.device,
+            ),
+            state.dtype,
         )

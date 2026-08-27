@@ -6,10 +6,16 @@ r"""Abstract CPU implementation for the Moreau-Yosida Unajusted Langevin Algorit
 #
 # adpated from: https://gitlab.cristal.univ-lille.fr/pthouven/dsgs
 
-from typing import Optional
+from abc import abstractmethod
+
+import numpy as np
+import torch
 
 import cards.backend as xp
+from cards.core.variable import Variable
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
+
+# TODO: update documentation
 
 
 class MYULA(BaseTransitionKernel):
@@ -23,6 +29,24 @@ class MYULA(BaseTransitionKernel):
 
     with :math:`f \in \Gamma_0 (\mathbb{R}^N)` an :math:`L_f`-smooth function
     and :math:`g \in \Gamma_0 (\mathbb{R}^N)`.
+
+    Parameters
+    ----------
+    lipschitz_cst : float
+        Lipschitz constant :math:`L_f` of :math:`\nabla f`.
+    regularization_factor : float, optional
+        Multiplicative factor :math:`r \in (0, 1]` to adjust the
+        Moreau-Yosida smoothing parameter :math:`\lambda = r L_f^{-1}` of
+        :math:`g`, by default 1.0
+    stepsize_factor : float, optional
+        Stepsize factor :math:`s` reducing the default stepsize adopted for
+        MYULA, by default 0.5
+
+    Raises
+    ------
+    ValueError
+        The parameters ``stepsize_factor`` and ``regularization_factor``
+        both need to be <= 1.
 
     Attributes
     ----------
@@ -55,50 +79,20 @@ class MYULA(BaseTransitionKernel):
         \quad
         \gamma \in \big[ \lambda \big( 5 (L_f\lambda + 1) \big)^{-1},
         \lambda (L_f\lambda + 1)^{-1} \big)
+
+    Default recommendations from :cite:p:`Durmus2018` are used to set the
+    stepsize and the regularization parameters involved in the MYULA
+    transition kernel.
     """
 
     def __init__(
         self,
-        state_shape: tuple[int, ...],
+        var: Variable,
         lipschitz_cst: float,
         regularization_factor: float = 1.0,
         stepsize_factor: float = 0.5,
-        dtype: Optional[xp.dtype] = None,
-        initial_value: xp.ndarray | None = None,
     ) -> None:
-        r"""MYULA Constructor.
-
-        Default recommendations from :cite:p:`Durmus2018` are used to set the
-        stepsize and the regularization parameters involved in the MYULA
-        transition kernel.
-
-        Parameters
-        ----------
-        state_shape : tuple[int, ...]
-            Shape of the parameter handled by the transition kernel.
-        lipschitz_cst : float
-            Lipschitz constant :math:`L_f` of :math:`\nabla f`.
-        regularization_factor : float, optional
-            Multiplicative factor :math:`r \in (0, 1]` to adjust the
-            Moreau-Yosida smoothing parameter :math:`\lambda = r L_f^{-1}` of
-            :math:`g`, by default 1.0
-        stepsize_factor : float, optional
-            Stepsize factor :math:`s` reducing the default stepsize adopted for
-            MYULA, by default 0.5
-        dtype : xp.dtype | None, optional
-            Parameter type, by default None.
-        initial_value: xp.ndarray | None, optional
-            Initial state value, by default None.
-
-        Raises
-        ------
-        ValueError
-            The parameters ``stepsize_factor`` and ``regularization_factor``
-            both need to be <= 1.
-        """
-        super(MYULA, self).__init__(
-            state_shape, dtype=dtype, initial_value=initial_value
-        )
+        super().__init__(var)
 
         if xp.minimum(stepsize_factor, regularization_factor) > 1:
             raise ValueError(
@@ -166,11 +160,42 @@ class MYULA(BaseTransitionKernel):
         """
         raise ValueError("Gradient function not defined.")
 
+    @abstractmethod
+    def _noise(
+        self,
+        state: xp.ndarray,
+        rng,
+    ) -> xp.ndarray: ...
+
     def mc_step(self, rng: xp.random.Generator) -> None:
-        self.current_state = (
-            (1 - self._cst2) * self.current_state
-            - self.step_size * self.grad(self.current_state)
-            + self._cst2 * self.prox(self.current_state)
-            + self._cst1
-            * rng.standard_normal(self.current_state.shape, dtype=self.dtype)
+        state = self.var.state
+
+        grad = self.grad(state)
+        prox = self.prox(state)
+        noise = self._noise(state, rng)
+
+        self.var.state = (
+            (1 - self._cst2) * state
+            - self.step_size * grad
+            + self._cst2 * prox
+            + self._cst1 * noise
+        )
+
+
+class CpuMYULA(MYULA):
+    def _noise(self, state: xp.ndarray, rng: np.random.Generator) -> xp.ndarray:
+        return rng.standard_normal(state.shape, dtype=state.dtype)
+
+
+class GpuMYULA(MYULA):
+    def _noise(self, state: xp.ndarray, rng: torch.Generator) -> xp.ndarray:
+        return xp.asarray(
+            torch.normal(
+                mean=0.0,
+                std=1.0,
+                size=state.shape,
+                generator=rng,
+                device=rng.device,
+            ),
+            state.dtype,
         )

@@ -6,13 +6,19 @@ gradient Langevin algorithm (PnP-PSGLA) :cite:p:`Renaud2025`.
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
+from abc import abstractmethod
+
+import numpy as np
 import torch
 
 import cards.backend as xp
+from cards.core.variable import Variable
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
+# TODO: update documentation
 
-class GpuPnpSGLA(BaseTransitionKernel):
+
+class PnpSGLA(BaseTransitionKernel):
     r"""PnP-PSGLA transition kernel.
 
     PnP-PSGLA transition kernel :cite:p:`Renaud2025`, whose negative
@@ -20,18 +26,27 @@ class GpuPnpSGLA(BaseTransitionKernel):
 
     Attributes
     ----------
+    var : Variable
+        ...
     step_size : float
         Step-size value used in the PnP-PSGLA transition.
+    epsilon : float
+        Standard deviation of the denoiser.
+
+    Attributes
+    ----------
+    step_size : float
+        Step-size value used in the PnP-PSGLA transition.
+    epsilon : float
+        Standard deviation of the denoiser.
     """
 
     def __init__(
         self,
-        state_shape: tuple[int, ...],
+        var: Variable,
         step_size: float,
-        dtype: xp.dtype | None = None,
-        initial_value: xp.ndarray | None = None,
     ) -> None:
-        r"""Constructor of the GpuPnpSGLA class.
+        r"""Constructor of the PnpSGLA class.
 
         Parameters
         ----------
@@ -44,7 +59,7 @@ class GpuPnpSGLA(BaseTransitionKernel):
         initial_value : xp.ndarray | None, optional
             Initial state value, by default None.
         """
-        super().__init__(state_shape, dtype=dtype, initial_value=initial_value)
+        super().__init__(var)
         self.step_size = step_size
 
     def denoise(self, state: xp.ndarray) -> xp.ndarray:
@@ -86,22 +101,36 @@ class GpuPnpSGLA(BaseTransitionKernel):
         """
         raise ValueError("Gradient function not defined.")
 
-    def mc_step(self, rng: torch.Generator):
-        self.current_state = self.denoise(
-            self.current_state
-            + (2 * self.step_size) ** 0.5
-            * xp.from_dlpack(
-                torch.normal(
-                    mean=0,
-                    std=1,
-                    size=self.current_state.shape,
-                    generator=rng,
-                    device=rng.device,
-                )
-                # TODO: proper dtype handling in the torch.normal call
-                # dtype=self.current_state.dtype,
-                # https://docs.pytorch.org/docs/stable/generated/torch.set_default_dtype.html#torch.set_default_dtype
-                # https://github.com/pytorch/pytorch/issues/40568
-            )
-            - self.step_size * self.grad(self.current_state)
+    @abstractmethod
+    def _noise(
+        self,
+        state: xp.ndarray,
+        rng,
+    ) -> xp.ndarray: ...
+
+    def mc_step(self, rng):
+        state = self.var.state
+        grad = self.grad(state)
+        noise = self._noise(state, rng)
+        self.var.state = self.denoise(
+            state - self.step_size * grad + (2 * self.step_size) ** 0.5 * noise
+        )
+
+
+class CpuPnpSGLA(PnpSGLA):
+    def _noise(self, state: xp.ndarray, rng: np.random.Generator) -> xp.ndarray:
+        return rng.standard_normal(state.shape, dtype=state.dtype)
+
+
+class GpuPnpSGLA(PnpSGLA):
+    def _noise(self, state: xp.ndarray, rng: torch.Generator) -> xp.ndarray:
+        return xp.asarray(
+            torch.normal(
+                mean=0.0,
+                std=1.0,
+                size=state.shape,
+                generator=rng,
+                device=rng.device,
+            ),
+            state.dtype,
         )

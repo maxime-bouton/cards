@@ -15,6 +15,8 @@ import cards.backend as xp
 from cards.core.variable import Variable
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
+# TODO: update documentation
+
 
 class PnpULA(BaseTransitionKernel):
     r"""Generic implementation of PnP-ULA.
