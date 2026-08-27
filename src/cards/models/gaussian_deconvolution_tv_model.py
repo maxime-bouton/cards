@@ -4,7 +4,7 @@ r"""Implementation of a Gaussian deconvolution model under a TV prior to reprodu
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
-# TODO: documentation
+# TODO: documentation + testing
 
 from abc import ABC
 from dataclasses import dataclass
@@ -25,7 +25,6 @@ from cards.operators.distributed_dft_convolution import DistributedDftConvolutio
 from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
-from cards.transition_kernels.gpu_psgla import GpuPSGLA
 from cards.transition_kernels.psgla import PSGLA
 
 
@@ -46,22 +45,21 @@ class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
     ):
         super().__init__(params, convolution_operator, y, X, Z)
         self.G = gradient_operator
-
         self.split_coeff = params.split_coeff
-        self.Gx = xp.zeros_like(self.X.current_state)
+        self.reg_coeff = params.reg_coeff
 
     def set_conditionals(self):
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
-        if isinstance(self.X, (PSGLA, GpuPSGLA)):
+        if isinstance(self.X, PSGLA):
             self.X.prox = prox_nonegativity
             self.X.grad = lambda state: (
-                self.H.adjoint(self.Hx - self.y) / self.sigma2
-                + self.G.adjoint(self.Gx - self.Z.current_state) / self.split_coeff
+                self.H.adjoint(self.Hx - self.y.state) / self.sigma2
+                + self.G.adjoint(self.Gx - self.Z.state) / self.split_coeff
             )
         else:
             raise ValueError("Kernel type not yet supported by this model.")
 
-        if isinstance(self.Z, (PSGLA, GpuPSGLA)):
+        if isinstance(self.Z, PSGLA):
             self.Z.prox = lambda state: prox_l21norm(
                 state, lam=self.Z.step_size * self.reg_coeff
             )
@@ -85,8 +83,8 @@ class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         self.X.mc_step(rng)
 
         # update cached buffers related to X
-        self.Hx = self.H.forward(self.X.current_state)
-        self.Gx = self.G.forward(self.X.current_state)
+        self.Hx = self.H.forward(self.X.state)
+        self.Gx = self.G.forward(self.X.state)
 
         self.Z.mc_step(rng)
 
@@ -99,8 +97,8 @@ class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
             Potential of the targeted distribution.
         """
         p = (0.5 / self.sigma2) * xp.sum((self.y - self.Hx) ** 2)
-        p += xp.sum((self.Gx - self.Z.current_state) ** 2) * (0.5 / self.split_coeff)
-        p += self.reg_coeff * l21_norm(self.Z.current_state)
+        p += xp.sum((self.Gx - self.Z.state) ** 2) * (0.5 / self.split_coeff)
+        p += self.reg_coeff * l21_norm(self.Z.state)
         return p
 
 
