@@ -23,3 +23,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+# python examples/gaussian_deconvolution/main_rework.py --config examples/new_config.json --mode serial --device gpu
