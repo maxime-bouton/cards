@@ -146,7 +146,7 @@ class TvDeconvGeometryHook:
         z_shape = tuple(G.data_shape)
         tile_x_shape = tuple(slicer_x.tile_size) if slicer_x else x_shape
         tile_y_shape = tuple(slicer_y.tile_size) if slicer_y else y_shape
-        tile_z_shape = (*G.adjoint_tile_size,) if ctx.is_mpi else None
+        tile_z_shape = (*G.adjoint_tile_size,) if ctx.is_mpi else z_shape
         layout_x = Layout(tile_x_shape, x_shape, slice_x)
         layout_y = Layout(tile_y_shape, y_shape, slice_y)
         layout_z = Layout(tile_z_shape, z_shape, slice_z)
@@ -271,7 +271,7 @@ def compute_step_sizes_gaussian_deconvolution_tv(
     return step_size_X, step_size_Z
 
 
-class GaussianDeconvPnpMcmcHook:
+class GaussianDeconvTvMcmcHook:
     def build_model(
         self,
         ctx: ExecutionContext,

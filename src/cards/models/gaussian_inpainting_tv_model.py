@@ -23,7 +23,6 @@ from cards.models.base_model import BaseDistributedModel
 from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
-from cards.transition_kernels.gpu_psgla import GpuPSGLA
 from cards.transition_kernels.psgla import PSGLA
 
 
@@ -48,7 +47,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
 
     def set_conditionals(self) -> None:
         """Set the conditionals of the transition kernels including the coupling between those kernels."""
-        if (type(self.X) is PSGLA) or (type(self.X) is GpuPSGLA):
+        if isinstance(self.X, PSGLA):
             self.X.prox = prox_nonegativity
             self.X.grad = lambda state: (
                 self.mask * (state - self.observations) / self.sigma2
@@ -58,7 +57,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
         else:
             raise ValueError("Kernel type not yet supported by this model.")
 
-        if (type(self.Z) is PSGLA) or (type(self.Z) is GpuPSGLA):
+        if isinstance(self.Z, PSGLA):
             self.Z.prox = lambda state: prox_l21norm(
                 state, lam=self.Z.step_size * self.reg_coeff, axis=0
             )

@@ -21,10 +21,9 @@ from cards.models.base_poisson_deconvolution_model import (
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
-from cards.transition_kernels.gpu_pnp_sgla import GpuPnpSGLA
-from cards.transition_kernels.gpu_psgla import GpuPSGLA
+from cards.transition_kernels.pnp_sgla import GpuPnpSGLA
 from cards.transition_kernels.pnp_ula import GpuPnpULA
-from cards.transition_kernels.psgla import PSGLA
+from cards.transition_kernels.psgla import PSGLA, GpuPSGLA
 
 
 class BasePoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):

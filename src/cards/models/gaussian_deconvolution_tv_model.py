@@ -4,7 +4,7 @@ r"""Implementation of a Gaussian deconvolution model under a TV prior to reprodu
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
-# TODO: documentation + testing
+# TODO: documentation
 
 from abc import ABC
 from dataclasses import dataclass
@@ -44,7 +44,11 @@ class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         Z: BaseTransitionKernel,
     ):
         super().__init__(params, convolution_operator, y, X, Z)
+
+        self.Z = Z
         self.G = gradient_operator
+        self.Gx = self.G.forward(self.X.state)
+
         self.split_coeff = params.split_coeff
         self.reg_coeff = params.reg_coeff
 
@@ -96,7 +100,7 @@ class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         float
             Potential of the targeted distribution.
         """
-        p = (0.5 / self.sigma2) * xp.sum((self.y - self.Hx) ** 2)
+        p = (0.5 / self.sigma2) * xp.sum((self.y.state - self.Hx) ** 2)
         p += xp.sum((self.Gx - self.Z.state) ** 2) * (0.5 / self.split_coeff)
         p += self.reg_coeff * l21_norm(self.Z.state)
         return p

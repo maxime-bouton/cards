@@ -19,7 +19,7 @@ from cards.models.base_gaussian_inpainting_model import (
 )
 from cards.models.base_model import BaseDistributedModel
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
-from cards.transition_kernels.gpu_pnp_sgla import GpuPnpSGLA
+from cards.transition_kernels.pnp_sgla import GpuPnpSGLA
 from cards.transition_kernels.pnp_ula import GpuPnpULA
 
 

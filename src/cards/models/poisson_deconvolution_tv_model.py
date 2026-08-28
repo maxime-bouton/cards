@@ -26,8 +26,7 @@ from cards.operators.distributed_dft_convolution import DistributedDftConvolutio
 from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
-from cards.transition_kernels.gpu_psgla import GpuPSGLA
-from cards.transition_kernels.psgla import PSGLA
+from cards.transition_kernels.psgla import PSGLA, GpuPSGLA
 
 
 class BasePoissonDeconvolutionTvModel(BasePoissonDeconvolutionModel):
