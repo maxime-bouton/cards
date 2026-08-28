@@ -1,4 +1,4 @@
-r"""Abstract GPU implementation of the Plug-and-Playp proximal stochastic
+r"""Implementation of the Plug-and-Playp proximal stochastic
 gradient Langevin algorithm (PnP-PSGLA) :cite:p:`Renaud2025`.
 """
 

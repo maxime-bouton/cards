@@ -1,6 +1,4 @@
-r"""Abstract CPU implementation for the Proximal Stochastic Gradient Langevin
-Algorithm (PSGLA) :cite:p:`Salim2020`.
-"""
+r"""Implementation for the Proximal Stochastic Gradient Langevin Algorithm (PSGLA) :cite:p:`Salim2020`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #

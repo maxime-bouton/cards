@@ -1,4 +1,6 @@
-r"""Abstract CPU implementation for the Moreau-Yosida Unajusted Langevin Algorithm (MYULA) :cite:p:`Durmus2018`."""
+r"""Implementation of the Moreau-Yosida Unajusted Langevin Algorithm
+(MYULA) :cite:p:`Durmus2018`.
+"""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #

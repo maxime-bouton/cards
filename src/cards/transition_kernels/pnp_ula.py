@@ -1,4 +1,4 @@
-r"""Implementations of the Plug-and-Play Unadjusted Langevin
+r"""Implementation of the Plug-and-Play Unadjusted Langevin
 (PnP-ULA) algorithm :cite:p:`Laumont2022`.
 """
 
