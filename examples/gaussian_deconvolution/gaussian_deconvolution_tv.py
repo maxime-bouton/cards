@@ -140,10 +140,10 @@ class TvDeconvGeometryHook:
         slicer_y = H.adjoint_communicator.cartslicer if ctx.is_mpi else None
         slice_x = slicer_x.slice_global_buffer_to_tile if slicer_x else None
         slice_y = slicer_y.slice_global_buffer_to_tile if slicer_y else None
-        slice_z = G.slice_adjoint_global_buffer_to_tile if ctx.is_mpi else None
+        slice_z = G.adjoint_slice_global_buffer_to_tile if ctx.is_mpi else None
         x_shape = gt_shape
-        y_shape = tuple(H.data_shape)
-        z_shape = tuple(G.data_shape)
+        y_shape = (*H.data_shape,)
+        z_shape = (*G.data_shape,)
         tile_x_shape = tuple(slicer_x.tile_size) if slicer_x else x_shape
         tile_y_shape = tuple(slicer_y.tile_size) if slicer_y else y_shape
         tile_z_shape = (*G.adjoint_tile_size,) if ctx.is_mpi else z_shape
@@ -301,6 +301,7 @@ class GaussianDeconvTvMcmcHook:
             dtype=obs.x.dtype,
         )
 
+        # FIXME: issue here in MPI settings
         z_var = Variable(
             layout=geom.layout_z,
             name="Z",

@@ -107,13 +107,8 @@ class DistributedGradient2d(LinearOperator):
             np.s_[:],
             *self.direct_communicator.cartslicer.slice_global_buffer_to_tile,
         )
-        self.adjoint_tile_size = (
-            np.asarray(
-                [
-                    2,
-                    *self.direct_communicator.cartslicer.tile_size,
-                ]
-            ),
+        self.adjoint_tile_size = np.asarray(
+            [2, *self.direct_communicator.cartslicer.tile_size]
         )
 
         # TODO: mutualize is_first/last -> communications ?

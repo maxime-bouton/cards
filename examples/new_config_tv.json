@@ -1,7 +1,7 @@
 {
     "application": {
         "type": "gaussian_deconvolution",
-        "name": "tv_ddfb"
+        "name": "tv"
     },
     "io": {
         "root_dir_path": "produced_data",

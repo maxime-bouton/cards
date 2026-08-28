@@ -144,7 +144,7 @@ def local_split_range(
         start = -1 + index * step
     stop = np.rint(start + step)
     start = np.rint(start)
-    rg = np.array([start + 1, stop], dtype="i")
+    rg = np.asarray([start + 1, stop])
     # if the facet overlaps with a neighbour
     if overlap > 0 and nchunks > 1:
         if backward:

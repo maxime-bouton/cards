@@ -55,6 +55,11 @@ class Simulation(Generic[G, Obs]):
         paths: PathBuilder | None = None,
     ) -> "Simulation":
         args = parse_args()
+        # ! only for debugging
+        # args.config = "examples/new_config_tv.json"
+        # args.mode = "mpi"
+        # args.device = "cpu"
+        # !
         return cls(
             geom_hk,
             obs_hk,
