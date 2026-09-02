@@ -272,21 +272,11 @@ def compute_step_sizes_gaussian_deconvolution_tv(
 
 
 class GaussianDeconvTvMcmcHook:
-    def build_model(
+    def build_estimators(
         self,
-        ctx: ExecutionContext,
-        cfg: dict,
         geom: TvDeconvGeometry,
         obs: GaussianDeconvObs,
-    ) -> tuple[BaseModel, list[BaseEstimator]]:
-
-        reg_coef = cfg["parameters"]["reg_coef"]
-        split_coef = cfg["parameters"]["split_coef"]
-        step_size_X, step_size_Z = compute_step_sizes_gaussian_deconvolution_tv(
-            obs.sigma2,
-            obs.kernel,
-            split_coef,
-        )
+    ) -> tuple[dict[str, Variable], list[BaseEstimator]]:
 
         y_var = Variable(
             layout=geom.layout_y,
@@ -301,12 +291,37 @@ class GaussianDeconvTvMcmcHook:
             dtype=obs.x.dtype,
         )
 
-        # FIXME: issue here in MPI settings
         z_var = Variable(
             layout=geom.layout_z,
             name="Z",
             dtype=obs.x.dtype,
         )
+
+        variables = {"X": x_var, "Y": y_var, "Z": z_var}
+        estimators: list[BaseEstimator] = [MMSEVar(x_var), CI(x_var, all_samples=True)]
+
+        return variables, estimators
+
+    def build_model(
+        self,
+        ctx: ExecutionContext,
+        cfg: dict,
+        geom: TvDeconvGeometry,
+        obs: GaussianDeconvObs,
+        vars_: dict[str, Variable],
+    ) -> BaseModel:
+
+        reg_coef = cfg["parameters"]["reg_coef"]
+        split_coef = cfg["parameters"]["split_coef"]
+        step_size_X, step_size_Z = compute_step_sizes_gaussian_deconvolution_tv(
+            obs.sigma2,
+            obs.kernel,
+            split_coef,
+        )
+
+        x_var = vars_["X"]
+        y_var = vars_["Y"]
+        z_var = vars_["Z"]
 
         model_params = GaussianDeconvolutionTvParams(obs.sigma2, reg_coef, split_coef)
 
@@ -327,7 +342,7 @@ class GaussianDeconvTvMcmcHook:
         else:
             Model = GaussianDeconvolutionTvModel
 
-        model = Model(
+        return Model(
             params=model_params,
             convolution_operator=geom.H,
             gradient_operator=geom.G,
@@ -335,7 +350,3 @@ class GaussianDeconvTvMcmcHook:
             X=X,
             Z=Z,
         )
-
-        estimators: list[BaseEstimator] = [MMSEVar(x_var), CI(x_var, all_samples=True)]
-
-        return model, estimators
