@@ -27,7 +27,7 @@ class Simulation(Generic[G, Obs]):
         geometry_hk: GeometryHook[G],
         obs_hk: ObservationsHook[G, Obs],
         mcmc_hk: McmcHook[G, Obs],
-        # analysis_hk: AnalysisHook,
+        # analysis_hk: AnalysisHook[G, Obs],
         mode: Literal["serial", "mpi"],
         device: Literal["cpu", "gpu"],
         cfg: dict | Path | str,
@@ -51,7 +51,7 @@ class Simulation(Generic[G, Obs]):
         geom_hk: GeometryHook[G],
         obs_hk: ObservationsHook[G, Obs],
         mcmc_hk: McmcHook[G, Obs],
-        # analysis_hk: AnalysisHook,
+        # analysis_hk: AnalysisHook[G, Obs],
         paths: PathBuilder | None = None,
     ) -> "Simulation":
         args = parse_args()
@@ -122,8 +122,10 @@ class Simulation(Generic[G, Obs]):
 
     def _run_mcmc_phase(self, geometry: G, obs: Obs) -> None:
         self._log_phase("MCMC")
+        with self._log_step("Build estimators"):
+            vars_, estim = self.mcmc_hk.build_estimators(geometry, obs)
         with self._log_step("Build model"):
-            model, estim = self.mcmc_hk.build_model(self.ctx, self.cfg, geometry, obs)
+            model = self.mcmc_hk.build_model(self.ctx, self.cfg, geometry, obs, vars_)
         with self._log_step("Build sampler"):
             s_params = self.create_sampler_params()
             sampler = Sampler.create_from_context(
@@ -132,12 +134,23 @@ class Simulation(Generic[G, Obs]):
         with self._log_step("Run MCMC"):
             sampler.sample()
 
-    # def _run_analysis_phase(self, model: M, sampler: S) -> None:
+    # def _run_analysis_phase(
+    #     self, geometry: G, obs: Obs, estimators: list[BaseEstimator]
+    # ) -> None:
     #     self._log_phase("ANALYSIS")
-    #     with self._log_step("Setup analysis"):
-    #         self.analysis_hk.setup_analysis(self.cfg, self.ctx, model)
+    #     ckpt_dir = self.paths.get_ckpt_dir()
     #     with self._log_step("Run analysis"):
-    #         self.analysis_hk.run_analysis(model, sampler)
+    #         results = self.analysis_hk.run_analysis(
+    #             self.ctx, self.io_mng, self.cfg, geometry, obs, estimators, ckpt_dir
+    #         )
+    #     with self._log_step("Save analysis results"):
+    #         self.analysis_hk.save_results(
+    #             self.ctx, self.io_mng, results, self.paths.get_analysis_dir()
+    #         )
+    #     with self._log_step("Visualize analysis results"):
+    #         self.analysis_hk.visualize_results(
+    #             self.ctx, results, self.paths.get_analysis_dir()
+    #         )
 
     def create_sampler_params(self) -> SamplerParameters:
         s_params = self.cfg["sampler"]
