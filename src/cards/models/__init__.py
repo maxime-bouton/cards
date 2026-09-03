@@ -82,11 +82,10 @@ from .poisson_deconvolution_pnp_model import (
     DistributedPoissonDeconvolutionPnpModel,
     PoissonDeconvolutionPnpModel,
 )
-
-# from .poisson_deconvolution_tv_model import (
-#     DistributedPoissonDeconvolutionTvModel,
-#     PoissonDeconvolutionTvModel,
-# )
+from .poisson_deconvolution_tv_model import (
+    DistributedPoissonDeconvolutionTvModel,
+    PoissonDeconvolutionTvModel,
+)
 
 __all__ = [
     "BaseDistributedModel",
@@ -96,11 +95,11 @@ __all__ = [
     "DistributedGaussianInpaintingPnpModel",
     "DistributedGaussianInpaintingTvModel",
     "DistributedPoissonDeconvolutionPnpModel",
-    # "DistributedPoissonDeconvolutionTvModel",
+    "DistributedPoissonDeconvolutionTvModel",
     "GaussianDeconvolutionPnpModel",
     "GaussianDeconvolutionTvModel",
     "GaussianInpaintingPnpModel",
     "GaussianInpaintingTvModel",
     "PoissonDeconvolutionPnpModel",
-    # "PoissonDeconvolutionTvModel",
+    "PoissonDeconvolutionTvModel",
 ]

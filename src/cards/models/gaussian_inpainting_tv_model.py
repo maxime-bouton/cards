@@ -28,7 +28,7 @@ from cards.transition_kernels.psgla import PSGLA
 
 @dataclass
 class GaussianInpaintingTvParameters(GaussianInpaintingParameters):
-    split_coeff: float
+    split_coef: float
 
 
 class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
@@ -41,7 +41,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
         Z: BaseTransitionKernel,
     ):
         self.Z = Z
-        self.split_coeff = params.split_coeff
+        self.split_coef = params.split_coef
         self.gradX = xp.zeros_like(X.current_state)
         super().__init__(params, X)
 
@@ -52,7 +52,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
             self.X.grad = lambda state: (
                 self.mask * (state - self.observations) / self.sigma2
                 + self.gradient_operator.adjoint(self.gradX - self.Z.current_state)
-                / self.split_coeff
+                / self.split_coef
             )
         else:
             raise ValueError("Kernel type not yet supported by this model.")
@@ -61,7 +61,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
             self.Z.prox = lambda state: prox_l21norm(
                 state, lam=self.Z.step_size * self.reg_coeff, axis=0
             )
-            self.Z.grad = lambda state: (state - self.gradX) / self.split_coeff
+            self.Z.grad = lambda state: (state - self.gradX) / self.split_coef
         else:
             raise ValueError("Kernel type not yet supported by this model.")
 
@@ -112,7 +112,7 @@ class BaseGaussianInpaintingTvModel(BaseGaussianInpaintingModel):
         p = xp.sum((self.observations - self.mask * self.X.current_state) ** 2) / (
             2 * self.sigma2
         )
-        p += xp.sum((self.gradX - self.Z.current_state) ** 2) / (2 * self.split_coeff)
+        p += xp.sum((self.gradX - self.Z.current_state) ** 2) / (2 * self.split_coef)
         p += self.reg_coeff * l21_norm(self.Z.current_state)
         return p
 

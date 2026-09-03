@@ -30,7 +30,7 @@ from cards.transition_kernels.psgla import PSGLA
 
 @dataclass
 class GaussianDeconvolutionTvParams(GaussianDeconvolutionParams):
-    split_coeff: float
+    split_coef: float
 
 
 class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
@@ -49,7 +49,7 @@ class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
         self.G = gradient_operator
         self.Gx = self.G.forward(self.X.state)
 
-        self.split_coeff = params.split_coeff
+        self.split_coef = params.split_coef
         self.reg_coeff = params.reg_coeff
 
     def set_conditionals(self):
@@ -58,7 +58,7 @@ class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
             self.X.prox = prox_nonegativity
             self.X.grad = lambda state: (
                 self.H.adjoint(self.Hx - self.y.state) / self.sigma2
-                + self.G.adjoint(self.Gx - self.Z.state) / self.split_coeff
+                + self.G.adjoint(self.Gx - self.Z.state) / self.split_coef
             )
         else:
             raise ValueError("Kernel type not yet supported by this model.")
@@ -67,7 +67,7 @@ class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
             self.Z.prox = lambda state: prox_l21norm(
                 state, lam=self.Z.step_size * self.reg_coeff
             )
-            self.Z.grad = lambda state: (state - self.Gx) / self.split_coeff
+            self.Z.grad = lambda state: (state - self.Gx) / self.split_coef
         else:
             raise ValueError("Kernel type not yet supported by this model.")
 
@@ -101,7 +101,7 @@ class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
             Potential of the targeted distribution.
         """
         p = (0.5 / self.sigma2) * xp.sum((self.y.state - self.Hx) ** 2)
-        p += xp.sum((self.Gx - self.Z.state) ** 2) * (0.5 / self.split_coeff)
+        p += xp.sum((self.Gx - self.Z.state) ** 2) * (0.5 / self.split_coef)
         p += self.reg_coeff * l21_norm(self.Z.state)
         return p
 
