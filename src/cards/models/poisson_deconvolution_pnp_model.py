@@ -24,7 +24,6 @@ from cards.models.base_poisson_deconvolution_model import (
 from cards.operators.dft_convolution import DftConvolution
 from cards.operators.distributed_dft_convolution import DistributedDftConvolution
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
-from cards.transition_kernels.pnp_sgla import PnpSGLA
 from cards.transition_kernels.pnp_ula import PnpULA
 from cards.transition_kernels.psgla import PSGLA
 
@@ -66,7 +65,9 @@ class PoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
             raise ValueError("Kernel type not yet supported by this model.")
 
         if isinstance(self.Z1, PSGLA):
-            self.Z1.prox = lambda state: prox_KL(state, self.y, lam=self.Z1.step_size)
+            self.Z1.prox = lambda state: prox_KL(
+                state, self.y.state, lam=self.Z1.step_size
+            )
             self.Z1.grad = lambda state: (
                 (state - self.dynamic_range * self.Hx) / self.split_coef1
             )
@@ -81,7 +82,7 @@ class PoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
             self.Z2.project = lambda state: state.clip(-1, 2)
             self.Z2.grad = lambda state: (state - self.X.state) / self.split_coef2
 
-        if isinstance(self.Z2, PnpSGLA):
+        if isinstance(self.Z2, PnpULA):
             self.Z2.denoise = lambda state: self.denoiser(
                 state,
                 self.Z2.reg_coef * self.Z2.epsilon**0.5,
@@ -118,7 +119,7 @@ class PoissonDeconvolutionPnpModel(BasePoissonDeconvolutionModel):
         float
             Potential of the targeted law.
         """
-        p = KL(self.Z1.state, self.y)
+        p = KL(self.Z1.state, self.y.state)
         p += xp.sum(self.Z1.state - self.dynamic_range * self.Hx) ** 2 / (
             2 * self.split_coef1
         )
