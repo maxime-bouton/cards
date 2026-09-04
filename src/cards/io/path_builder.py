@@ -103,3 +103,6 @@ class PathBuilder:
             log_stem += f"_{self.ctx.rank}"
 
         return self.get_ckpt_dir() / f"{log_stem}.log"
+
+    def get_analysis_dir(self, burnin: int) -> Path:
+        return self.get_ckpt_dir() / f"burnin_{burnin}"
