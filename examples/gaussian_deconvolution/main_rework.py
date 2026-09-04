@@ -4,6 +4,7 @@
 
 from gaussian_deconvolution_pnp import (
     GaussianDeconvObservationsHook,
+    GaussianDeconvPnpAnalysisHook,
     GaussianDeconvPnpMcmcHook,
     PnpDeconvGeometryHook,
 )
@@ -16,8 +17,9 @@ def main():
     geom_hk = PnpDeconvGeometryHook()
     obs_hk = GaussianDeconvObservationsHook()
     mcmc_hk = GaussianDeconvPnpMcmcHook()
+    analysis_hk = GaussianDeconvPnpAnalysisHook()
 
-    simu = Simulation.from_cli(geom_hk, obs_hk, mcmc_hk)
+    simu = Simulation.from_cli(geom_hk, obs_hk, mcmc_hk, analysis_hk)
     simu.run()
 
 
