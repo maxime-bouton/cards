@@ -7,6 +7,7 @@ r"""Object that handles any reading/writing on disk with parallel memory access.
 # TODO: add more h5py save options in the interface
 # (rdcc_nbytes, compression, compression_opts, chunk local_sizes, ...)
 
+import json
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -487,6 +488,35 @@ class IOManager:
             schema[key] = val
 
         return restore_rng(schema)
+
+    def write_metrics(self, path: str | Path, metrics: dict) -> None:
+        """Write a (possibly nested) dict of scalar metrics to a JSON file.
+
+        Master-rank only. Numpy/torch scalars are cast
+        to native Python types before serialization.
+
+        Parameters
+        ----------
+        path : str | pathlib.Path
+            Destination `.json` path.
+        metrics : dict
+            Nested dict of metric names to scalar values.
+        """
+        if not self.ctx.is_master:
+            return
+
+        def _to_item(obj):
+            if isinstance(obj, dict):
+                return {k: _to_item(v) for k, v in obj.items()}
+            return obj.item() if hasattr(obj, "item") else obj
+
+        with Path(path).open("w") as f:
+            json.dump(_to_item(metrics), f, indent=2)
+
+    def read_metrics(self, path: str | Path) -> dict:
+        """Read a metrics dict previously written by `write_metrics`."""
+        with Path(path).open("r") as f:
+            return json.load(f)
 
     def _is_collective(self, file: h5py.File, is_sliced: bool = True) -> bool:
         """Determines if a collective MPI I/O context should be used.
