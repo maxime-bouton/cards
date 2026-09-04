@@ -6,13 +6,15 @@ import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generic, Literal
+from typing import Literal
 
+from cards.core.analysis_hook import AnalysisHook
 from cards.core.execution_context import ExecutionContext
-from cards.core.geometry_hook import G, GeometryHook
+from cards.core.geometry_hook import GeometryHook
 from cards.core.mcmc_hook import McmcHook
-from cards.core.observations_hook import Obs, ObservationsHook
+from cards.core.observations_hook import ObservationsHook
 from cards.core.utils import parse_args
+from cards.estimators.base_estimator import BaseEstimator
 from cards.io.io_manager import IOManager
 from cards.io.path_builder import PathBuilder
 from cards.io.utils import read_json
@@ -21,13 +23,13 @@ from cards.samplers import SamplerParameters
 from cards.samplers.sampler import Sampler
 
 
-class Simulation(Generic[G, Obs]):
+class Simulation[G, O]:
     def __init__(
         self,
         geometry_hk: GeometryHook[G],
-        obs_hk: ObservationsHook[G, Obs],
-        mcmc_hk: McmcHook[G, Obs],
-        # analysis_hk: AnalysisHook[G, Obs],
+        obs_hk: ObservationsHook[G, O],
+        mcmc_hk: McmcHook[G, O],
+        analysis_hk: AnalysisHook[G, O],
         mode: Literal["serial", "mpi"],
         device: Literal["cpu", "gpu"],
         cfg: dict | Path | str,
@@ -36,7 +38,7 @@ class Simulation(Generic[G, Obs]):
         self.geometry_hk = geometry_hk
         self.obs_hk = obs_hk
         self.mcmc_hk = mcmc_hk
-        # self.analysis_hk = analysis_hk
+        self.analysis_hk = analysis_hk
 
         self.ctx = ExecutionContext(mode, device)
         self.cfg = cfg if isinstance(cfg, dict) else read_json(cfg)
@@ -49,9 +51,9 @@ class Simulation(Generic[G, Obs]):
     def from_cli(
         cls,
         geom_hk: GeometryHook[G],
-        obs_hk: ObservationsHook[G, Obs],
-        mcmc_hk: McmcHook[G, Obs],
-        # analysis_hk: AnalysisHook[G, Obs],
+        obs_hk: ObservationsHook[G, O],
+        mcmc_hk: McmcHook[G, O],
+        analysis_hk: AnalysisHook[G, O],
         paths: PathBuilder | None = None,
     ) -> "Simulation":
         args = parse_args()
@@ -64,7 +66,7 @@ class Simulation(Generic[G, Obs]):
             geom_hk,
             obs_hk,
             mcmc_hk,
-            # analysis_hk,
+            analysis_hk,
             args.mode,
             args.device,
             args.config,
@@ -78,8 +80,8 @@ class Simulation(Generic[G, Obs]):
         try:
             geometry = self._run_geometry_phase()
             obs = self._run_observations_phase(geometry)
-            self._run_mcmc_phase(geometry, obs)
-            # self._run_analysis_phase(model, sampler)
+            estimators = self._run_mcmc_phase(geometry, obs)
+            self._run_analysis_phase(geometry, obs, estimators)
             self._log_phase("END")
         except Exception:
             self.log.critical("Simulation pipeline aborted due to an error.")
@@ -96,7 +98,7 @@ class Simulation(Generic[G, Obs]):
                 obs_path,
             )
 
-    def _run_observations_phase(self, geometry: G) -> Obs:
+    def _run_observations_phase(self, geometry: G) -> O:
         self._log_phase("OBSERVATIONS")
         obs_path = self.paths.get_obs_path()
         if not obs_path.exists():
@@ -105,6 +107,7 @@ class Simulation(Generic[G, Obs]):
                     self.ctx, self.io_mng, self.cfg, geometry
                 )
             with self._log_step(f"Save observations to `{obs_path}`"):
+                obs_path.parent.mkdir(parents=True, exist_ok=True)
                 self.obs_hk.save_observations(
                     self.ctx,
                     self.io_mng,
@@ -120,37 +123,54 @@ class Simulation(Generic[G, Obs]):
                 )
         return obs
 
-    def _run_mcmc_phase(self, geometry: G, obs: Obs) -> None:
+    def _run_mcmc_phase(self, geometry: G, obs: O) -> list[BaseEstimator]:
         self._log_phase("MCMC")
         with self._log_step("Build estimators"):
-            vars_, estim = self.mcmc_hk.build_estimators(geometry, obs)
+            vars_, estimators = self.mcmc_hk.build_estimators(geometry, obs)
         with self._log_step("Build model"):
             model = self.mcmc_hk.build_model(self.ctx, self.cfg, geometry, obs, vars_)
         with self._log_step("Build sampler"):
             s_params = self.create_sampler_params()
+            s_params.ckpt_dir_path.mkdir(parents=True, exist_ok=True)
             sampler = Sampler.create_from_context(
-                self.ctx, self.io_mng, model, estim, s_params, self.log
+                self.ctx, self.io_mng, model, estimators, s_params, self.log
             )
         with self._log_step("Run MCMC"):
+            self.paths.get_obs_path().parent.mkdir(parents=True, exist_ok=True)
             sampler.sample()
+        return estimators
 
-    # def _run_analysis_phase(
-    #     self, geometry: G, obs: Obs, estimators: list[BaseEstimator]
-    # ) -> None:
-    #     self._log_phase("ANALYSIS")
-    #     ckpt_dir = self.paths.get_ckpt_dir()
-    #     with self._log_step("Run analysis"):
-    #         results = self.analysis_hk.run_analysis(
-    #             self.ctx, self.io_mng, self.cfg, geometry, obs, estimators, ckpt_dir
-    #         )
-    #     with self._log_step("Save analysis results"):
-    #         self.analysis_hk.save_results(
-    #             self.ctx, self.io_mng, results, self.paths.get_analysis_dir()
-    #         )
-    #     with self._log_step("Visualize analysis results"):
-    #         self.analysis_hk.visualize_results(
-    #             self.ctx, results, self.paths.get_analysis_dir()
-    #         )
+    def _run_analysis_phase(
+        self, geometry: G, obs: O, estimators: list[BaseEstimator]
+    ) -> None:
+        self._log_phase("ANALYSIS")
+        ckpt_dir = self.paths.get_ckpt_dir()
+        burnin = self.cfg["analysis"]["burnin"]
+        analysis_dir = self.paths.get_analysis_dir(burnin)
+        with self._log_step("Run analysis"):
+            results = self.analysis_hk.run_analysis(
+                self.ctx,
+                self.io_mng,
+                self.cfg,
+                geometry,
+                obs,
+                estimators,
+                burnin,
+                ckpt_dir,
+                self.paths.get_obs_path(),
+            )
+        with self._log_step("Save analysis results"):
+            analysis_dir.mkdir(parents=True, exist_ok=True)
+            self.analysis_hk.save_results(
+                self.ctx,
+                self.io_mng,
+                results,
+                analysis_dir,
+            )
+        with self._log_step("Visualize analysis results"):
+            self.analysis_hk.visualize_results(
+                self.ctx, self.io_mng, results, self.paths.get_analysis_dir(burnin)
+            )
 
     def create_sampler_params(self) -> SamplerParameters:
         s_params = self.cfg["sampler"]
