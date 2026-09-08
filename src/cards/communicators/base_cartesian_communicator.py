@@ -123,7 +123,7 @@ class BaseCartesianCommunicator(ABC):
         self.send_size = send_size
         self.recv_size = recv_size
 
-        self.ndims = grid_size.size
+        self.ndims = self.grid_size.size
         self.rank = self.comm.Get_rank()
         self.ranknd = get_ranknd(self.rank, self.grid_size)
         # self.circular_boundaries = False

@@ -12,88 +12,67 @@ import numpy as np
 import torch
 
 import cards.backend as xp
+from cards.core.variable import Variable
 from cards.denoisers.base_denoiser import BaseDenoiser
 from cards.models.base_gaussian_inpainting_model import (
     BaseGaussianInpaintingModel,
     GaussianInpaintingParameters,
 )
 from cards.models.base_model import BaseDistributedModel
+from cards.operators.distributed_masking import DistributedMasking
+from cards.operators.masking import Masking
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
-from cards.transition_kernels.pnp_sgla import GpuPnpSGLA
-from cards.transition_kernels.pnp_ula import GpuPnpULA
+
+# from cards.transition_kernels.pnp_sgla import PnpSGLA
+from cards.transition_kernels.pnp_ula import PnpULA
 
 
 @dataclass
 class GaussianInpaintingPnpParameters(GaussianInpaintingParameters): ...
 
 
-class BaseGaussianInpaintingPnpModel(BaseGaussianInpaintingModel):
+class GaussianInpaintingPnpModel(BaseGaussianInpaintingModel):
     def __init__(
         self,
         params: GaussianInpaintingPnpParameters,
+        masking_operator: Masking | DistributedMasking,
+        y: Variable,
         X: BaseTransitionKernel,
         denoiser: BaseDenoiser,
     ):
+        super().__init__(params, masking_operator, y, X)
         self.denoiser = denoiser
-        super().__init__(params, X)
 
     def set_conditionals(self):
-        """Set the conditionals of the transition kernels including the coupling between those kernels."""
-        if type(self.X) is GpuPnpULA:
+        if isinstance(self.X, PnpULA):
             self.X.denoise = lambda state: self.denoiser(
                 state,
                 self.X.epsilon**0.5,
-                torch_dtype=torch.float32,
-                xp_dtype=xp.float64,
-            )
-            self.X.grad = lambda state: (
-                self.mask * (state - self.observations) / self.sigma2
             )
             self.X.project = lambda state: state.clip(-1, 2)
-        elif type(self.X) is GpuPnpSGLA:
-            self.X.denoise = lambda state: self.denoiser(
-                state,
-                self.X.reg_coef * self.X.epsilon**0.5,
-                torch_dtype=torch.float32,
-                xp_dtype=xp.float64,
-            )
+            # NOTE: self.Hx could be replaced by state, as current implementation of masking based on term-wise multiplication
             self.X.grad = lambda state: (
-                self.mask * (state - self.observations) / self.sigma2
+                self.H.adjoint(self.Hx - self.y.state) / self.sigma2
             )
         else:
             raise ValueError("Kernel type not yet supported by this model.")
 
-    def get_states(self) -> dict:
-        """Extracts the current state of the transition kernel and other variables of interest and return the in a dictionary.
+    def _on_states_updated(self):
+        self.Hx = self.H.forward(self.X.state)
 
-        Returns
-        -------
-        dict
-            Dictionary containing the curent states of the variables.
-        """
-        return {"X": self.X.get_state()}
-
-    def set_states(self, states: dict) -> None:
-        """set_states
-        Read the dictionary given in entry and set the variables of the model to the values contained in it.
-        The keys used by the dictionary must be the same as in "get_states"
+    def update(self, rng: np.random.Generator | torch.Generator):
+        """Global update of the model. Updates every kernel used by the model and computes annex variables.
 
         Parameters
         ----------
-        states : dict
-            Dictionary containing new values for the variables of the model.
-        """
-        self.X.current_state = xp.asarray(states["X"])
-
-    def update(self, rng: np.random.Generator):
-        """update Gobal update of the model. Updates every kernel used by the model and computes annex variables.
-
-        Parameters
-        ----------
-        rng : np.random.Generator
+        rng : np.random.Generator | torch.Generator
             Random number generator, given by the sampler.
         """
+
         self.X.mc_step(rng)
+
+        # update cached buffer related to X
+        self.Hx = self.H.forward(self.X.state)
 
     def compute_potential(self) -> float:
         """compute_potential Computes the potential.
@@ -103,49 +82,11 @@ class BaseGaussianInpaintingPnpModel(BaseGaussianInpaintingModel):
         float
             Potential of the targeted law.
         """
-        p = xp.sum((self.observations - self.mask * self.X.current_state) ** 2) / (
-            2 * self.sigma2
-        )
+        p = xp.sum((self.y.state - self.Hx) ** 2) / (2 * self.sigma2)
         return p
 
 
-class GaussianInpaintingPnpModel(BaseGaussianInpaintingPnpModel): ...
-
-
 class DistributedGaussianInpaintingPnpModel(
-    BaseGaussianInpaintingPnpModel,
+    GaussianInpaintingPnpModel,
     BaseDistributedModel,
-):
-    def __init__(
-        self,
-        params: GaussianInpaintingPnpParameters,
-        X: BaseTransitionKernel,
-        denoiser: BaseDenoiser,
-        full_size: np.ndarray,
-    ):
-        self.full_size = full_size
-
-        super().__init__(params, X, denoiser)
-
-    def set_slices(self):
-        """set_slices Describes which portion of the global buffer the current thread must handle.
-
-        Returns
-        -------
-        dict
-            Dictionary containing the slices of the global buffer that this thread will handle.
-        """
-        self.slices["X"] = self.denoiser.global_to_tile_slice
-
-    def set_global_sizes(self):
-        """set_global_sizes Describe the gobla sizes of several global buffers.
-
-        Returns
-        -------
-        dict
-            Global sizes of the variable of interest.
-        """
-        self.global_sizes["X"] = np.asarray(self.full_size, dtype=int)
-
-    def set_local_sizes(self):
-        self.local_sizes["X"] = self.X.current_state.shape
+): ...

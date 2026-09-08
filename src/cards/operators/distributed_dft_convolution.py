@@ -404,7 +404,7 @@ class DistributedDftConvolution(LinearOperator):
             self.slice_valid_direct_convolution
         ]
 
-    # TODO: add this collection of features through inhteritance, instead of repeating it each time?
+    # TODO: add this collection of features through inheritance, instead of repeating it each time?
     def get_send_size(self) -> np.ndarray:
         return self.direct_communicator.cartslicer.send_size
 
