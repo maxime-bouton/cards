@@ -176,13 +176,16 @@ def build_mask(
     mask_loss = obs_cfg["mask_loss"]
     data_seed = obs_cfg["seed_data"]
 
-    if ctx.is_master == 0:
-        ss = np.random.SeedSequence(data_seed)
-        # spawn off nworkers child SeedSequences to pass to child processes.
-        child_seed = ss.spawn(ctx.comm_size)
+    if ctx.is_mpi:
+        if ctx.is_master == 0:
+            ss = np.random.SeedSequence(data_seed)
+            # spawn off nworkers child SeedSequences to pass to child processes.
+            child_seed = ss.spawn(ctx.comm_size)
+        else:
+            child_seed = None
+        seed = ctx.comm.scatter(child_seed, root=0)
     else:
-        child_seed = None
-    seed = ctx.comm.scatter(child_seed, root=0)
+        seed = data_seed
     rng = np.random.default_rng(seed)
 
     local_size = cartslicer.tile_size
@@ -216,8 +219,8 @@ class PnpInpaintingGeometryHook:
             ranknd,
             grid_size,
             np.asarray(gt_shape),
-            xp.zeros(len(grid_size), dtype=int),
-            xp.zeros(len(grid_size), dtype=int),
+            np.zeros(len(grid_size), dtype=int),
+            np.zeros(len(grid_size), dtype=int),
         )
 
         if obs_path.exists():

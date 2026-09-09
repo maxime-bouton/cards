@@ -24,18 +24,14 @@ class DistributedMasking(LinearOperator):
     Parameters
     ----------
     mask_tile : xp.ndarray
-        Mask tensor for the current worker, with 0 corresponding to masked entries, 1 to observed entries.
+        Local mask tensor tile for the current worker, with 0 corresponding to masked entries, 1 to observed entries.
 
     Attributes
     ----------
-    mask_tile : xp.ndarray
-        Mask tensor, with 0 corresponding to masked entries, 1 to observed entries.
-    dtype : type, optional
-        Type of the entries in communicated arrays, by default xp.float64.
-    image_size : np.ndarray[int]
-        Numpy array created from ``self.image_shape``.
-    data_size : np.ndarray[int]
-        Numpy array created from ``self.data_shape``.
+    mask : xp.ndarray
+        Local mask tensor tile for the current worker, with 0 corresponding to masked entries, 1 to observed entries.
+    cartslicer : CartesianCommSlicer
+        Slicer describing the Cartesian tensor tessellation adopted for data distribution.
     grid_size : np.ndarray[int]
         Numpy array created from ``grid_shape``.
 
@@ -54,6 +50,7 @@ class DistributedMasking(LinearOperator):
         super().__init__(image_shape, image_shape)
         self.grid_size = np.asarray(grid_shape)
         self.cartslicer = cartslicer
+        self.mask = mask_tile
 
         if not len(mask_tile.shape) == self.ndims:
             raise ValueError("mask should have ndims = len(image_size) dimensions")
@@ -61,10 +58,16 @@ class DistributedMasking(LinearOperator):
         if not (
             self.cartslicer.tile_range is not None
             and np.allclose(
-                np.asarray(mask_tile)[None, ...],
-                np.diff(self.cartslicer.tile_range, axis=-1),
-            )
+                np.squeeze(np.asarray(mask_tile.shape)),
+                np.squeeze(np.diff(self.cartslicer.tile_range, axis=-1)) + 1,
+            ),
         ):
             raise ValueError(
                 "mask_tile shape is not consistent with cartslicer.tile_range"
             )
+
+    def forward(self, image: xp.ndarray, op=None) -> xp.ndarray:
+        return self.mask * image
+
+    def adjoint(self, data: xp.ndarray, adjoint_op=None) -> xp.ndarray:
+        return self.mask * data

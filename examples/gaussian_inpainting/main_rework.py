@@ -24,4 +24,6 @@ def main():
 if __name__ == "__main__":
     main()
 
-# python examples/gaussian_inpainting/main_rework.py --config examples/new_config.json --mode serial --device gpu
+# python examples/gaussian_inpainting/main_rework.py --config examples/new_config_gaussian_inpainting_pnp.json --mode serial --device gpu
+# mpiexec -np 2 python -m mpi4py examples/gaussian_inpainting/main_rework.py --config examples/new_config_gaussian_inpainting_pnp.json --mode mpi --device cpu
+# mpiexec -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py examples/gaussian_inpainting/main_rework.py --config examples/new_config_gaussian_inpainting_pnp.json --mode mpi --device gpu
