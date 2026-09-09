@@ -10,8 +10,7 @@ import cards.backend as xp
 from cards.operators.linear_operator import LinearOperator
 from cards.slicers.cartesian_comm_slicer import CartesianCommSlicer
 
-# from mpi4py import MPI
-# from cards.communicators.mpi_utils import get_ranknd
+# TODO: test + documentation
 
 # FIXME: factorize implementation of DistributedLinearOperator (only a matter of adding an execution context on the abstract level and Slicer to a LinearOperator)
 # -> better factorization between operators

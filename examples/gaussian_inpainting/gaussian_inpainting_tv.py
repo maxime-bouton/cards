@@ -14,46 +14,38 @@ from cards.communicators.mpi_utils import get_ranknd
 from cards.core.execution_context import ExecutionContext
 from cards.core.layout import Layout
 from cards.core.variable import Variable
-from cards.denoisers.base_denoiser import BaseDenoiser
-from cards.denoisers.distributed_ddfb import DistributedDDFB
-from cards.denoisers.distributed_dncnn import DistributedDnCNN
-from cards.denoisers.distributed_drunet import DistributedDRUNet
-from cards.denoisers.serial_ddfb import SerialDDFB
-from cards.denoisers.serial_dncnn import SerialDnCNN
-from cards.denoisers.serial_drunet import SerialDRUNet
 from cards.estimators.base_estimator import BaseEstimator
 from cards.estimators.ci import CI
 from cards.estimators.mmse_var import MMSEVar
 from cards.io.io_manager import IOManager
 from cards.models import (
     BaseModel,
-    DistributedGaussianInpaintingPnpModel,
-    GaussianInpaintingPnpModel,
+    DistributedGaussianInpaintingTvModel,
+    GaussianInpaintingTvModel,
 )
-from cards.models.gaussian_inpainting_pnp_model import (
-    GaussianInpaintingPnpParameters,
-)
+from cards.models.gaussian_inpainting_tv_model import GaussianInpaintingTvParameters
+from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.distributed_masking import DistributedMasking
+from cards.operators.gradient import Gradient2d
 from cards.operators.masking import Masking
 from cards.random import create_rng
 from cards.slicers.cartesian_comm_slicer import CartesianCommSlicer
-from cards.transition_kernels.pnp_ula import CpuPnpULA, GpuPnpULA
+from cards.transition_kernels.psgla import CpuPSGLA, GpuPSGLA
 from cards.utils.utils_img import read_img_shape
 from cards.utils.utils_observations import (
     compute_sigma2_from_isnr,
     fit_mask_shape,
 )
 
-# TODO: test and documentation
-
 
 @dataclass
-class PnpInpaintingGeometry:
+class TvInpaintingGeometry:
     grid_shape: tuple[int, ...]
     layout_x: Layout
     layout_y: Layout
+    layout_z: Layout
     H: Masking | DistributedMasking
-    D: BaseDenoiser
+    G: Gradient2d | DistributedGradient2d
     mask: xp.ndarray
 
 
@@ -135,36 +127,16 @@ def build_masking_operator(
     return Masking(mask)
 
 
-def build_denoiser(
-    params: dict,
+def build_gradient(
     full_shape: tuple[int, ...],
     grid_shape: tuple[int, ...],
     ctx: ExecutionContext,
-) -> tuple[BaseDenoiser, np.ndarray | None]:
-    tile_range = None
-    match (params["type"], ctx.is_mpi):
-        case ("ddfb", False):
-            denoiser = SerialDDFB(full_shape, params["n_layers"], params["n_features"])
-        case ("ddfb", True):
-            denoiser = DistributedDDFB(
-                ctx.comm,
-                grid_shape,
-                full_shape,
-                params["n_layers"],
-                params["n_features"],
-            )
-        case ("dncnn", False):
-            denoiser = SerialDnCNN(full_shape)
-        case ("dncnn", True):
-            denoiser = DistributedDnCNN(ctx.comm, grid_shape, full_shape)
-        case ("drunet", False):
-            denoiser = SerialDRUNet(full_shape)
-        case ("drunet", True):
-            denoiser = DistributedDRUNet(ctx.comm, grid_shape, full_shape)
-            tile_range = denoiser.tile_range
-        case _:
-            raise ValueError(f"Unknown denoiser type '{params['type']}'.")
-    return denoiser, tile_range
+) -> Gradient2d | DistributedGradient2d:
+    if ctx.is_mpi:
+        gradient = DistributedGradient2d(full_shape, grid_shape, ctx.comm)
+    else:
+        gradient = Gradient2d(full_shape)
+    return gradient
 
 
 def build_mask(
@@ -196,14 +168,14 @@ def build_mask(
     return mask
 
 
-class PnpInpaintingGeometryHook:
+class TvInpaintingGeometryHook:
     def build_geometry(
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
         cfg: dict,
         obs_path: Path,
-    ) -> PnpInpaintingGeometry:
+    ) -> TvInpaintingGeometry:
         obs_cfg = cfg["observations"]
         gt_path = obs_cfg["img_path"]
         gt_shape = read_img_shape(gt_path)
@@ -234,8 +206,7 @@ class PnpInpaintingGeometryHook:
 
         mask = fit_mask_shape(xp.asarray(mask), cartslicer.tile_size)
 
-        D, _ = build_denoiser(
-            cfg["parameters"]["denoiser"],
+        G = build_gradient(
             gt_shape,
             grid_shape,
             ctx,
@@ -252,14 +223,19 @@ class PnpInpaintingGeometryHook:
         slicer_y = slicer_x
         slice_x = slicer_x.slice_global_buffer_to_tile if slicer_x else None
         slice_y = slicer_y.slice_global_buffer_to_tile if slicer_y else None
+        slice_z = G.adjoint_slice_global_buffer_to_tile if ctx.is_mpi else None
         x_shape = gt_shape
-        y_shape = gt_shape
+        y_shape = x_shape
+        z_shape = (*G.data_shape,)
         tile_x_shape = tuple(slicer_x.tile_size) if slicer_x else x_shape
         tile_y_shape = tuple(slicer_y.tile_size) if slicer_y else y_shape
+        tile_z_shape = (*G.adjoint_tile_size,) if ctx.is_mpi else z_shape
         layout_x = Layout(tile_x_shape, x_shape, slice_x)
         layout_y = Layout(tile_y_shape, y_shape, slice_y)
-
-        return PnpInpaintingGeometry(grid_shape, layout_x, layout_y, H, D, mask)
+        layout_z = Layout(tile_z_shape, z_shape, slice_z)
+        return TvInpaintingGeometry(
+            grid_shape, layout_x, layout_y, layout_z, H, G, mask
+        )
 
 
 @dataclass
@@ -283,7 +259,7 @@ class GaussianInpaintingObservationsHook:
         ctx: ExecutionContext,
         io_mng: IOManager,
         cfg: dict,
-        geom: PnpInpaintingGeometry,
+        geom: TvInpaintingGeometry,
     ) -> GaussianInpaintingObs:
         obs_cfg = cfg["observations"]
         img_path = obs_cfg["img_path"]
@@ -330,7 +306,7 @@ class GaussianInpaintingObservationsHook:
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        geom: PnpInpaintingGeometry,
+        geom: TvInpaintingGeometry,
         obs: GaussianInpaintingObs,
         obs_path: Path,
     ) -> None:
@@ -363,7 +339,7 @@ class GaussianInpaintingObservationsHook:
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        geom: PnpInpaintingGeometry,
+        geom: TvInpaintingGeometry,
         obs_path: Path,
     ) -> GaussianInpaintingObs:
         with io_mng.open(obs_path, mode="r", force_serial=True) as f:
@@ -390,23 +366,19 @@ class GaussianInpaintingObservationsHook:
         )
 
 
-def compute_step_sizes_gaussian_inpainting_pnp(
+def compute_step_sizes_gaussian_inpainting_tv(
+    split_coef: float,
     sigma2: float,
-    reg_coef: float,
-    L: float,
-    eps: float,
 ) -> tuple[float, float]:
-    Ly = 1 / sigma2
-    lambda_ = 0.99 / (2 * L / eps + 4 * Ly)
-    be = (reg_coef * L) / eps + 1 / lambda_ + Ly
-    step_size_X = 0.99 / (3 * be)
-    return step_size_X, lambda_
+    step_size_X = 0.99 * 1.0 / (8.0 / split_coef + 1.0 / sigma2)
+    step_size_Z = 0.99 * split_coef
+    return step_size_X, step_size_Z
 
 
-class GaussianInpaintingPnpMcmcHook:
+class GaussianInpaintingTvMcmcHook:
     def build_estimators(
         self,
-        geom: PnpInpaintingGeometry,
+        geom: TvInpaintingGeometry,
         obs: GaussianInpaintingObs,
     ) -> tuple[dict[str, Variable], list[BaseEstimator]]:
 
@@ -423,7 +395,13 @@ class GaussianInpaintingPnpMcmcHook:
             dtype=obs.x.dtype,
         )
 
-        variables = {"X": x_var, "Y": y_var}
+        z_var = Variable(
+            layout=geom.layout_z,
+            name="Z",
+            dtype=obs.x.dtype,
+        )
+
+        variables = {"X": x_var, "Y": y_var, "Z": z_var}
         estimators: list[BaseEstimator] = [MMSEVar(x_var), CI(x_var, all_samples=True)]
 
         return variables, estimators
@@ -432,53 +410,46 @@ class GaussianInpaintingPnpMcmcHook:
         self,
         ctx: ExecutionContext,
         cfg: dict,
-        geom: PnpInpaintingGeometry,
+        geom: TvInpaintingGeometry,
         obs: GaussianInpaintingObs,
         vars_: dict[str, Variable],
     ) -> BaseModel:
 
         reg_coef = cfg["parameters"]["reg_coef"]
-        denoiser_params = cfg["parameters"]["denoiser"]
-        eps = (
-            denoiser_params["denoising_level"] ** 2
-            if denoiser_params["denoising_level"] is not None
-            else obs.sigma2
-        )
-        L = denoiser_params.get("L", None) or 1.0
-        step_size_X, lambda_ = compute_step_sizes_gaussian_inpainting_pnp(
+        split_coef = cfg["parameters"]["split_coef"]
+        step_size_X, step_size_Z = compute_step_sizes_gaussian_inpainting_tv(
             obs.sigma2,
-            reg_coef,
-            L,
-            eps,
+            split_coef,
         )
 
         x_var = vars_["X"]
-        x_var.state = obs.interpolation
         y_var = vars_["Y"]
+        z_var = vars_["Z"]
 
-        model_params = GaussianInpaintingPnpParameters(
-            sigma2=obs.sigma2, reg_coeff=reg_coef
-        )
+        model_params = GaussianInpaintingTvParameters(obs.sigma2, reg_coef, split_coef)
 
-        PnpULA = GpuPnpULA if ctx.is_gpu else CpuPnpULA
+        PSGLA = GpuPSGLA if ctx.is_gpu else CpuPSGLA
 
-        X = PnpULA(
+        X = PSGLA(
             var=x_var,
             step_size=step_size_X,
-            reg_coef=reg_coef,
-            epsilon=obs.sigma2,
-            lambda_=lambda_,
+        )
+
+        Z = PSGLA(
+            var=z_var,
+            step_size=step_size_Z,
         )
 
         if ctx.is_mpi:
-            Model = DistributedGaussianInpaintingPnpModel
+            Model = DistributedGaussianInpaintingTvModel
         else:
-            Model = GaussianInpaintingPnpModel
+            Model = GaussianInpaintingTvModel
 
         return Model(
             model_params,
             geom.H,
+            geom.G,
             y_var,
             X,
-            geom.D,
+            Z,
         )

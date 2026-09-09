@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 from cards.core.variable import Variable
 from cards.models.base_model import BaseModel
+from cards.operators.distributed_masking import DistributedMasking
 from cards.operators.masking import Masking
 from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
@@ -56,7 +57,7 @@ class BaseGaussianInpaintingModel(BaseModel):
     def __init__(
         self,
         params: GaussianInpaintingParameters,
-        masking_operator: Masking,
+        masking_operator: Masking | DistributedMasking,
         y: Variable,
         X: BaseTransitionKernel,
         *other_kernels: BaseTransitionKernel,
