@@ -4,6 +4,7 @@ from typing import Protocol
 
 import cards.backend as xp
 from cards.core.execution_context import ExecutionContext
+from cards.core.validation import SimulationConfig
 from cards.estimators.base_estimator import BaseEstimator
 from cards.io.io_manager import IOManager
 
@@ -17,7 +18,7 @@ class AnalysisArtifacts:
     slices: dict[str, tuple[slice, ...]]
     initialisation: xp.ndarray | None
     potential: xp.ndarray | None
-    time: dict[str | xp.ndarray] | None
+    time: dict[str, xp.ndarray] | None
 
 
 @dataclass
@@ -31,7 +32,7 @@ class AnalysisHook[G, O](Protocol):
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        cfg: dict,
+        cfg: SimulationConfig,
         geometry: G,
         obs: O,
         estimators: list[BaseEstimator],

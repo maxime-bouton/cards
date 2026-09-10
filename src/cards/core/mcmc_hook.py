@@ -5,6 +5,7 @@
 from typing import Protocol
 
 from cards.core.execution_context import ExecutionContext
+from cards.core.validation import SimulationConfig
 from cards.core.variable import Variable
 from cards.estimators.base_estimator import BaseEstimator
 from cards.models import BaseModel
@@ -20,7 +21,7 @@ class McmcHook[G, O](Protocol):
     def build_model(
         self,
         ctx: ExecutionContext,
-        cfg: dict,
+        cfg: SimulationConfig,
         geom: G,
         obs: O,
         vars_: dict[str, Variable],

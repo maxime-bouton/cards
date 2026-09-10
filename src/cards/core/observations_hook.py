@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Protocol
 
 from cards.core.execution_context import ExecutionContext
+from cards.core.validation import SimulationConfig
 from cards.io.io_manager import IOManager
 
 
@@ -14,7 +15,7 @@ class ObservationsHook[G, O](Protocol):
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        cfg: dict,
+        cfg: SimulationConfig,
         geom: G,
     ) -> O: ...
 
