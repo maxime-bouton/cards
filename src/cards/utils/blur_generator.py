@@ -106,7 +106,7 @@ class MotionBlurKernel:
 
         blur_radius = max(1, int(self.diagonal * 0.01))
         img = img.filter(ImageFilter.GaussianBlur(radius=blur_radius))
-        img = img.resize(self.size, Image.LANCZOS)
+        img = img.resize(self.size, Image.Resampling.LANCZOS)
 
         kernel = np.array(img, dtype=self.dtype)
         kernel = kernel / np.sum(kernel) if np.sum(kernel) > 0 else kernel
