@@ -518,6 +518,9 @@ class IOManager:
         with Path(path).open("r") as f:
             return json.load(f)
 
+    def stacked_size(self, file: h5py.File, name: str) -> int:
+        return file[name].shape[0]
+
     def _is_collective(self, file: h5py.File, is_sliced: bool = True) -> bool:
         """Determines if a collective MPI I/O context should be used.
 
