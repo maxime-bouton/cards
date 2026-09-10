@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  cpu-tests:
+    runs-on: ubuntu-latest
+
+    # using a matrix runs both serial and mpi tests in parallel
+    strategy:
+      fail-fast: false # if `serial` fails, let `mpi` finish to get full logs
+      matrix:
+        mode: [serial, mpi]
+
+    steps:
+      # check out the repository under $GITHUB_WORKSPACE
+      # so the job can access it
+      - name: checkout
+        uses: actions/checkout@v7
+
+      # this action is heavily optimized for speed and handles caching automatically
+      - name: setup-pixi
+        uses: prefix-dev/setup-pixi@v0.10.0
+        with:
+          cache: true
+
+      - name: install mpi
+        if: matrix.mode == 'mpi'
+        run: sudo apt-get update && sudo apt-get install -y openmpi-bin libopenmpi-dev
+
+      - name: cache drunet weights
+        id: weights-cache                  # give this step an id so it can be referenced later
+        uses: actions/cache@v4
+        with:
+          path: data/weights/drunet/
+          key: drunet-weights-v1           # bump to v2 if the data on the server changes
+
+      # download only if the cache was completely empty
+      - name: download drunet weights
+        if: steps.weights-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p data/weights/drunet
+          wget https://github.com/cszn/KAIR/releases/download/v1.0/drunet_color.pth
+          mv drunet_color.pth data/weights/drunet/drunet_nch3.pth
+
+      - name: run serial CPU tests
+        if: matrix.mode == 'serial'
+        run: pixi run --environment test pytest tests
+
+      - name: run MPI CPU tests
+        if: matrix.mode == 'mpi'
+        run: pixi run --environment test mpirun -np 2 pytest tests --mode mpi
+
+  # tests summary
+  all-tests-passed:
+    name: all tests passed
+    runs-on: ubuntu-latest
+    needs: cpu-tests
+    if: always() # forced to run even if the matrix above fails
+    steps:
+      - name: Verify matrix success
+        # fail the job if any of the matrix jobs failed
+        if: ${{ needs.cpu-tests.result != 'success' }}
+        run: exit 1

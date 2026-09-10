@@ -1,72 +1,96 @@
-r"""Base class to define Poisson deconvolution models leveraging approximate data augmentation (AXDA :cite:`Vono2020`)."""
+r"""Base class to define Poisson deconvolution models leveraging approximate data augmentation (AXDA :cite:`Vono2021`)."""
 
-# TODO: documentation
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
+# TODO: update documentation
 
 from abc import abstractmethod
 from dataclasses import dataclass
 
-from cards.backend import xp
-from cards.estimator.mmse_builder import MMSEBuilder
+from cards.core.variable import Variable
 from cards.models.base_model import BaseModel
 from cards.operators.dft_convolution import DftConvolution
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.transition_kernel.base_transition_kernel import (
-    BaseGpuTransitionKernel,
-    BaseTransitionKernel,
-)
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
+from cards.transition_kernels.base_transition_kernel import BaseTransitionKernel
 
 
 @dataclass
-class PoissonDeconvolutionParameters:
-    observations: xp.ndarray
-    kernel: xp.ndarray
+class PoissonDeconvolutionParams:
+    r"""Configuration parameters for deconvolution under Gaussian noise models.
+
+    This data class encapsulates the known variables and hyperparameters required to
+    define the forward model of this inverse problem.
+    """
+
     dynamic_range: float
+    r"""The dynamic range of the ground truth image."""
+
     reg_coeff: float
+    r"""The regularization coefficient used to weight the prior relative to the likelihood."""
+
     split_coef1: float
+    r"""AXDA splitting parameter (within the likelihood)."""
+
     split_coef2: float
+    r"""AXDA splitting parameter (within the prior)."""
 
 
 class BasePoissonDeconvolutionModel(BaseModel):
+    r"""Abstract base class for deconvolution under Poisson noise models.
+
+    This class extends :class:`BaseModel` to provide a standard framework for
+    deconvolution tasks. It stores the forward operator, initializes internal
+    buffers for convolution operations, and retains the model hyperparameters.
+
+    Parameters
+    ----------
+    estimators : list[BaseEstimator]
+        A list of estimator builders used to compute parameter estimates during sampling.
+    params : GaussianDeconvolutionParams
+        The configuration parameters containing the observations, kernel, and noise variance.
+    convolution_operator : DftConvolution | DistributedDftConvolution
+        The operator handling the forward and adjoint convolution operations.
+    X : BaseTransitionKernel
+        The transition kernel responsible for sampling the primary target variable.
+    """
+
     def __init__(
         self,
-        params: PoissonDeconvolutionParameters,
-        convolution_operator: DftConvolution | MpiDftConvolution,
+        params: PoissonDeconvolutionParams,
+        convolution_operator: DftConvolution | DistributedDftConvolution,
+        y: Variable,
         X: BaseTransitionKernel,
-        Z1: BaseTransitionKernel,
-        Z2: BaseTransitionKernel,
+        *other_kernels: BaseTransitionKernel,
+        # Z1: BaseTransitionKernel,
+        # Z2: BaseTransitionKernel,
     ):
-        self.X = X
-        self.Z1 = Z1
-        self.Z2 = Z2
-        self.convolution_operator = convolution_operator
-        super().__init__()
+        super().__init__(X.var, *[k.var for k in other_kernels])
+        self.params = params
 
-        self.observations = params.observations
-
-        # model hyperparameters
         self.reg_coeff = params.reg_coeff
-        self.split_coef1 = params.split_coef1
-        self.split_coef2 = params.split_coef2
         self.dynamic_range = params.dynamic_range
 
-        # internal buffers
-        self.convX = xp.zeros_like(self.observations)
+        self.H = convolution_operator
 
-        self.estimator_builder = MMSEBuilder(
-            X.current_state.shape, dtype=X.current_state.dtype, name="X"
-        )
+        self.y = y
+        self.X = X
 
-        self.set_conditionals()
+        self.Hx = self.H.forward(self.X.state)
+
+        # self.Z1 = Z1
+        # self.Z2 = Z2
 
     @abstractmethod
-    def set_conditionals(self):
-        pass
+    def set_conditionals(self) -> None:
+        r"""Set up the conditional distributions for the transition kernels.
 
-    def aggregate_states(self):
-        self.estimator_builder.aggregate_states(self.X.current_state)
+        This method is called automatically at the end of initialization.
+        Inheriting classes must implement this to define how the transition
+        kernels update their respective variables based on the specific
+        inference algorithm (e.g., Gibbs sampling or PnP-ULA).
+        """
 
-    def _get_estimator_builder_states(self) -> xp.ndarray:
-        # TODO: check if this instruction is absolutely needed
-        if isinstance(self.X, BaseGpuTransitionKernel):
-            return self.estimator_builder.estimator.get()
-        return self.estimator_builder.estimator
+    def compile(self) -> None:
+        self.set_conditionals()

@@ -1,26 +1,24 @@
-r"""Utility functions to build the applications associated with the experiments reported in :cite:p:`Bouton2025`."""
+r"""Utility functions to build the applications associated with the experiments reported in :cite:p:`Bouton2026`."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
-# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
-# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
-# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 # TODO: documentation
 
 import argparse
 import importlib
 import json
+from collections.abc import Callable  # NoReturn
 from os.path import join
 from pathlib import Path
-from typing import Callable  # NoReturn
 
 import torch
 
-from cards.backend import bm
+import cards.backend as xp
+from cards.analysis.core import analyze_data
 from cards.logger import build_logger
-from cards.post_process.post_processing import analyze_data
-from cards.sampler.base_sampler import SamplerParameters
+from cards.samplers.sampler import SamplerParameters
 from cards.utils.path_builder import (
     generate_obs_dir_path,
     generate_save_dir_path,
@@ -33,11 +31,9 @@ def create_sampler_params(params: dict) -> SamplerParameters:
     sampler_params = SamplerParameters(
         params["checkpoint_size"],
         params["n_checkpoint"],
-        params["seed"],
-        "sample",
         params["save_path"],
-        params["save_all"],
-        params["compute_ci"],
+        "checkpoint_",
+        params["seed"],
         params["reloaded_checkpoint"],
         params.get("reloaded_path", ""),
     )
@@ -97,9 +93,9 @@ def main(
 
     module = importlib.import_module(module_name)
     if "denoiser_params" in params:
-        compute_fn = getattr(module, "compute_pnp")
+        compute_fn = module.compute_pnp
     else:
-        compute_fn = getattr(module, "compute_tv")
+        compute_fn = module.compute_tv
     compute_fn(logger=logger, mode=mode, device=device, **args_main)
 
     if rank == 0:
@@ -174,16 +170,16 @@ def run_main(
         log_file = "sampling.log"
 
     if gpu:
-        bm.set_backend("cupy")
+        xp.set_backend("cupy")
         # TODO: modify instruction to allow multiple MPI proceses to use the same GPU
-        gpu = bm.xp.cuda.Device(rank % bm.xp.cuda.runtime.getDeviceCount())
+        gpu = xp.cuda.Device(rank % xp.cuda.runtime.getDeviceCount())
         gpu.use()
 
         torch.cuda.set_device(gpu.id)
         torch.set_default_device("cuda")
         torch.backends.cudnn.deterministic = True
     else:
-        bm.set_backend("numpy")
+        xp.set_backend("numpy")
         torch.set_default_device("cpu")
 
     paths = build_paths(params, *build_obs_and_model_paths_fn(params), mode_str)

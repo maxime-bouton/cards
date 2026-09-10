@@ -34,6 +34,13 @@ Before any commit or pull request to the master branch, verify all tests pass un
 
             pixi shell -e full
 
+            # run all tests (CPU + GPU)
+            pixi run tests
+
+            # run all CPU tests using pre-defined pixi command
+            pixi run tests_cpu
+
+            ## details
             # display available markers
             pytest --markers
 
@@ -59,9 +66,13 @@ Before any commit or pull request to the master branch, verify all tests pass un
 
             # example serial test on CPU
             python -m pytest --mode serial --device cpu tests/operators/test_dft_convolution.py
+            ## with provided pixi task
+            pixi run test_mpi_cpu tests/operators/test_dft_convolution.py
 
             # example MPI test on GPU
             mpiexec -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m pytest --mode mpi --device gpu tests/operators/test_dft_convolution.py
+            ## with provided pixi task
+            pixi run test_mpi_gpu tests/operators/test_dft_convolution.py
 
 
 Assessing code and docstring coverage

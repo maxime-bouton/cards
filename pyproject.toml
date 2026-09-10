@@ -12,71 +12,72 @@ authors = [
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
-platforms = ["linux-64"]
+platforms = [
+    "linux-64",
+    { name = "linux-64-cuda-12", platform = "linux-64", cuda = "12" },
+]
 preview = ["pixi-build"]
 
 [tool.pixi.dependencies]
-mpi4py = ">=4.1.2,<5"
 h5py = { version = ">=3.16.0,<4", build = "*openmpi*" }
-scipy = ">=1.16.3,<2"
 imageio = ">=2.37.0,<3"
-tqdm = ">=4.68.1,<5"
-matplotlib = ">=3.10.9,<4"
-scikit-image = ">=0.26.0,<0.27"
-numba = ">=0.65.1,<0.66"
-numpy = ">=2.4.6,<3"
 jupyter = ">=1.1.1,<2"
+matplotlib = ">=3.11.1,<4"
+mpi4py = ">=4.1.2,<5"
+numba = ">=0.67.0,<0.68"
+numpy = ">=2.5.2,<3"
+scikit-image = ">=0.26.0,<0.27"
+scipy = ">=1.17.1,<2"
+tqdm = ">=4.70.0,<5"
 
 [tool.pixi.pypi-dependencies]
 cards = { path = ".", editable = true }
 
 [tool.pixi.environments]
 test = { features = ["cpu", "test"], solve-group = "default" }
-doc  = { features = ["cpu", "doc"],  solve-group = "default" }
-gpu  = { features = ["gpu"],         solve-group = "gpu" }
+doc = { features = ["cpu", "doc"], solve-group = "gpu" }
+gpu = { features = ["gpu"], solve-group = "gpu" }
 full = { features = ["gpu", "dev", "doc", "test"], solve-group = "gpu" }
 
 # https://pixi.sh/latest/reference/pixi_manifest/#the-feature-table
 [tool.pixi.feature.cpu.dependencies]
-pytorch = ">=2.11.0,<3"
-torchvision = ">=0.26.0,<0.27"
+pytorch = ">=2.13.0,<3"
+torchvision = ">=0.28.0,<0.29"
 
 [tool.pixi.feature.gpu]
-system-requirements = { cuda = "12" }
+platforms = ["linux-64-cuda-12"]
 
 [tool.pixi.feature.gpu.dependencies]
-pytorch = { version = ">=2.11.0,<3", build = "*cuda*" }
-torchvision = { version = ">=0.26.0,<0.27", build = "*cuda*" }
-cupy = ">=14.1.1,<15"
-ucx = ">=1.20.0,<2"
+cupy = ">=14.2.0,<15"
+pytorch = { version = ">=2.13.0,<3", build = "*cuda*" }
+torchvision = { version = ">=0.28.0,<0.29", build = "*cuda*" }
+ucx = ">=1.20.1,<2"
 
 [tool.pixi.feature.test.dependencies]
-pytest = ">=9.0.3,<10"
-coverage = ">=7.14.1,<8"
+coverage = ">=7.15.4,<8"
+pytest = ">=9.1.1,<10"
 
 [tool.pixi.feature.doc.dependencies]
 furo = ">=2025.12.19,<2026"
-sphinx = ">=8.2.3,<9"
-sphinx_rtd_theme = ">=3.1.0,<4"
-sphinxcontrib-bibtex = ">=2.7.0,<3"
-sphinx-autoapi = ">=3.8.0,<4"
+sphinx = ">=9.1.0,<10"
+sphinx-autobuild = ">=2025.8.25,<2026"
 sphinx-design = ">=0.7.0,<0.8"
+sphinxcontrib-bibtex = ">=2.7.0,<3"
 
 [tool.pixi.feature.doc.pypi-dependencies]
-sphinxcontrib-apa = ">=1.0.0, <2"
-sphinx-copybutton = ">=0.5.2, <0.6"
 docstr-coverage = ">=2.3.2, <3"
 genbadge = ">=1.1.3, <2"
+sphinx-copybutton = ">=0.5.2, <0.6"
+sphinxcontrib-apa = ">=1.0.0, <2"
 wily = ">=1.25.0, <2"
 
 [tool.pixi.feature.dev.dependencies]
-isort = ">=8.0.1,<9"
-pre-commit = ">=4.6.0,<5"
-conda-build = ">=26.5.0,<27"
 anaconda-client = ">=1.14.1,<2"
-ruff = ">=0.15.16,<0.16"
-ty = ">=0.0.44,<0.0.45"
-
+conda-build = ">=26.7.1,<27"
+isort = ">=8.0.1,<9"
+prek = ">=0.4.8,<0.5"
+ruff = ">=0.16.4,<0.17"
+ty = ">=0.0.73,<0.0.74"
 
 [tool.pixi.package]
 name = { workspace = true }
@@ -93,28 +94,51 @@ backend = { name = "pixi-build-python", version = "==0.4.0" }
 hatchling = "*"
 
 [tool.pixi.package.run-dependencies]
-mpi4py = ">=4.1.1,<5"
+cupy = ">=13.6.0,<14"
 h5py = { version = ">=3.15.1,<4", build = "*openmpi*" }
-scipy = ">=1.16.3,<2"
 imageio = ">=2.37.0,<3"
-tqdm = ">=4.67.1,<5"
 matplotlib = ">=3.10.8,<4"
-scikit-image = ">=0.25.2,<0.26"
+mpi4py = ">=4.1.1,<5"
 numba = ">=0.63.1,<0.64"
 numpy = ">=2.3.5,<3"
 pytorch = ">=2.9.1,<3"
+scikit-image = ">=0.25.2,<0.26"
+scipy = ">=1.16.3,<2"
 torchvision = ">=0.24.1,<0.25"
+tqdm = ">=4.67.1,<5"
 ucx = ">=1.19.1,<2"
-cupy = ">=13.6.0,<14"
-
-# * additional tools
-[tool.ruff]
-target-version = "py312"
 
 [tool.ty.environment]
-extra-paths = ["./examples/gaussian_deconvolution", "./examples/gaussian_inpainting", "./examples/poisson_deconvolution"]
+extra-paths = [
+    "./examples/gaussian_deconvolution",
+    "./examples/gaussian_inpainting",
+    "./examples/poisson_deconvolution",
+]
+
+[tool.ty.src]
+exclude = ["archive"]
 
 [tool.pytest.ini_options]
 addopts = "-ra -q -vv"
 strict = true
 testpaths = ["tests"]
+
+# tasks
+[tool.pixi.tasks]
+doc = { cmd = "rm -rf doc/_build doc/api && sphinx-autobuild doc doc/_build/html --watch src", default-environment = "full" }
+tests = { cmd = """
+pytest tests
+pytest tests --device gpu
+mpirun -np 2 pytest tests --mode mpi
+mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 pytest tests --mode mpi --device gpu
+""", default-environment = "full" }
+tests_cpu = { cmd = """
+pytest tests
+mpirun -np 2 pytest tests --mode mpi
+""", default-environment = "test" }
+tests_gpu = { cmd = """
+pytest tests --device gpu
+mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 pytest tests --mode mpi --device gpu
+""", default-environment = "test" }
+test_mpi_cpu = { cmd = " mpiexec -n 2 python -m mpi4py -m pytest --mode mpi --device cpu ", default-environment = "test" }
+test_mpi_gpu = { cmd = " mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 pytest --mode mpi --device gpu ", default-environment = "test" }

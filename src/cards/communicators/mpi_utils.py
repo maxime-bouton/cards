@@ -1,0 +1,152 @@
+r"""Utility functions to create MPI subarray datatypes.
+
+This package module provides elementary functionalities to create and
+deallocate MPI datatype underlying communications over Cartesian grids of
+workers in arbitray dimensions.
+"""
+
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
+# TODO: check typing (xp.ndarray or np.ndarray)
+
+from typing import Any
+
+import mpi4py.util.dtlib as mpilib
+import numpy as np
+from mpi4py import MPI
+
+
+def get_ranknd(
+    rank: int, grid_size: np.typing.NDArray[np.integer[Any]]
+) -> np.typing.NDArray[np.integer[Any]]:
+    """Generate the nD rank of a process from its linear rank.
+
+    Generate the nD rank of a process from its linear rank within a Cartesian grid of processes of shape ``grid_size``.
+
+    Parameters
+    ----------
+    rank : int
+        Linear rank of a process.
+    grid_size : np.ndarray[int]
+        Number of processes along each axis of the Cartesian grid.
+
+    Returns
+    -------
+    np.ndarray[int]
+        Multi-dimensional rank of the current process in the Cartesian grid.
+    """
+    return np.array(np.unravel_index(rank, grid_size), dtype="i")
+
+
+def mpi_create_subarray_type(
+    array_size: np.ndarray,
+    comm_rank: np.ndarray,
+    comm_starts: np.ndarray,
+    comm_subsizes: np.ndarray,
+    dtype: type = np.float64,
+) -> list[MPI.Datatype]:
+    r"""Source, destination types and ranks to update facet borders.
+
+    Set-up destination and source data types and process ranks to communicate
+    facet borders within an nD Cartesian communicator. Diagonal communications
+    (involving more than a single dimension) are not separated from the other
+    communications.
+
+    Parameters
+    ----------
+    array_size : np.ndarray[int]
+        Size of the array from which a subarray needs to be extracted.
+    comm_rank : np.ndarray[int]
+        List of process ranks with which the current process needs to communicate. Contains the value ``MPI_PROC_NULL`` for any invalid communication.
+    comm_starts : np.ndarray[int]
+        nD index of the starting point of the subarray to be extracted.
+    comm_subsizes : np.ndarray[int]
+        Shape of the subarray to be extracted.
+    dtype : type, optional
+        Type of the buffer over which the communicator is defined (required
+        to define sub-arrays), by default np.float64.
+
+    Returns
+    -------
+    resizedsubarray : list(MPI.Datatype)
+        Custom MPI subarray type describing the subarray to be communicated to another process (see `mpi4py.MPI.Datatype.Create_subarray <https://mpi4py.github.io/usrman/reference/mpi4py.MPI.Datatype.html?highlight=create%20subarray#mpi4py.MPI.Datatype.Create_subarray>`_).
+
+    Note
+    ----
+    For synchronous communications, ``ndims_comm`` communications maximum need
+    to be performed per worker (one along each axis of the Cartesian grid.
+    Whenever a communication along an axis is not valid, ``comm_rank`` is
+    expected to contain the value ``MPI.PROC_NULL`` in the corresponding entry.
+    """
+    # Useful references
+    # 1. https://www.mpi-forum.org/docs/mpi-3.1/mpi31-report/node83.htm#Node83
+    # 2. https://events.prace-ri.eu/event/1049/sessions/3350/attachments/1330/2362/Advanced%20MPI-%20User-defined%20datatypes.pdf
+    # Size := number of bytes that have to be transferred -> favor the wording "shape"
+    # Extent := spans from first to last byte (including all holes).
+    # True extent := spans from first to last true byte (excluding holes at begin+end)
+    # Automatic holes at the end for necessary alignment purpose
+    # Additional holes at begin and by lb and ub markers: MPI_TYPE_CREATE_RESIZED
+    # Basic datatypes: Size = Extent = number of bytes used by the compiler
+
+    # number of communications to be performed
+    ncomms = comm_rank.size
+
+    if comm_rank.size == 0:
+        resizedsubarray = []
+    else:
+        mpi_datatype = mpilib.from_numpy_dtype(dtype)
+
+        # size in bytes of an item from the array to be sent.
+        # itemsize = np.dtype(dtype).itemsize
+
+        # defining custom types to communicate non-contiguous arrays
+        resizedsubarray = ncomms * [None]
+
+        for comm_id in range(ncomms):
+            if (
+                comm_rank[comm_id] > MPI.PROC_NULL
+            ):  # if valid communication, create new Datatype, keep None otherwise
+                subarray = mpi_datatype.Create_subarray(
+                    array_size,
+                    comm_subsizes[comm_id],
+                    comm_starts[comm_id],
+                    order=MPI.ORDER_C,
+                )
+
+                [lb, extent] = subarray.Get_extent()
+                resizedsubarray[comm_id] = subarray.Create_resized(lb, extent)
+                resizedsubarray[comm_id].Commit()
+
+    return resizedsubarray
+
+
+def free_custom_mpi_types(
+    resizedsendsubarray: list[MPI.Datatype | None],
+    resizedrecvsubarray: list[MPI.Datatype | None],
+) -> None:
+    r"""Freeing list of custom MPI.Datatype.
+
+    Parameters
+    ----------
+    resizedsendsubarray : list[MPI.Datatype | None], of size ``d``
+        Custom MPI subarray type describing the data sent by the current
+        process, as returned by ``MPI.Datatype.Create_subarray``.
+    resizedrecvsubarray : list[MPI.Datatype| None], of size ``d``
+        Custom MPI subarray type describing the data received by the current
+        process, as returned by ``MPI.Datatype.Create_subarray``.
+
+    Note
+    ----
+    `None` values in the input list indicate correpond to communications to be
+    skipped (e.g., invalid axis for communication in  Cartesian grid of
+    workers).
+    """
+    ncomms = len(resizedsendsubarray)
+
+    for comm_id in range(ncomms):
+        if resizedsendsubarray[comm_id] is not None:
+            resizedsendsubarray[comm_id].Free()
+        if resizedrecvsubarray[comm_id] is not None:
+            resizedrecvsubarray[comm_id].Free()

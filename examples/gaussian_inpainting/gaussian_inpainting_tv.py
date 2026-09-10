@@ -1,0 +1,455 @@
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+import torch
+from scipy import interpolate
+
+import cards.backend as xp
+from cards.communicators.mpi_utils import get_ranknd
+from cards.core.execution_context import ExecutionContext
+from cards.core.layout import Layout
+from cards.core.variable import Variable
+from cards.estimators.base_estimator import BaseEstimator
+from cards.estimators.ci import CI
+from cards.estimators.mmse_var import MMSEVar
+from cards.io.io_manager import IOManager
+from cards.models import (
+    BaseModel,
+    DistributedGaussianInpaintingTvModel,
+    GaussianInpaintingTvModel,
+)
+from cards.models.gaussian_inpainting_tv_model import GaussianInpaintingTvParameters
+from cards.operators.distributed_gradient import DistributedGradient2d
+from cards.operators.distributed_masking import DistributedMasking
+from cards.operators.gradient import Gradient2d
+from cards.operators.masking import Masking
+from cards.random import create_rng
+from cards.slicers.cartesian_comm_slicer import CartesianCommSlicer
+from cards.transition_kernels.psgla import CpuPSGLA, GpuPSGLA
+from cards.utils.utils_img import read_img_shape
+from cards.utils.utils_observations import (
+    compute_sigma2_from_isnr,
+    fit_mask_shape,
+)
+
+
+@dataclass
+class TvInpaintingGeometry:
+    grid_shape: tuple[int, ...]
+    layout_x: Layout
+    layout_y: Layout
+    layout_z: Layout
+    H: Masking | DistributedMasking
+    G: Gradient2d | DistributedGradient2d
+    mask: xp.ndarray
+
+
+def interpolate_masked_image_cubic(
+    masked_image: xp.ndarray,
+    mask: xp.ndarray,
+) -> xp.ndarray:
+    r"""Interpolate masked values in an image using cubic spline interpolation.
+    Transfers data to CPU for interpolation.
+
+    Parameters
+    ----------
+    masked_image : xp.ndarray
+        Image with masked values, shape (C, H, W)
+    mask : xp.ndarray
+        Boolean mask where True/1 indicates visible pixels, shape (C, H, W)
+
+    Returns
+    -------
+    xp.ndarray
+        Interpolated image with the same shape as the input
+    """
+    # NOTE: ensure gray image and associated mask have at least 3 axis to reuse
+    # the same code for gray and color images
+    if len(masked_image.shape) < 3:
+        masked_image = masked_image[None, ...]
+        mask = mask[None, ...]
+    C, H, W = masked_image.shape
+    result = masked_image.copy()
+    C_mask = mask.shape[-3]
+    for c in range(C):
+        channel_gpu = masked_image[c]
+        mask_gpu = xp.asarray(mask[min(c, C_mask - 1)]).astype(bool)
+
+        if xp.all(~mask_gpu) or xp.all(mask_gpu):
+            continue
+
+        # TODO: simplify below, channel_cpu and mask_cpu should not be needed
+        if xp.get_backend() == "cupy":
+            channel_cpu = channel_gpu.get()
+            mask_cpu = mask_gpu.get()
+        else:
+            channel_cpu = channel_gpu
+            mask_cpu = mask_gpu
+
+        known_coords = np.where(mask_cpu)
+        known_values = channel_cpu[known_coords]
+
+        y_grid, x_grid = np.mgrid[0:H, 0:W]
+
+        filled_channel = interpolate.griddata(
+            np.column_stack((known_coords[0], known_coords[1])),
+            known_values,
+            (y_grid, x_grid),
+            method="cubic",
+            fill_value=np.mean(known_values),
+        )
+
+        filled_channel_gpu = xp.asarray(filled_channel)
+        result[c][~mask_gpu] = filled_channel_gpu[~mask_gpu]
+
+    return result
+
+
+def build_masking_operator(
+    mask: xp.ndarray,
+    full_shape: tuple[int, ...],
+    grid_shape: tuple[int, ...],
+    ctx: ExecutionContext,
+    cartslicer: CartesianCommSlicer,
+) -> Masking | DistributedMasking:
+    if ctx.is_mpi:
+        return DistributedMasking(
+            grid_shape,
+            full_shape,
+            mask,
+            cartslicer,
+        )
+    return Masking(mask)
+
+
+def build_gradient(
+    full_shape: tuple[int, ...],
+    grid_shape: tuple[int, ...],
+    ctx: ExecutionContext,
+) -> Gradient2d | DistributedGradient2d:
+    if ctx.is_mpi:
+        gradient = DistributedGradient2d(full_shape, grid_shape, ctx.comm)
+    else:
+        gradient = Gradient2d(full_shape)
+    return gradient
+
+
+def build_mask(
+    obs_cfg: dict,
+    cartslicer: CartesianCommSlicer,
+    ctx: ExecutionContext,
+) -> xp.ndarray:
+    mask_loss = obs_cfg["mask_loss"]
+    data_seed = obs_cfg["seed_data"]
+
+    if ctx.is_mpi:
+        if ctx.is_master == 0:
+            ss = np.random.SeedSequence(data_seed)
+            # spawn off nworkers child SeedSequences to pass to child processes.
+            child_seed = ss.spawn(ctx.comm_size)
+        else:
+            child_seed = None
+        seed = ctx.comm.scatter(child_seed, root=0)
+    else:
+        seed = data_seed
+    rng = np.random.default_rng(seed)
+
+    local_size = cartslicer.tile_size
+
+    # generate local mask and operator
+    sz = [local_size[k].item() for k in range(local_size.size - 2, local_size.size)]
+    mask = rng.random(sz) < (1 - mask_loss)
+
+    return mask
+
+
+class TvInpaintingGeometryHook:
+    def build_geometry(
+        self,
+        ctx: ExecutionContext,
+        io_mng: IOManager,
+        cfg: dict,
+        obs_path: Path,
+    ) -> TvInpaintingGeometry:
+        obs_cfg = cfg["observations"]
+        gt_path = obs_cfg["img_path"]
+        gt_shape = read_img_shape(gt_path)
+        # dtype = read_dtype(gt_path)
+
+        grid_shape = ctx.generate_grid_shape(len(gt_shape))
+
+        # create slicer object
+        grid_size = np.asarray(grid_shape)
+        ranknd = get_ranknd(ctx.rank, grid_size)
+        cartslicer = CartesianCommSlicer(
+            ranknd,
+            grid_size,
+            np.asarray(gt_shape),
+            np.zeros(len(grid_size), dtype=int),
+            np.zeros(len(grid_size), dtype=int),
+        )
+
+        if obs_path.exists():
+            with io_mng.open(obs_path, mode="r") as f:
+                mask = io_mng.read_array(
+                    f,
+                    "mask",
+                    source_slice=cartslicer.slice_global_buffer_to_tile,
+                )
+        else:
+            mask = build_mask(obs_cfg, cartslicer, ctx)
+
+        mask = fit_mask_shape(xp.asarray(mask), cartslicer.tile_size)
+
+        G = build_gradient(
+            gt_shape,
+            grid_shape,
+            ctx,
+        )
+        H = build_masking_operator(
+            mask,
+            gt_shape,
+            grid_shape,
+            ctx,
+            cartslicer,
+        )
+        # TODO: rework access to mpi slicing utilities
+        slicer_x = H.cartslicer if ctx.is_mpi else None
+        slicer_y = slicer_x
+        slice_x = slicer_x.slice_global_buffer_to_tile if slicer_x else None
+        slice_y = slicer_y.slice_global_buffer_to_tile if slicer_y else None
+        slice_z = G.adjoint_slice_global_buffer_to_tile if ctx.is_mpi else None
+        x_shape = gt_shape
+        y_shape = x_shape
+        z_shape = (*G.data_shape,)
+        tile_x_shape = tuple(slicer_x.tile_size) if slicer_x else x_shape
+        tile_y_shape = tuple(slicer_y.tile_size) if slicer_y else y_shape
+        tile_z_shape = (*G.adjoint_tile_size,) if ctx.is_mpi else z_shape
+        layout_x = Layout(tile_x_shape, x_shape, slice_x)
+        layout_y = Layout(tile_y_shape, y_shape, slice_y)
+        layout_z = Layout(tile_z_shape, z_shape, slice_z)
+        return TvInpaintingGeometry(
+            grid_shape, layout_x, layout_y, layout_z, H, G, mask
+        )
+
+
+@dataclass
+class GaussianInpaintingObs:
+    y: xp.ndarray
+    n: xp.ndarray
+    Hx: xp.ndarray
+    x: xp.ndarray
+    mask: xp.ndarray
+    interpolation: xp.ndarray
+    sigma2: float
+    isnr: float
+    seed_data: int
+    comm_size: int
+    is_gpu: bool
+
+
+class GaussianInpaintingObservationsHook:
+    def generate_observations(
+        self,
+        ctx: ExecutionContext,
+        io_mng: IOManager,
+        cfg: dict,
+        geom: TvInpaintingGeometry,
+    ) -> GaussianInpaintingObs:
+        obs_cfg = cfg["observations"]
+        img_path = obs_cfg["img_path"]
+
+        with io_mng.open(img_path) as f:
+            x = io_mng.read_array(f, "x", geom.layout_x.s)
+
+        Hx = geom.H.forward(x)
+
+        seed_data = obs_cfg["seed_data"]
+        rng = create_rng(seed_data, ctx)
+        isnr = obs_cfg["isnr"]
+        sigma2 = compute_sigma2_from_isnr(Hx, isnr, ctx)
+
+        # TODO: rework rng handling
+        if ctx.is_gpu:
+            n = torch.normal(
+                0, sigma2**0.5, size=geom.layout_y.tile, device="cuda", generator=rng
+            )
+            n = xp.asarray(n, x.dtype)
+        else:
+            n = sigma2**0.5 * rng.standard_normal(geom.layout_y.tile, x.dtype)
+
+        y = Hx + n
+
+        # NOTE: in distributed setting, only local interpolation (not equivalent to serial interpolation)
+        interpolation = interpolate_masked_image_cubic(y, geom.H.mask).clip(0, 1)
+
+        return GaussianInpaintingObs(
+            y,
+            n,
+            Hx,
+            x,
+            geom.mask,
+            interpolation,
+            sigma2,
+            isnr,
+            seed_data,
+            ctx.comm_size,
+            ctx.is_gpu,
+        )
+
+    def save_observations(
+        self,
+        ctx: ExecutionContext,
+        io_mng: IOManager,
+        geom: TvInpaintingGeometry,
+        obs: GaussianInpaintingObs,
+        obs_path: Path,
+    ) -> None:
+        with io_mng.open(obs_path, mode="x") as f:
+            io_mng.write_array(f, "y", obs.y, geom.layout_y.full, geom.layout_y.s)
+            io_mng.write_array(f, "Hx", obs.Hx, geom.layout_y.full, geom.layout_y.s)
+            io_mng.write_array(f, "n", obs.n, geom.layout_y.full, geom.layout_y.s)
+            io_mng.write_array(f, "x", obs.x, geom.layout_x.full, geom.layout_x.s)
+            io_mng.write_array(f, "mask", obs.mask, geom.layout_x.full, geom.layout_x.s)
+            io_mng.write_array(
+                f,
+                "interpolation",
+                obs.interpolation,
+                geom.layout_x.full,
+                geom.layout_x.s,
+            )
+
+        with io_mng.open_master_only(obs_path, mode="r+") as f:
+            if f is not None:
+                obs_dict = {
+                    "sigma2": obs.sigma2,
+                    "isnr": obs.isnr,
+                    "seed_data": obs.seed_data,
+                    "comm_size": obs.comm_size,
+                    "is_gpu": obs.is_gpu,
+                }
+                io_mng.write_config(f, obs_dict)
+
+    def load_observations(
+        self,
+        ctx: ExecutionContext,
+        io_mng: IOManager,
+        geom: TvInpaintingGeometry,
+        obs_path: Path,
+    ) -> GaussianInpaintingObs:
+        with io_mng.open(obs_path, mode="r", force_serial=True) as f:
+            y = io_mng.read_array(f, "y", geom.layout_y.s)
+            Hx = io_mng.read_array(f, "Hx", geom.layout_y.s)
+            n = io_mng.read_array(f, "n", geom.layout_y.s)
+            x = io_mng.read_array(f, "x", geom.layout_x.s)
+            mask = io_mng.read_array(f, "mask", geom.layout_x.s)
+            interpolation = io_mng.read_array(f, "interpolation", geom.layout_x.s)
+            obs_dict = io_mng.read_config(f)
+
+        return GaussianInpaintingObs(
+            y,
+            n,
+            Hx,
+            x,
+            mask,
+            interpolation,
+            obs_dict["sigma2"],
+            obs_dict["isnr"],
+            obs_dict["seed_data"],
+            ctx.comm_size,
+            ctx.is_gpu,
+        )
+
+
+def compute_step_sizes_gaussian_inpainting_tv(
+    split_coef: float,
+    sigma2: float,
+) -> tuple[float, float]:
+    step_size_X = 0.99 * 1.0 / (8.0 / split_coef + 1.0 / sigma2)
+    step_size_Z = 0.99 * split_coef
+    return step_size_X, step_size_Z
+
+
+class GaussianInpaintingTvMcmcHook:
+    def build_estimators(
+        self,
+        geom: TvInpaintingGeometry,
+        obs: GaussianInpaintingObs,
+    ) -> tuple[dict[str, Variable], list[BaseEstimator]]:
+
+        y_var = Variable(
+            layout=geom.layout_y,
+            name="Y",
+            state=obs.y,
+            dtype=obs.y.dtype,
+        )
+
+        x_var = Variable(
+            layout=geom.layout_x,
+            name="X",
+            dtype=obs.x.dtype,
+        )
+
+        z_var = Variable(
+            layout=geom.layout_z,
+            name="Z",
+            dtype=obs.x.dtype,
+        )
+
+        variables = {"X": x_var, "Y": y_var, "Z": z_var}
+        estimators: list[BaseEstimator] = [MMSEVar(x_var), CI(x_var, all_samples=True)]
+
+        return variables, estimators
+
+    def build_model(
+        self,
+        ctx: ExecutionContext,
+        cfg: dict,
+        geom: TvInpaintingGeometry,
+        obs: GaussianInpaintingObs,
+        vars_: dict[str, Variable],
+    ) -> BaseModel:
+
+        reg_coef = cfg["parameters"]["reg_coef"]
+        split_coef = cfg["parameters"]["split_coef"]
+        step_size_X, step_size_Z = compute_step_sizes_gaussian_inpainting_tv(
+            obs.sigma2,
+            split_coef,
+        )
+
+        x_var = vars_["X"]
+        y_var = vars_["Y"]
+        z_var = vars_["Z"]
+
+        model_params = GaussianInpaintingTvParameters(obs.sigma2, reg_coef, split_coef)
+
+        PSGLA = GpuPSGLA if ctx.is_gpu else CpuPSGLA
+
+        X = PSGLA(
+            var=x_var,
+            step_size=step_size_X,
+        )
+
+        Z = PSGLA(
+            var=z_var,
+            step_size=step_size_Z,
+        )
+
+        if ctx.is_mpi:
+            Model = DistributedGaussianInpaintingTvModel
+        else:
+            Model = GaussianInpaintingTvModel
+
+        return Model(
+            model_params,
+            geom.H,
+            geom.G,
+            y_var,
+            X,
+            Z,
+        )

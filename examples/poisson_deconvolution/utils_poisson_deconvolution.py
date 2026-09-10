@@ -1,10 +1,8 @@
-r"""Utility functions to set the Poisson deconvolution example script for the experiments reported in :cite:p:`Bouton2025` (synthetic data generation, sampling and post-processing steps)."""
+r"""Utility functions to set the Poisson deconvolution example script for the experiments reported in :cite:p:`Bouton2026` (synthetic data generation, sampling and post-processing steps)."""
 
 # authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
 #
-# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais - **A
-# Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse
-# Problems**, [arxiv preprint](http://arxiv.org/abs/), October 2025.
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 # FIXME: use DataManager instead to hide details on data loading
 
@@ -13,8 +11,13 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+from cards.samplers.base_sampler import SamplerParameters
+from cards.transition_kernels.gpu_pnp_ula import GpuPnpULA
+from cards.transition_kernels.gpu_psgla import GpuPSGLA
 
-from cards.backend import xp
+import cards.backend as xp
+from cards.estimators.base_estimator import BaseEstimator
+from cards.estimators.mmse_var import MMSEVar
 from cards.models.base_poisson_deconvolution_model import (
     PoissonDeconvolutionParameters,
 )
@@ -27,15 +30,12 @@ from cards.models.poisson_deconvolution_tv_model import (
     PoissonDeconvolutionTvModel,
 )
 from cards.operators.dft_convolution import DftConvolution
-from cards.operators.mpi_dft_convolution import MpiDftConvolution
-from cards.sampler.base_sampler import SamplerParameters
-from cards.sampler.distributed_sampler import DistributedSampler
-from cards.sampler.gpu_sampler import GpuSampler
-from cards.sampler.multi_gpu_sampler import MultiGpuSampler
-from cards.sampler.serial_sampler import SerialSampler
-from cards.transition_kernel.gpu_pnp_ula import GpuPnpULA
-from cards.transition_kernel.gpu_psgla import GpuPSGLA
-from cards.transition_kernel.psgla import PSGLA
+from cards.operators.distributed_dft_convolution import DistributedDftConvolution
+from cards.samplers.distributed_cpu_sampler import DistributedCpuSampler
+from cards.samplers.distributed_gpu_sampler import DistributedGpuSampler
+from cards.samplers.serial_cpu_sampler import SerialCpuSampler
+from cards.samplers.serial_gpu_sampler import SerialGpuSampler
+from cards.transition_kernels.psgla import PSGLA
 from cards.utils.path_builder import (
     deconvolution_str,
     obs_dir,
@@ -111,7 +111,9 @@ def generate_poisson_deconvolution_observations(
         case "mpi":
             from mpi4py import MPI
 
-            from cards.operators.mpi_dft_convolution import MpiDftConvolution
+            from cards.operators.distributed_dft_convolution import (
+                DistributedDftConvolution,
+            )
 
             comm = MPI.COMM_WORLD
             rank = comm.Get_rank()
@@ -128,14 +130,16 @@ def generate_poisson_deconvolution_observations(
             # MPI.Compute_dims(size, 2)
             grid_size = np.asarray([1] * (len(gt_shape) - 2) + [comm_size, 1])
 
-            convolution_operator = MpiDftConvolution(gt_size, kernel, comm, grid_size)
+            convolution_operator = DistributedDftConvolution(
+                gt_size, kernel, comm, grid_size
+            )
 
         case "serial":
             from cards.operators.dft_convolution import DftConvolution
 
             seed = data_seed
 
-            convolution_operator = DftConvolution(gt_size, kernel, data_size)
+            convolution_operator = DftConvolution(gt_size, data_size, kernel)
 
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
@@ -372,7 +376,9 @@ def compute_tv(
             # MPI.Compute_dims(size, 2)
             grid_size = np.asarray([1] * (len(gt_shape) - 2) + [size, 1])
 
-            op = MpiDftConvolution(np.asarray(gt_shape), kernel, comm, grid_size)
+            op = DistributedDftConvolution(
+                np.asarray(gt_shape), kernel, comm, grid_size
+            )
             y = np.empty(
                 op.adjoint_communicator.cartslicer.tile_size, dtype=kernel.dtype
             )
@@ -390,7 +396,7 @@ def compute_tv(
                 y = xp.asarray(f["y"])
             state_shape = gt_shape
             data_size = np.asarray(gt_shape) + np.asarray(kernel.shape, dtype=int) - 1
-            op = DftConvolution(np.asarray(gt_shape), kernel, data_size)
+            op = DftConvolution(np.asarray(gt_shape), data_size, kernel)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 
@@ -415,30 +421,26 @@ def compute_tv(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
+    estimators: list[BaseEstimator] = [MMSEVar(X)]
+
     match mode:
         case "mpi":
             model = DistributedPoissonDeconvolutionTvModel(
-                op,
+                estimators,
                 model_params,
+                op,
                 X,
                 Z1,
                 Z2,
             )
 
-            if device == "cpu":
-                sampler = DistributedSampler(comm, sampler_params, model, logger)
-            else:
-                # TODO: revise / generalise default gpu assignment
-                sampler = MultiGpuSampler(
-                    comm,
-                    sampler_params,
-                    model,
-                    logger,
-                    gpu_id=comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
-                )
+            Sampler = (
+                DistributedCpuSampler if device == "cpu" else DistributedGpuSampler
+            )
+            sampler = Sampler(comm, sampler_params, model, logger)
         case "serial":
-            model = PoissonDeconvolutionTvModel(op, model_params, X, Z1, Z2)
-            Sampler = SerialSampler if device == "cpu" else GpuSampler
+            model = PoissonDeconvolutionTvModel(estimators, model_params, op, X, Z1, Z2)
+            Sampler = SerialCpuSampler if device == "cpu" else SerialGpuSampler
             sampler = Sampler(sampler_params, model, logger)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
@@ -486,9 +488,9 @@ def compute_pnp(
 
             match denoiser_params["type"]:
                 case "ddfb":
-                    from cards.denoisers.mpi_ddfb import MpiDDFB
+                    from cards.denoisers.distributed_ddfb import DistributedDDFB
 
-                    denoiser = MpiDDFB(
+                    denoiser = DistributedDDFB(
                         comm,
                         grid_size,
                         image_size=np.asarray(gt_shape),
@@ -496,16 +498,16 @@ def compute_pnp(
                         n_features=denoiser_params["n_features"],
                     )
                 case "dncnn":
-                    from cards.denoisers.mpi_dncnn import MpiDnCNN
+                    from cards.denoisers.distributed_dncnn import DistributedDnCNN
 
-                    denoiser = MpiDnCNN(
+                    denoiser = DistributedDnCNN(
                         comm, grid_size, image_size=np.asarray(gt_shape)
                     )
 
                 case "drunet":
-                    from cards.denoisers.mpi_drunet import MpiDRUNet
+                    from cards.denoisers.distributed_drunet import DistributedDRUNet
 
-                    denoiser = MpiDRUNet(
+                    denoiser = DistributedDRUNet(
                         comm, grid_size, image_size=np.asarray(gt_shape)
                     )
                     tile_range = (
@@ -517,7 +519,7 @@ def compute_pnp(
                         f"Unknown denoiser type: {denoiser_params['type']}"
                     )
 
-            op = MpiDftConvolution(
+            op = DistributedDftConvolution(
                 np.asarray(gt_shape), kernel, comm, grid_size, tile_range=tile_range
             )
             y = np.empty(
@@ -559,7 +561,7 @@ def compute_pnp(
                 y = xp.asarray(f["y"])
             state_shape = gt_shape
             data_size = np.asarray(gt_shape) + np.asarray(kernel.shape, dtype=int) - 1
-            op = DftConvolution(np.asarray(gt_shape), kernel, data_size)
+            op = DftConvolution(np.asarray(gt_shape), data_size, kernel)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")
 
@@ -584,9 +586,12 @@ def compute_pnp(
         case _:
             raise ValueError(f"Unknown device: {device}")
 
+    estimators: list[BaseEstimator] = [MMSEVar(X)]
+
     match mode:
         case "mpi":
             model = DistributedPoissonDeconvolutionPnpModel(
+                estimators,
                 op,
                 model_params,
                 X,
@@ -594,20 +599,22 @@ def compute_pnp(
                 Z2,
                 denoiser,
             )
-            if device == "cpu":
-                sampler = DistributedSampler(comm, sampler_params, model, logger)
-            else:
-                # TODO: revise / generalise default gpu assignment
-                sampler = MultiGpuSampler(
-                    comm,
-                    sampler_params,
-                    model,
-                    logger,
-                    comm.Get_rank() % xp.cuda.runtime.getDeviceCount(),
-                )
+
+            Sampler = (
+                DistributedCpuSampler if device == "cpu" else DistributedGpuSampler
+            )
+            sampler = Sampler(comm, sampler_params, model, logger)
         case "serial":
-            model = PoissonDeconvolutionPnpModel(op, model_params, X, Z1, Z2, denoiser)
-            Sampler = SerialSampler if device == "cpu" else GpuSampler
+            model = PoissonDeconvolutionPnpModel(
+                estimators,
+                model_params,
+                op,
+                X,
+                Z1,
+                Z2,
+                denoiser,
+            )
+            Sampler = SerialCpuSampler if device == "cpu" else SerialGpuSampler
             sampler = Sampler(sampler_params, model, logger)
         case _:
             raise ValueError(f"Unknown run mode: {mode}")

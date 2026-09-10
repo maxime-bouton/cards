@@ -13,13 +13,13 @@ import numpy as np
 import pytest
 from mpi4py.MPI import PROC_NULL
 
-import cards.communicator.sync_cartesian_communicator as sync_cart_comm
-from cards.slicer.cartesian_comm_slicer import (
+import cards.communicators.sync_cartesian_communicator as sync_cart_comm
+from cards.slicers.cartesian_comm_slicer import (
     CartesianCommSlicer,
     compute_local_buffer_size,
     # create_slice_async_send_recv,
 )
-from cards.slicer.cartesian_tessellation import local_split_range_nd
+from cards.slicers.cartesian_tessellation import local_split_range_nd
 
 
 @pytest.fixture
@@ -112,7 +112,7 @@ def test_fail_negative_send_recv_size(image_size, send_size, recv_size):
             recv_size,
             backward=True,
         )
-    assert "All entries in send_size should be positive." in str(excinfo.value)
+    assert "All entries in `send_size` should be positive." in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
         CartesianCommSlicer(
@@ -123,7 +123,7 @@ def test_fail_negative_send_recv_size(image_size, send_size, recv_size):
             np.array([-1, 2], dtype="i"),
             backward=True,
         )
-    assert "All entries in recv_size should be positive." in str(excinfo.value)
+    assert "All entries in `recv_size` should be positive." in str(excinfo.value)
 
 
 def test_fail_large_overlap_send(image_size, recv_size):
@@ -141,7 +141,7 @@ def test_fail_large_overlap_send(image_size, recv_size):
             recv_size,
             backward=True,
         )
-    assert "All entries in tile_size should be greater than send_size" in str(
+    assert "All entries in `tile_size` should be greater than `send_size`" in str(
         excinfo.value
     )
 

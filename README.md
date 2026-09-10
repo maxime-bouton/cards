@@ -19,11 +19,12 @@
   - [Table of content](#table-of-content)
   - [Description](#description)
   - [Installation](#installation)
+  - [Example usage](#example-usage)
   - [Contributing](#contributing)
     - [Setup](#setup)
     - [Testing](#testing)
-  - [License](#license)
   - [Citation](#citation)
+  - [License](#license)
 
 </details>
 
@@ -123,7 +124,7 @@ pixi shell --environment full
 
 ### Testing
 
-Before any commit or pull request to the master branch, verify all tests pass under the different configuration considered (serial and distributed mode, running on CPU or GPU). See [`tests/conftest.py`](tests/conftest.py) for further details.
+Before any commit or pull request to the master branch, verify all tests pass under the different configuration considered (serial and distirbuted mode, running on CPU or GPU). See [`tests/conftest.py`](tests/conftest.py) for further details.
 
 ```bash
 pixi shell -e full
@@ -151,20 +152,24 @@ mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=tru
 
 ## Citation
 
-If you use this code or rely on our methodology in your research, please cite our paper:
+If you reuse this code, please cite the [associated paper](https://ieeexplore.ieee.org/document/11482855).
 
-> M. Bouton, P.-A. Thouvenin, A. Repetti, and P. Chainais, "A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems," *IEEE Transactions on Computational Imaging*, vol. 12, pp. 839-849, 2026. [DOI: 10.1109/TCI.2026.3685151](https://doi.org/10.1109/TCI.2026.3685151).
-
-```bibtex
-@ARTICLE{11482855,
-  author={Bouton, Maxime and Thouvenin, Pierre-Antoine and Repetti, Audrey and Chainais, Pierre},
-  journal={IEEE Transactions on Computational Imaging},
-  title={A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems},
-  year={2026},
-  volume={12},
-  number={},
-  pages={839-849},
-  doi={10.1109/TCI.2026.3685151}
+```bib
+@article{Bouton2026,
+  arxivid      = {2511.00870},
+  author       = {Maxime Bouton and Pierre-Antoine Thouvenin and Audrey Repetti and Pierre Chainais},
+  code         = {https://github.com/maxime-bouton/cards},
+  date         = {2026-04},
+  doi          = {10.1109/TCI.2026.3685151},
+  hal_id       = {hal-05326314},
+  hal_version  = {v1},
+  journaltitle = {{IEEE Trans. Comput. Imag.}},
+  month        = apr,
+  number       = {},
+  title        = {A Distributed {P}lug-and-{P}lay {MCMC} Algorithm for High-Dimensional Inverse Problems},
+  url          = {https://hal.science/hal-05326314},
+  pages        = {839-849},
+  volume       = {12},
 }
 ```
 
