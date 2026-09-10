@@ -60,7 +60,7 @@ class PathBuilder:
         if self.io.obs_dir_path:
             return self.io.obs_dir_path
 
-        path = self.io.root_dir / self.app.type
+        path = self.io.root_dir_path / self.app.type
 
         if self.fn_obs_rel_path:
             path /= self.fn_obs_rel_path(self.cfg)

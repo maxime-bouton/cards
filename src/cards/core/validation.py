@@ -14,7 +14,7 @@ class ApplicationConfig(PydanticModel):
 
 
 class IOConfig(PydanticModel):
-    root_dir: Path = Field(default_factory=lambda: Path.cwd() / "results")
+    root_dir_path: Path = Field(default_factory=lambda: Path.cwd() / "results")
     log_file_prefix: str = Field(default="sampling", pattern=SAFE_NAME)
     obs_file_stem: str = Field(default="data", pattern=SAFE_NAME)
     ckpt_prefix: str = Field(default="checkpoint_", pattern=SAFE_NAME)
@@ -22,6 +22,13 @@ class IOConfig(PydanticModel):
     obs_dir_path: Path | None = None
     ckpt_dir_path: Path | None = None
     start_ckpt_dir_path: Path | None = None
+
+    @field_validator("root_dir_path", mode="before")
+    @classmethod
+    def handle_empty_root(cls, v: str | None) -> Path | str:
+        if v == "" or v is None:
+            return Path.cwd() / "results"
+        return v
 
     @field_validator(
         "log_file_path",
