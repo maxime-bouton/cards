@@ -4,7 +4,6 @@
 
 import argparse
 import collections.abc
-import copy
 import itertools
 import json
 import subprocess
@@ -82,14 +81,19 @@ def _create_config_file(app, obs_path: Path, prior_path: Path, common_config):
         print(f"[SKIP] {config_name} already exists.")
         return config_name
 
-    with open(obs_path, "r") as f:
-        obs_data = json.load(f)
-    with open(prior_path, "r") as f:
-        prior_data = json.load(f)
+    merged_config = {}
+    merged_config["application"] = {"type": obs_prefix, "name": prior_prefix}
 
-    merged_config = copy.deepcopy(common_config)
+    obs_data, prior_data = {}, {}
+    with open(obs_path, "r") as f:
+        obs_data["observations"] = json.load(f)
+    obs_data["observations"]["seed_data"] = 1234
+    with open(prior_path, "r") as f:
+        prior_data["parameters"] = json.load(f)
+
     _deep_update(merged_config, obs_data)
     _deep_update(merged_config, prior_data)
+    _deep_update(merged_config, common_config)
 
     with open(config_path, "w") as f:
         json.dump(merged_config, f, indent=4)
