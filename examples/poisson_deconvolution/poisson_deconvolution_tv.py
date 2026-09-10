@@ -11,6 +11,7 @@ import torch
 import cards.backend as xp
 from cards.core.execution_context import ExecutionContext
 from cards.core.layout import Layout
+from cards.core.validation import SimulationConfig
 from cards.core.variable import Variable
 from cards.estimators.base_estimator import BaseEstimator
 from cards.estimators.ci import CI
@@ -110,10 +111,10 @@ class TvDeconvGeometryHook:
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        cfg: dict,
+        cfg: SimulationConfig,
         obs_path: Path,
     ) -> TvDeconvGeometry:
-        obs_cfg = cfg["observations"]
+        obs_cfg = cfg.observations.model_dump()
         gt_path = obs_cfg["img_path"]
         gt_shape = read_img_shape(gt_path)
         dtype = read_dtype(gt_path)
@@ -183,10 +184,10 @@ class PoissonDeconvObservationsHook:
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        cfg: dict,
+        cfg: SimulationConfig,
         geom: TvDeconvGeometry,
     ) -> PoissonDeconvObs:
-        obs_cfg = cfg["observations"]
+        obs_cfg = cfg.observations.model_dump()
         img_path = obs_cfg["img_path"]
 
         with io_mng.open(img_path) as f:
@@ -327,15 +328,15 @@ class PoissonDeconvTvMcmcHook:
     def build_model(
         self,
         ctx: ExecutionContext,
-        cfg: dict,
+        cfg: SimulationConfig,
         geom: TvDeconvGeometry,
         obs: PoissonDeconvObs,
         vars_: dict[str, Variable],
     ) -> BaseModel:
-
-        reg_coef = cfg["parameters"]["reg_coef"]
-        split_coef1 = cfg["parameters"]["split_coef1"]
-        split_coef2 = cfg["parameters"]["split_coef2"]
+        cfg_params = cfg.parameters.model_dump()
+        reg_coef = cfg_params["reg_coef"]
+        split_coef1 = cfg_params["split_coef1"]
+        split_coef2 = cfg_params["split_coef2"]
 
         step_size_X, step_size_Z1, step_size_Z2 = (
             compute_step_sizes_gaussian_deconvolution_tv(

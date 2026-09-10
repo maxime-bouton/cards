@@ -11,6 +11,7 @@ import torch
 import cards.backend as xp
 from cards.core.execution_context import ExecutionContext
 from cards.core.layout import Layout
+from cards.core.validation import SimulationConfig
 from cards.core.variable import Variable
 from cards.estimators.base_estimator import BaseEstimator
 from cards.estimators.ci import CI
@@ -107,10 +108,10 @@ class TvDeconvGeometryHook:
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        cfg: dict,
+        cfg: SimulationConfig,
         obs_path: Path,
     ) -> TvDeconvGeometry:
-        obs_cfg = cfg["observations"]
+        obs_cfg = cfg.observations.model_dump()
         gt_path = obs_cfg["img_path"]
         gt_shape = read_img_shape(gt_path)
         dtype = read_dtype(gt_path)
@@ -174,10 +175,10 @@ class GaussianDeconvObservationsHook:
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        cfg: dict,
+        cfg: SimulationConfig,
         geom: TvDeconvGeometry,
     ) -> GaussianDeconvObs:
-        obs_cfg = cfg["observations"]
+        obs_cfg = cfg.observations.model_dump()
         img_path = obs_cfg["img_path"]
 
         with io_mng.open(img_path) as f:
@@ -305,14 +306,14 @@ class GaussianDeconvTvMcmcHook:
     def build_model(
         self,
         ctx: ExecutionContext,
-        cfg: dict,
+        cfg: SimulationConfig,
         geom: TvDeconvGeometry,
         obs: GaussianDeconvObs,
         vars_: dict[str, Variable],
     ) -> BaseModel:
-
-        reg_coef = cfg["parameters"]["reg_coef"]
-        split_coef = cfg["parameters"]["split_coef"]
+        cfg_params = cfg.parameters.model_dump()
+        reg_coef = cfg_params["reg_coef"]
+        split_coef = cfg_params["split_coef"]
         step_size_X, step_size_Z = compute_step_sizes_gaussian_deconvolution_tv(
             obs.sigma2,
             obs.kernel,

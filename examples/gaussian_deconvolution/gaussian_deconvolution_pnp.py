@@ -331,9 +331,9 @@ class GaussianDeconvPnpMcmcHook:
         obs: GaussianDeconvObs,
         vars_: dict[str, Variable],
     ) -> BaseModel:
-        params = cfg.parameters.model_dump()
-        reg_coef = params["reg_coef"]
-        denoiser_params = params["denoiser"]
+        cfg_params = cfg.parameters.model_dump()
+        reg_coef = cfg_params["reg_coef"]
+        denoiser_params = cfg_params["denoiser"]
         eps = (
             denoiser_params["denoising_level"] ** 2
             if denoiser_params["denoising_level"] is not None

@@ -13,6 +13,7 @@ import torch
 import cards.backend as xp
 from cards.core.execution_context import ExecutionContext
 from cards.core.layout import Layout
+from cards.core.validation import SimulationConfig
 from cards.core.variable import Variable
 from cards.denoisers.base_denoiser import BaseDenoiser
 from cards.denoisers.distributed_ddfb import DistributedDDFB
@@ -136,10 +137,10 @@ class PnpDeconvGeometryHook:
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        cfg: dict,
+        cfg: SimulationConfig,
         obs_path: Path,
     ) -> PnpDeconvGeometry:
-        obs_cfg = cfg["observations"]
+        obs_cfg = cfg.observations.model_dump()
         gt_path = obs_cfg["img_path"]
         gt_shape = read_img_shape(gt_path)
         dtype = read_dtype(gt_path)
@@ -154,7 +155,7 @@ class PnpDeconvGeometryHook:
 
         kernel = fit_kernel_shape(kernel_2d, gt_shape)
         D, tile_range = build_denoiser(
-            cfg["parameters"]["denoiser"],
+            cfg.parameters.model_dump()["denoiser"],
             gt_shape,
             grid_shape,
             ctx,
@@ -211,10 +212,10 @@ class PoissonDeconvObservationsHook:
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        cfg: dict,
+        cfg: SimulationConfig,
         geom: PnpDeconvGeometry,
     ) -> PoissonDeconvObs:
-        obs_cfg = cfg["observations"]
+        obs_cfg = cfg.observations.model_dump()
         img_path = obs_cfg["img_path"]
 
         with io_mng.open(img_path) as f:
@@ -361,16 +362,16 @@ class PoissonDeconvPnpMcmcHook:
     def build_model(
         self,
         ctx: ExecutionContext,
-        cfg: dict,
+        cfg: SimulationConfig,
         geom: PnpDeconvGeometry,
         obs: PoissonDeconvObs,
         vars_: dict[str, Variable],
     ) -> BaseModel:
-
-        split_coef1 = cfg["parameters"]["split_coef1"]
-        split_coef2 = cfg["parameters"]["split_coef2"]
-        reg_coef = cfg["parameters"]["reg_coef"]
-        denoiser_params = cfg["parameters"]["denoiser"]
+        cfg_params = cfg.parameters.model_dump()
+        split_coef1 = cfg_params["split_coef1"]
+        split_coef2 = cfg_params["split_coef2"]
+        reg_coef = cfg_params["reg_coef"]
+        denoiser_params = cfg_params["denoiser"]
         eps = denoiser_params["denoising_level"] ** 2
         L = denoiser_params.get("L", None) or 1.0
 
