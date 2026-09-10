@@ -1,14 +1,9 @@
 {
-    "checkpoint_size": 10,
-    "n_checkpoint": 10,
-    "burnin": 1,
-    "reloaded_checkpoint": 0,
-    "seed": 42,
-    "seed_data": 1234,
-    "compute_ci": false,
-    "save_all": false,
-    "obs_path": "",
-    "save_path": "",
-    "save_path_resumed": "",
-    "logfile_path": ""
+    "sampler": {
+        "ckpt_size": 100,
+        "n_ckpts": 10
+    },
+    "analysis": {
+        "burnin": 1
+    }
 }
