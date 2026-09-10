@@ -13,6 +13,7 @@ from cards.analysis.metrics import psnr, snr, ssim
 from cards.core.analysis_hook import AnalysisArtifacts, AnalysisResults
 from cards.core.execution_context import ExecutionContext
 from cards.core.layout import Layout
+from cards.core.validation import SimulationConfig
 from cards.core.variable import Variable
 from cards.denoisers.base_denoiser import BaseDenoiser
 from cards.denoisers.distributed_ddfb import DistributedDDFB
@@ -134,10 +135,10 @@ class PnpDeconvGeometryHook:
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        cfg: dict,
+        cfg: SimulationConfig,
         obs_path: Path,
     ) -> PnpDeconvGeometry:
-        obs_cfg = cfg["observations"]
+        obs_cfg = cfg.observations.model_dump()
         gt_path = obs_cfg["img_path"]
         gt_shape = read_img_shape(gt_path)
         dtype = read_dtype(gt_path)
@@ -152,7 +153,7 @@ class PnpDeconvGeometryHook:
 
         kernel = fit_kernel_shape(kernel_2d, gt_shape)
         D, tile_range = build_denoiser(
-            cfg["parameters"]["denoiser"],
+            cfg.parameters.model_dump()["denoiser"],
             gt_shape,
             grid_shape,
             ctx,
@@ -197,10 +198,10 @@ class GaussianDeconvObservationsHook:
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        cfg: dict,
+        cfg: SimulationConfig,
         geom: PnpDeconvGeometry,
     ) -> GaussianDeconvObs:
-        obs_cfg = cfg["observations"]
+        obs_cfg = cfg.observations.model_dump()
         img_path = obs_cfg["img_path"]
 
         with io_mng.open(img_path) as f:
@@ -325,14 +326,14 @@ class GaussianDeconvPnpMcmcHook:
     def build_model(
         self,
         ctx: ExecutionContext,
-        cfg: dict,
+        cfg: SimulationConfig,
         geom: PnpDeconvGeometry,
         obs: GaussianDeconvObs,
         vars_: dict[str, Variable],
     ) -> BaseModel:
-
-        reg_coef = cfg["parameters"]["reg_coef"]
-        denoiser_params = cfg["parameters"]["denoiser"]
+        params = cfg.parameters.model_dump()
+        reg_coef = params["reg_coef"]
+        denoiser_params = params["denoiser"]
         eps = (
             denoiser_params["denoising_level"] ** 2
             if denoiser_params["denoising_level"] is not None
@@ -397,7 +398,7 @@ class GaussianDeconvPnpAnalysisHook:
         self,
         ctx: ExecutionContext,
         io_mng: IOManager,
-        cfg: dict,
+        cfg: SimulationConfig,
         geometry: PnpDeconvGeometry,
         obs: GaussianDeconvObs,
         estimators: list[BaseEstimator],
@@ -405,15 +406,18 @@ class GaussianDeconvPnpAnalysisHook:
         ckpt_dir: Path,
         obs_path: Path,
     ) -> AnalysisResults:
-        n_ckpts = int(cfg["sampler"]["n_ckpts"])
-        ckpt_size = int(cfg["sampler"]["ckpt_size"])
+        n_ckpts = int(cfg.sampler.n_ckpts)
+        ckpt_size = int(cfg.sampler.ckpt_size)
         n_iter = n_ckpts * ckpt_size
 
         ckpt_files = sorted(
-            ckpt_dir.glob("checkpoint_*.h5"),
+            ckpt_dir.glob(f"{cfg.io.ckpt_prefix}*.h5"),
             # NOTE: key is important so `10` doesn't come between `1` and `2`
             key=lambda p: int(p.stem.split("_")[-1]),
         )
+
+        if len(ckpt_files) < n_ckpts:
+            raise ValueError("Not enough checkpoints found.")
 
         all_keys = [k for e in estimators for k in e.declared_keys]
         all_slices = {k: v for e in estimators for k, v in e.slices.items()}
@@ -421,12 +425,12 @@ class GaussianDeconvPnpAnalysisHook:
         # NOTE: estimates concatenation is list based to allow Generator usage in the future
         per_ckpt_local = []
 
-        if ctx.is_master:
-            potential = xp.zeros(n_iter, dtype=float)
-            computation_time = xp.zeros((ctx.comm_size, n_iter), dtype=float)
-
         for i, f_path in enumerate(ckpt_files):
             with io_mng.open(f_path, "r") as f:
+                if i == 0 and ctx.is_master:
+                    potential = xp.zeros(n_iter, dtype=float)
+                    comm_size = io_mng.stacked_size(f, "computation_time")
+                    computation_time = xp.zeros((comm_size, n_iter), dtype=float)
                 per_ckpt_local.append(
                     io_mng.read_dict(f, keys=all_keys, slices=all_slices)
                 )
