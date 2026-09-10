@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Literal
 
 from cards.core.execution_context import ExecutionContext
-from cards.core.utils import parse_args
 from cards.core.validation import DefaultSimulationConfig, SimulationConfig
 from cards.estimators.base_estimator import BaseEstimator
 from cards.hooks.analysis_hook import AnalysisHook
@@ -19,7 +18,7 @@ from cards.hooks.observations_hook import ObservationsHook
 from cards.hooks.paths_hook import PathsHook
 from cards.io.io_manager import IOManager
 from cards.io.path_builder import PathBuilder
-from cards.io.utils import read_json
+from cards.io.utils import parse_args, read_json
 from cards.logger import build_logger
 from cards.samplers import SamplerParameters
 from cards.samplers.sampler import Sampler
