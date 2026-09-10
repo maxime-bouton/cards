@@ -20,12 +20,12 @@ preview = ["pixi-build"]
 
 [tool.pixi.dependencies]
 h5py = { version = ">=3.16.0,<4", build = "*openmpi*" }
-imageio = ">=2.37.0,<3"
+imageio = ">=2.37.4,<3"
 jupyter = ">=1.1.1,<2"
 matplotlib = ">=3.11.1,<4"
 mpi4py = ">=4.1.2,<5"
 numba = ">=0.67.0,<0.68"
-numpy = ">=2.5.2,<3"
+numpy = ">=2.5.3,<3"
 scikit-image = ">=0.26.0,<0.27"
 scipy = ">=1.17.1,<2"
 tqdm = ">=4.70.0,<5"
@@ -51,10 +51,10 @@ platforms = ["linux-64-cuda-12"]
 cupy = ">=14.2.0,<15"
 pytorch = { version = ">=2.13.0,<3", build = "*cuda*" }
 torchvision = { version = ">=0.28.0,<0.29", build = "*cuda*" }
-ucx = ">=1.20.1,<2"
+ucx = ">=1.22.0,<2"
 
 [tool.pixi.feature.test.dependencies]
-coverage = ">=7.15.4,<8"
+coverage = ">=7.16.0,<8"
 pytest = ">=9.1.1,<10"
 
 [tool.pixi.feature.doc.dependencies]
@@ -74,10 +74,10 @@ wily = ">=1.25.0, <2"
 [tool.pixi.feature.dev.dependencies]
 anaconda-client = ">=1.14.1,<2"
 conda-build = ">=26.7.1,<27"
-isort = ">=8.0.1,<9"
-prek = ">=0.4.8,<0.5"
-ruff = ">=0.16.4,<0.17"
-ty = ">=0.0.73,<0.0.74"
+isort = ">=9.0.1,<10"
+prek = ">=0.5.2,<0.6"
+ruff = ">=0.16.6,<0.17"
+ty = ">=0.0.80,<0.0.81"
 
 [tool.pixi.package]
 name = { workspace = true }

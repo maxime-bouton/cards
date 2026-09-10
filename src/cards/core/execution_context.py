@@ -7,8 +7,25 @@
 from typing import Literal
 
 import torch
+from pydantic import BaseModel as PydanticModel
+from pydantic import ConfigDict
 
 import cards.backend as xp
+
+
+class ContextTag(PydanticModel):
+    """Identity of an execution context. Used for config parsing and path generation."""
+
+    model_config = ConfigDict(frozen=True)
+
+    mode: Literal["serial", "mpi"]
+    device: Literal["cpu", "gpu"]
+    comm_size: int = 1
+
+    def __str__(self) -> str:
+        if self.mode == "mpi":
+            return f"{self.mode}-{self.device}_{self.comm_size}"
+        return f"{self.mode}-{self.device}"
 
 
 class ExecutionContext:
@@ -70,10 +87,16 @@ class ExecutionContext:
 
         self._setup_environment()
 
+    @property
+    def tag(self) -> ContextTag:
+        return ContextTag(
+            mode=self._mode,
+            device=self._device,
+            comm_size=self._comm_size,
+        )
+
     def __str__(self) -> str:
-        if self.is_mpi:
-            return f"{self._mode}-{self._device}_{self._comm_size}"
-        return f"{self._mode}-{self._device}"
+        return str(self.tag)
 
     @property
     def mode(self) -> str:

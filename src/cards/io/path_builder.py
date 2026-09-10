@@ -9,15 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from cards.core.execution_context import ExecutionContext
-
-DEFAULT_ROOT_DIR_PATH = Path.cwd() / "produced_data"
-DEFAULT_PROBLEM_NAME = "inverse_problem"
-DEFAULT_APPLICATION_NAME = "application"
-DEFAULT_OBS_FILE_STEM = "data"
-DEFAULT_CKPT_PREFIX = "checkpoint_"
-DEFAULT_LOG_PREFIX = "sampling"
-DEFAULT_CKPT_SIZE = 100
-DEFAULT_SEED = 42
+from cards.core.validation import SimulationConfig
 
 
 def clean(val: Any) -> str:
@@ -44,29 +36,31 @@ def dict_to_str(params: dict, ignore_keys: list | None = None) -> str:
 class PathBuilder:
     def __init__(
         self,
-        cfg: dict,
+        cfg: SimulationConfig,
         ctx: ExecutionContext,
-        fn_obs_rel_path: Callable[[dict], Path | str] | None = None,
-        fn_ckpt_rel_path: Callable[[dict], Path | str] | None = None,
+        fn_obs_rel_path: Callable[[SimulationConfig], Path | str] | None = None,
+        fn_ckpt_rel_path: Callable[[SimulationConfig], Path | str] | None = None,
     ) -> None:
         self.cfg = cfg
         self.ctx = ctx
         self.fn_obs_rel_path = fn_obs_rel_path
         self.fn_ckpt_rel_path = fn_ckpt_rel_path
 
-        self.app = self.cfg.get("application", {})
-        self.io = self.cfg.get("io", {})
+        src_ctx = self.cfg.analysis.source_context
+        self.src_tag = src_ctx if src_ctx is not None else ctx.tag
+
+        self.app = cfg.application
+        self.io = cfg.io
+
+    @property
+    def _is_cross_context(self) -> bool:
+        return self.src_tag != self.ctx.tag
 
     def get_obs_dir(self) -> Path:
-        json_obs_path = self.io.get("obs_dir_path")
-        if json_obs_path:
-            return Path(json_obs_path)
+        if self.io.obs_dir_path:
+            return self.io.obs_dir_path
 
-        root_dir = self.io.get("root_dir_path")
-        if not root_dir:
-            root_dir = DEFAULT_ROOT_DIR_PATH
-
-        path = Path(root_dir) / self.app.get("type", DEFAULT_PROBLEM_NAME)
+        path = self.io.root_dir / self.app.type
 
         if self.fn_obs_rel_path:
             path /= self.fn_obs_rel_path(self.cfg)
@@ -74,32 +68,36 @@ class PathBuilder:
         return path
 
     def get_obs_path(self) -> Path:
-        file = self.io.get("obs_file_stem", DEFAULT_OBS_FILE_STEM) + ".h5"
-        return self.get_obs_dir() / file
+        return self.get_obs_dir() / (self.io.obs_file_stem + ".h5")
 
     def get_ckpt_dir(self) -> Path:
-        json_ckpt_path = self.io.get("ckpt_dir_path")
-        if json_ckpt_path:
-            return Path(json_ckpt_path) / str(self.ctx)
+        if self.io.ckpt_dir_path:
+            return self.io.ckpt_dir_path / str(self.src_tag)
 
-        path = self.get_obs_dir() / self.app.get("name", DEFAULT_APPLICATION_NAME)
-
+        path = self.get_obs_dir() / self.app.name
         if self.fn_ckpt_rel_path:
             path /= self.fn_ckpt_rel_path(self.cfg)
 
-        sampler = self.cfg.get("sampler", {})
-        ckpt_size = sampler.get("ckpt_size", DEFAULT_CKPT_SIZE)
-        seed = sampler.get("seed", DEFAULT_SEED)
-
-        return path / f"ckpt_size{ckpt_size}_seed{seed}" / str(self.ctx)
+        ckpt_size = self.cfg.sampler.ckpt_size
+        seed = self.cfg.sampler.seed
+        return path / f"ckpt_size{ckpt_size}_seed{seed}" / str(self.src_tag)
 
     def get_log_path(self) -> Path:
-        json_log_path = self.io.get("log_file_path")
-        if json_log_path:
-            return Path(json_log_path)
+        if self.io.log_file_path:
+            return self.io.log_file_path
 
-        log_stem = self.io.get("log_file_prefix", DEFAULT_LOG_PREFIX)
+        log_stem = self.io.log_file_prefix
         if self.ctx.is_mpi:
             log_stem += f"_{self.ctx.rank}"
 
-        return self.get_ckpt_dir() / f"{log_stem}.log"
+        if self._is_cross_context:
+            ckpt_dir = self.get_analysis_dir()
+        else:
+            ckpt_dir = self.get_ckpt_dir()
+        return ckpt_dir / f"{log_stem}.log"
+
+    def get_analysis_dir(self) -> Path:
+        analysis_dir = self.get_ckpt_dir() / f"burnin_{self.cfg.analysis.burnin}"
+        if self._is_cross_context:
+            analysis_dir = analysis_dir / str(self.ctx)
+        return analysis_dir
