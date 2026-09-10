@@ -10,7 +10,6 @@ import torch
 
 import cards.backend as xp
 from cards.analysis.metrics import psnr, snr, ssim
-from cards.core.analysis_hook import AnalysisArtifacts, AnalysisResults
 from cards.core.execution_context import ExecutionContext
 from cards.core.layout import Layout
 from cards.core.validation import SimulationConfig
@@ -25,6 +24,7 @@ from cards.denoisers.serial_drunet import SerialDRUNet
 from cards.estimators.base_estimator import BaseEstimator
 from cards.estimators.ci import CI
 from cards.estimators.mmse_var import MMSEVar
+from cards.hooks.analysis_hook import AnalysisArtifacts, AnalysisResults
 from cards.io.io_manager import IOManager
 from cards.models import (
     BaseModel,

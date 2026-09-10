@@ -8,15 +8,15 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Literal
 
-from cards.core.analysis_hook import AnalysisHook
 from cards.core.execution_context import ExecutionContext
-from cards.core.geometry_hook import GeometryHook
-from cards.core.mcmc_hook import McmcHook
-from cards.core.observations_hook import ObservationsHook
-from cards.core.paths_hook import PathsHook
 from cards.core.utils import parse_args
 from cards.core.validation import DefaultSimulationConfig, SimulationConfig
 from cards.estimators.base_estimator import BaseEstimator
+from cards.hooks.analysis_hook import AnalysisHook
+from cards.hooks.geometry_hook import GeometryHook
+from cards.hooks.mcmc_hook import McmcHook
+from cards.hooks.observations_hook import ObservationsHook
+from cards.hooks.paths_hook import PathsHook
 from cards.io.io_manager import IOManager
 from cards.io.path_builder import PathBuilder
 from cards.io.utils import read_json
