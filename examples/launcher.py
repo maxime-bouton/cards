@@ -26,12 +26,12 @@ OBS_CONFIGS = [
 
 PRIOR_CONFIGS = [
     "ddfb.json",
-    "dncnn.json",
-    "drunet.json",
+    # "dncnn.json",
+    # "drunet.json",
     "tv.json",
 ]
 
-WORKERS = [1, 2, 4]
+WORKERS = [1, 2]
 DEVICE = "gpu"
 
 ABBS = {
@@ -102,12 +102,12 @@ def _create_config_file(app, obs_path: Path, prior_path: Path, common_config):
     return config_name
 
 
-def build_command(config_name, workers, device=DEVICE):
+def build_command(config_name, workers, prior_name, device=DEVICE):
     """Constructs the command list for GPU execution based on worker count."""
 
     rel_config_path = f"configs/{config_name}"
 
-    base_cmd = ["python", "main.py"]
+    base_cmd = ["python", "main_tv.py" if "tv" in prior_name else "main_pnp.py"]
     mode = "serial" if workers == 1 else "mpi"
     script_args = ["--config", rel_config_path, "--mode", mode, "--device", device]
 
@@ -203,7 +203,7 @@ def main(args):
             job_name = f"{base_job_name}_w{w}"
 
             if args.run:
-                cmd_list = build_command(config_name, w)
+                cmd_list = build_command(config_name, w, prior_name)
                 print(f"\n[LAUNCHING LOCAL] {job_name}")
                 try:
                     subprocess.run(cmd_list, cwd=app, check=True)
