@@ -1,0 +1,26 @@
+{
+    "application": {
+        "type": "ginp_128",
+        "name": "tv"
+    },
+    "observations": {
+        "img_path": "../../../data/128.h5",
+        "isnr": 15,
+        "mask_loss": 0.7,
+        "seed_data": 1234
+    },
+    "parameters": {
+        "reg_coef": 40,
+        "split_coef": 1e-05
+    },
+    "sampler": {
+        "ckpt_size": 100,
+        "n_ckpts": 10
+    },
+    "analysis": {
+        "burnin": 1
+    },
+    "io": {
+        "root_dir_path": "../../../results"
+    }
+}

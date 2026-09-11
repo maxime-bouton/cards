@@ -3,16 +3,6 @@
         "type": "this_inverse_problem",
         "name": "with_this_prior"
     },
-    "io": {
-        "root_dir_path": "/path/to/root_dir/for/results",
-        "log_file_prefix": "sampling",
-        "obs_file_stem": "data",
-        "ckpt_prefix": "checkpoint_",
-        "log_file_path": "",
-        "obs_dir_path": "",
-        "ckpt_dir_path": "",
-        "start_ckpt_dir_path": ""
-    },
     "sampler": {
         "ckpt_size": 100,
         "n_ckpts": 10,
@@ -29,5 +19,15 @@
         "burnin": 1,
         "save_all": false,
         "source_context": {"mode": "mpi", "device": "cpu", "comm_size": 8}
+    },
+    "io": {
+        "root_dir_path": "/path/to/root_dir/for/results",
+        "log_file_prefix": "sampling",
+        "obs_file_stem": "data",
+        "ckpt_prefix": "checkpoint_",
+        "log_file_path": "",
+        "obs_dir_path": "",
+        "ckpt_dir_path": "",
+        "start_ckpt_dir_path": ""
     }
 }

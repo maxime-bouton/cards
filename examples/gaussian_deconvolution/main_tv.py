@@ -26,6 +26,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-# python examples/gaussian_deconvolution/main_rework_tv.py --config examples/new_config_tv.json --mode serial --device gpu
-# mpiexec -np 2 python -m mpi4py examples/gaussian_deconvolution/main_rework_tv.py --config examples/new_config_tv.json --mode mpi --device cpu
-# mpiexec -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py examples/gaussian_deconvolution/main_rework_tv.py --config examples/new_config_tv.json --mode mpi --device gpu
+# python examples/gaussian_deconvolution/main_tv.py --config examples/gaussian_deconvolution/configs/config_gdec_128_tv.json
+# python examples/gaussian_deconvolution/main_tv.py --config examples/gaussian_deconvolution/configs/config_gdec_128_tv.json --device gpu
+# mpirun -np 2 python examples/gaussian_deconvolution/main_tv.py --config examples/gaussian_deconvolution/configs/config_gdec_128_tv.json --mode mpi
+# mpirun -np 2 -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n python examples/gaussian_deconvolution/main_tv.py --config examples/gaussian_deconvolution/configs/config_gdec_128_tv.json --mode mpi --device gpu

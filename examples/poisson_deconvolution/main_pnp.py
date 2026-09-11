@@ -24,6 +24,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-# python examples/poisson_deconvolution/main_rework.py --config examples/new_config_poisson.json --mode serial --device gpu
-# mpiexec -np 2 python -m mpi4py examples/poisson_deconvolution/main_rework.py --config examples/new_config_poisson.json --mode mpi --device cpu
-# mpiexec -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -np 2 python -m mpi4py examples/poisson_deconvolution/main_rework.py --config examples/new_config_poisson.json --mode mpi --device gpu
+# python examples/poisson_deconvolution/main_pnp.py --config examples/poisson_deconvolution/configs/config_pdec_128_ddfb.json
+# python examples/poisson_deconvolution/main_pnp.py --config examples/poisson_deconvolution/configs/config_pdec_128_ddfb.json --device gpu
+# mpirun -np 2 python examples/poisson_deconvolution/main_pnp.py --config examples/poisson_deconvolution/configs/config_pdec_128_ddfb.json --mode mpi
+# mpirun -np 2 -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n python examples/poisson_deconvolution/main_pnp.py --config examples/poisson_deconvolution/configs/config_pdec_128_ddfb.json --mode mpi --device gpu

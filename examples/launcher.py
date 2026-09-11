@@ -82,7 +82,10 @@ def _create_config_file(app, obs_path: Path, prior_path: Path, common_config):
         return config_name
 
     merged_config = {}
-    merged_config["application"] = {"type": obs_prefix, "name": prior_prefix}
+    merged_config["application"] = {
+        "type": f"{app_short}_{obs_prefix}",
+        "name": prior_prefix,
+    }
 
     obs_data, prior_data = {}, {}
     with open(obs_path, "r") as f:
