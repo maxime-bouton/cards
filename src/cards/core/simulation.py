@@ -54,8 +54,16 @@ class Simulation[G, O]:
         if isinstance(cfg, SimulationConfig):
             self.cfg = cfg
         else:
-            raw_dict = cfg if isinstance(cfg, dict) else read_json(cfg)
-            self.cfg = DefaultSimulationConfig.model_validate(raw_dict)
+            if isinstance(cfg, dict):
+                raw_dict = cfg
+                anchor_dir = Path.cwd()
+            else:
+                cfg_path = Path(cfg).resolve()
+                raw_dict = read_json(cfg_path)
+                anchor_dir = cfg_path.parent
+            self.cfg = DefaultSimulationConfig.model_validate(
+                raw_dict, context={"anchor_dir": anchor_dir}
+            )
 
         fn_obs_rel_path = paths_hk.fn_obs_rel_path if paths_hk else None
         fn_ckpt_rel_path = paths_hk.fn_ckpt_rel_path if paths_hk else None

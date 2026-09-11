@@ -1,11 +1,52 @@
 from pathlib import Path
+from typing import Any
 
-from pydantic import BaseModel as PydanticModel
-from pydantic import ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from cards.core.execution_context import ContextTag
 
 SAFE_NAME = r"^[\w\-]+$"
+_PATH_SUFFIX = "_path"
+
+
+def _resolve_path_fields(data: Any, anchor_dir: Path) -> Any:
+    """Recursively anchor any '*_path' string/Path value to `base_dir`.
+    Absolute paths and empty strings are left untouched."""
+    if not isinstance(data, dict):
+        return data
+    resolved = {}
+    for key, value in data.items():
+        if isinstance(value, dict):
+            resolved[key] = _resolve_path_fields(value, anchor_dir)
+        elif (
+            key.endswith(_PATH_SUFFIX)
+            and isinstance(value, (str, Path))
+            and str(value) != ""
+        ):
+            p = Path(value)
+            resolved[key] = p if p.is_absolute() else (anchor_dir / p).resolve()
+        else:
+            resolved[key] = value
+    return resolved
+
+
+class PydanticModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _anchor_relative_paths(cls, data: Any, info: ValidationInfo) -> Any:
+        anchor_dir = (info.context or {}).get("anchor_dir")
+        if anchor_dir is None or not isinstance(data, dict):
+            return data
+        return _resolve_path_fields(data, Path(anchor_dir))
 
 
 class ApplicationConfig(PydanticModel):
