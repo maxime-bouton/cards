@@ -1,5 +1,5 @@
 {
-    "img_path": "../../data/2896.h5",
+    "img_path": "../../../data/2896.h5",
     "dynamic_range": 250,
     "kernel": {
         "type": "motion",

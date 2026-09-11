@@ -1,4 +1,7 @@
 {
+    "io":{
+        "root_dir_path": "../../../results"
+    },
     "sampler": {
         "ckpt_size": 100,
         "n_ckpts": 10

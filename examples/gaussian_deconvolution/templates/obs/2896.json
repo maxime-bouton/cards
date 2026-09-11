@@ -1,5 +1,5 @@
 {
-    "img_path": "../../data/2896.h5",
+    "img_path": "../../../data/2896.h5",
     "isnr": 25,
     "kernel": {
         "type": "motion",
