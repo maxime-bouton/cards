@@ -33,20 +33,20 @@
 This Python library provides elementary operators, MPI communicators and Markov transition kernels to facilitate the design of custom distributed Plug-and-Play (PnP) Markov chain Monte Carlo (MCMC) algorithms for high-dimensional Bayesian inference.
 Detailed examples provided in this repository focus on the resolution of high-dimensional inverse problems in image and signal processing.
 
-:warning: **WARNING** This project is under active development, and the API may evolve significantly until version `1.0`.
+<!-- :warning: **WARNING** This project is under active development, and the API may evolve significantly until version `1.0`. -->
 
 ## Installation
 
 - The `cards` Python package can be installed on `ubuntu` with `cuda` GPU support within an existing `conda`-compatible environment (e.g., using either `pixi`, `mamba` or `conda`). Example installation commands can be found below.
 
   ```bash
+  # installation within a pixi environment (recommended)
+  pixi workspace channel add pthouvenin
+  pixi add cards
+
   # installation within a mamba environment
   mamba env create -n my_samplers
   mamba install cards -c pthouvenin
-
-  # installation within a pixi environment
-  pixi workspace channel add pthouvenin
-  pixi add cards
   ```
 
 - A distributed implementation is provided for the `DRUNet`, `DnCNN` and `DDFB` deep denoisers.
@@ -80,7 +80,6 @@ Detailed examples provided in this repository focus on the resolution of high-di
 <!-- # from deepinv
 # https://huggingface.co/deepinv/drunet/tree/main
 # https://huggingface.co/deepinv/dncnn/tree/main -->
-
 
 ## Example usage
 
@@ -116,6 +115,7 @@ pixi install --environment full
 pixi shell --environment full
 # eval "$(pixi shell-hook --environment full)"
 ```
+
 </details>
 
 <details>

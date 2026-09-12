@@ -1,64 +1,60 @@
 ---
-title: 'Gala: A Python package for galactic dynamics'
+title: 'CARDS: Composable Algorithms for Reproducible Distributed Sampling'
 tags:
   - Python
-  - astronomy
-  - dynamics
-  - galactic dynamics
-  - milky way
+  - Markov chain Monte Carlo algorithms
+  - Langevin algorithm
+  - Plug-and-Play prior
+  - distributed computing
+
 authors:
-  - name: Adrian M. Price-Whelan
-    orcid: 0000-0000-0000-0000
+  - name: Maxime Bouton
+    orcid: 0009-0007-4480-3541
     equal-contrib: true
-    affiliation: "1, 2" # (Multiple affiliations must be quoted)
-  - name: Author Without ORCID
-    equal-contrib: true # (This is how you can denote equal contributions between multiple authors)
-    affiliation: 2
-  - name: Author with no affiliation
+    affiliation: 1
+  - name: Pierre-Antoine Thouvenin
+    orcid: 0000-0003-1246-9458
     corresponding: true # (This is how to denote the corresponding author)
-    affiliation: 3
-  - given-names: Ludwig
-    dropping-particle: van
-    surname: Beethoven
-    affiliation: 3
+    equal-contrib: true # (This is how you can denote equal contributions between multiple authors)
+    affiliation: 1
+  - name: Stéphane Despierres
+    affiliation: 1
+  - name: Audrey Repetti
+    orcid: 0000-0002-6296-6957
+    affiliation: "2, 3" # (Multiple affiliations must be quoted)
+  - name: Pierre Chainais
+    orcid: 0000-0003-4377-7584
+    affiliation: 1
 affiliations:
- - name: Lyman Spitzer, Jr. Fellow, Princeton University, United States
+ - name: Univ. Lille, CNRS, Centrale Lille, UMR 9189 CRIStAL, F-59000 Lille, France
    index: 1
-   ror: 00hx57361
- - name: Institution Name, Country
+ - name: School of Mathematical and Computer Sciences, Heriot-Watt University, Edinburgh EH14 4AS, UK
    index: 2
- - name: Independent Researcher, Country
+ - name: Maxwell Institute for Mathematical Sciences, Edinburgh EH8 9BT, UK
    index: 3
-date: 13 August 2017
+date: 12 September 2026
 bibliography: paper.bib
+
 
 # Optional fields for papers that are part of a joint submission.
 # For example, submitting to a AAS journal too, see this blog post:
 # https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
-#
+
 # If you are not making a joint submission you should remove these lines.
-#
-aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
-aas-journal: Astrophysical Journal <- The name of the AAS journal.
+
+# aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
+# aas-journal: Astrophysical Journal <- The name of the AAS journal.
 ---
 
 <!-- Link to instructions : https://joss.readthedocs.io/en/latest/index.html -->
 
 # Summary
 
-The forces on stars, galaxies, and dark matter under external gravitational
-fields lead to the dynamical evolution of structures in the universe. The orbits
-of these bodies are therefore key to understanding the formation, history, and
-future state of galaxies. The field of "galactic dynamics," which aims to model
-the gravitating components of galaxies to study their structure and evolution,
-is now well-established, commonly taught, and frequently used in astronomy.
-Aside from toy problems and demonstrations, the majority of problems require
-efficient numerical tools, many of which require the same base code (e.g., for
-performing numerical orbit integration).
+...
 
 # Statement of need
 
-`Gala` is an Astropy-affiliated Python package for galactic dynamics. Python
+<!-- `Gala` is an Astropy-affiliated Python package for galactic dynamics. Python
 enables wrapping low-level languages (e.g., C) for speed without losing
 flexibility or ease-of-use in the user-interface. The API for `Gala` was
 designed to provide a class-based and user-friendly interface to fast (C or
@@ -76,36 +72,36 @@ used in graduate courses on Galactic dynamics to, e.g., provide interactive
 visualizations of textbook material [@Binney:2008]. The combination of speed,
 design, and support for Astropy functionality in `Gala` will enable exciting
 scientific explorations of forthcoming data releases from the *Gaia* mission
-[@gaia] by students and experts alike.
+[@gaia] by students and experts alike. -->
 
-# State of the field                                                                                                                  
+# State of the field
 
-Several tools exist for galactic dynamics computations:                                                     
+<!-- Several tools exist for galactic dynamics computations:
 `galpy` [@Bovy:2015] is a Python package with similar goals,
-providing orbit integration and potential classes for galactic dynamics.                                                              
-`NEMO` [@Teuben:1995] is a well-established, comprehensive stellar dynamics                                                           
-toolbox written primarily in C, offering extensive functionality but with a                                                           
-steeper learning curve and less integration with modern Python workflows.                                                             
-Other tools like `GalPot` provide specific Milky Way potential models but lack                                                        
-the broader dynamical analysis capabilities.                                                                                          
-                                                                                                                                        
-`Gala` was built rather than contributing to existing projects for several                                                            
-reasons. First, `Gala` was designed from the ground up to integrate seamlessly                                                        
-with the Astropy ecosystem, using `astropy.units` and `astropy.coordinates`                                                           
-as core dependencies rather than optional features. This tight integration                                                            
-enables natural workflows for astronomers already using Astropy. Second,                                                              
-`Gala`'s object-oriented API with consistent interfaces across subpackages                                                            
-(potentials, integrators, dynamics) provides a more modular and extensible                                                            
-design than alternatives available at the time. Third, `Gala` fills a specific                                                        
-niche between simple demonstration codes and full N-body simulation packages                                                          
-like `Gadget` [@Springel:2005] – it focuses on the common tasks in galactic                                                             
-dynamics research (orbit integration, potential evaluation, coordinate                                                                
-transformations) while maintaining both performance through C implementations                                                         
-and usability through its Python interface.  
+providing orbit integration and potential classes for galactic dynamics.
+`NEMO` [@Teuben:1995] is a well-established, comprehensive stellar dynamics
+toolbox written primarily in C, offering extensive functionality but with a
+steeper learning curve and less integration with modern Python workflows.
+Other tools like `GalPot` provide specific Milky Way potential models but lack
+the broader dynamical analysis capabilities.
+
+`Gala` was built rather than contributing to existing projects for several
+reasons. First, `Gala` was designed from the ground up to integrate seamlessly
+with the Astropy ecosystem, using `astropy.units` and `astropy.coordinates`
+as core dependencies rather than optional features. This tight integration
+enables natural workflows for astronomers already using Astropy. Second,
+`Gala`'s object-oriented API with consistent interfaces across subpackages
+(potentials, integrators, dynamics) provides a more modular and extensible
+design than alternatives available at the time. Third, `Gala` fills a specific
+niche between simple demonstration codes and full N-body simulation packages
+like `Gadget` [@Springel:2005] – it focuses on the common tasks in galactic
+dynamics research (orbit integration, potential evaluation, coordinate
+transformations) while maintaining both performance through C implementations
+and usability through its Python interface.   -->
 
 # Software design
 
-`Gala`'s design philosophy is based on three core principles: (1) to provide a
+<!-- `Gala`'s design philosophy is based on three core principles: (1) to provide a
 user-friendly, modular, object-oriented API, (2) to use community tools and
 standards (e.g., Astropy for coordinates and units handling), and (3) to use
 low-level code (C/C++/Cython) for performance while keeping the user interface
@@ -122,11 +118,11 @@ potential functions are all implemented in C without support for units, but the
 Python layer handles unit conversions and prepares data to dispatch to the C
 layer appropriately.Within the coordinates subpackage, we extend Astropy's
 coordinate classes to add more specialized coordinate frames and
-transformations that are relevant for Galactic dynamics and Milky Way research.
+transformations that are relevant for Galactic dynamics and Milky Way research. -->
 
 # Research impact statement
 
-`Gala` has demonstrated significant research impact and grown both its user base
+<!-- `Gala` has demonstrated significant research impact and grown both its user base
 and contributor community since its initial release. The package has evolved
 through contributions from over 18 developers beyond the original core developer
 (@adrn), with community members adding new features, reporting bugs, and
@@ -150,9 +146,9 @@ dynamics curricula at multiple institutions.
 and active user community. Users span career stages from graduate students to
 faculty and other established researchers and represent institutions around the
 world. This broad adoption and active participation validate `Gala`'s role as
-core community infrastructure for galactic dynamics research.
+core community infrastructure for galactic dynamics research. -->
 
-# Mathematics
+<!-- # Mathematics
 
 Single dollars ($) are required for inline mathematics e.g. $f(x) = e^{\pi/x}$
 
@@ -190,7 +186,7 @@ Figures can be included like this:
 and referenced from text using \autoref{fig:example}.
 
 Figure sizes can be customized by adding an optional second parameter:
-![Caption for example figure.](figure.png){ width=20% }
+![Caption for example figure.](figure.png){ width=20% } -->
 
 # AI usage disclosure
 
@@ -199,12 +195,14 @@ of this manuscript, or the preparation of supporting materials.
 
 # Acknowledgements
 
-We acknowledge contributions from Brigitta Sipocz, Syrtis Major, and Semyeong
-Oh, and support from Kathryn Johnston during the genesis of this project.
+This work was supported by the ANR project ``Chaire IA Sherlock'' ANR-20-CHIA-0031-01 hold by P. Chainais, the national support within the programme d’investissements d’avenir ANR-16-IDEX-0004 ULNE, Région HDF, and the CNRS IEA “DAISHI” hold by P.-A. Thouvenin and A. Repetti.
+The project was provided with computing HPC and storage resources by GENCI at IDRIS on the supercomputer Jean Zay’s V100 partition thanks to the grant 2024-AD010615597.
+The authors acknowledge engineering support from Damien Marchal and Emmanuel Leguy, research engineers at UMR 9189 CRIStAL lab, F-59000 Lille, France.
+The library has been developed while M. Bouton and S. Despierres were affiliated with Centrale Lille Institut.
 
 # References
 
-Example paper.bib file:
+<!-- Example paper.bib file:
 
 @article{Pearson:2017,
   	url = {http://adsabs.harvard.edu/abs/2017arXiv170304627P},
@@ -274,4 +272,4 @@ Example paper.bib file:
   publisher = {GitHub},
   journal = {GitHub repository},
   url = {https://github.com/arfon/fidgit}
-}
+} -->

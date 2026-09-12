@@ -390,7 +390,7 @@ def slices_obs_deconv(
     left = kernel_size // 2
     right = -(kernel_size // 2)
 
-    return tuple(slice(l or None, r or None) for l, r in zip(left, right))
+    return tuple(slice(le or None, r or None) for le, r in zip(left, right))
 
 
 class GaussianDeconvPnpAnalysisHook:
@@ -463,8 +463,8 @@ class GaussianDeconvPnpAnalysisHook:
         full_shapes: dict[str, tuple[int, ...]] = {}
         slices: dict[str, tuple[slice, ...]] = {}
         for estimator in estimators:
-            l = [{k: d[k] for k in estimator.declared_keys} for d in per_ckpt_local]
-            reduced_local.update(estimator.reduce_checkpoints(l, burnin, ctx))
+            left = [{k: d[k] for k in estimator.declared_keys} for d in per_ckpt_local]
+            reduced_local.update(estimator.reduce_checkpoints(left, burnin, ctx))
             full_shapes.update(estimator.global_shapes)
             slices.update(estimator.slices)
 
@@ -490,10 +490,10 @@ class GaussianDeconvPnpAnalysisHook:
         if ctx.is_mpi:
             list_s = []
             for xs, cs in zip(geometry.layout_x.s, crop):
-                l = (xs.start or 0) + (cs.start or 0)
+                left = (xs.start or 0) + (cs.start or 0)
                 # NOTE: the right is shifted also by the same `start` value
                 r = (xs.stop or 0) + (cs.start or 0)
-                list_s.append(slice(l or None, r or None))
+                list_s.append(slice(left or None, r or None))
             with io_mng.open(obs_path) as f:
                 y = io_mng.read_array(f, "y", tuple(list_s))
         else:
