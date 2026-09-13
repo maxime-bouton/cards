@@ -10,12 +10,12 @@ tags:
 authors:
   - name: Maxime Bouton
     orcid: 0009-0007-4480-3541
-    equal-contrib: true
+    # equal-contrib: true
     affiliation: 1
   - name: Pierre-Antoine Thouvenin
     orcid: 0000-0003-1246-9458
     corresponding: true # (This is how to denote the corresponding author)
-    equal-contrib: true # (This is how you can denote equal contributions between multiple authors)
+    # equal-contrib: true # (This is how you can denote equal contributions between multiple authors)
     affiliation: 1
   - name: Stéphane Despierres
     affiliation: 1
