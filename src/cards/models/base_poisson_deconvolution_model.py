@@ -63,8 +63,6 @@ class BasePoissonDeconvolutionModel(BaseModel):
         y: Variable,
         X: BaseTransitionKernel,
         *other_kernels: BaseTransitionKernel,
-        # Z1: BaseTransitionKernel,
-        # Z2: BaseTransitionKernel,
     ):
         super().__init__(X.var, *[k.var for k in other_kernels])
         self.params = params
@@ -78,9 +76,6 @@ class BasePoissonDeconvolutionModel(BaseModel):
         self.X = X
 
         self.Hx = self.H.forward(self.X.state)
-
-        # self.Z1 = Z1
-        # self.Z2 = Z2
 
     @abstractmethod
     def set_conditionals(self) -> None:

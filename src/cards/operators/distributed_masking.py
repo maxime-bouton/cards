@@ -10,7 +10,7 @@ import cards.backend as xp
 from cards.operators.linear_operator import LinearOperator
 from cards.slicers.cartesian_comm_slicer import CartesianCommSlicer
 
-# TODO: test + documentation
+# TODO: add test + complete documentation
 
 # FIXME: factorize implementation of DistributedLinearOperator (only a matter of adding an execution context on the abstract level and Slicer to a LinearOperator)
 # -> better factorization between operators

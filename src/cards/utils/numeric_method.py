@@ -9,6 +9,7 @@ from collections.abc import Callable, Sequence
 import torch
 
 # FIXME: commented cupy variant for now to avoid explicit cupy import
+# FIXME: add dependency on ExecutionContext to cleanse + adapt noise generation procedure
 
 
 def power_method(

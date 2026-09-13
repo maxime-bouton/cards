@@ -130,9 +130,7 @@ def local_split_range(
 
     if nchunks <= index:
         raise ValueError(
-            r"Index should be taken in [0, ..., nchunks-1], with nchunks={0}".format(
-                nchunks
-            )
+            rf"Index should be taken in [0, ..., nchunks-1], with nchunks={nchunks}"
         )
     step = N / nchunks
     if overlap > np.floor(step):
@@ -213,9 +211,8 @@ def local_split_range_nd(
                 f"Index should be taken in [0, ..., nchunks-1], with nchunks={nchunks}"
             )
     step = N / nchunks
-    if overlap is not None:
-        if np.any(overlap > np.floor(step)):
-            raise ValueError(r"More than 100% overlap between two consecutive segments")
+    if overlap is not None and np.any(overlap > np.floor(step)):
+        raise ValueError(r"More than 100% overlap between two consecutive segments")
     start = -1 + index * step
     start[nchunks <= 1] = -1
     stop = (start + step).astype(np.int64)

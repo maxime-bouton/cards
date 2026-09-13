@@ -4,6 +4,8 @@ from pathlib import Path
 
 from cards.core.validation import SimulationConfig
 
+# TODO: documentation
+
 
 @dataclass
 class PathsHook:

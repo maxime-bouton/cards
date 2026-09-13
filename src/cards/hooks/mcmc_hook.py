@@ -10,6 +10,8 @@ from cards.core.variable import Variable
 from cards.estimators.base_estimator import BaseEstimator
 from cards.models import BaseModel
 
+# TODO: documentation
+
 
 class McmcHook[G, O](Protocol):
     def build_estimators(

@@ -23,6 +23,8 @@ from cards.logger import build_logger
 from cards.samplers import SamplerParameters
 from cards.samplers.sampler import Sampler
 
+# TODO: documentation
+
 
 class Simulation[G, O]:
     def __init__(

@@ -9,6 +9,8 @@ from cards.core.execution_context import ExecutionContext
 from cards.core.validation import SimulationConfig
 from cards.io.io_manager import IOManager
 
+# TODO: documentation
+
 
 class GeometryHook[G](Protocol):
     def build_geometry(

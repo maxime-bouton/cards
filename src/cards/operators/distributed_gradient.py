@@ -13,9 +13,6 @@ import cards.backend as xp
 from cards.communicators.sync_cartesian_communicator import SyncCartesianCommunicator
 from cards.operators.linear_operator import LinearOperator
 
-# FIXME: add slicer to recover chunks from output parameter
-# adjoint_cartslicer
-
 
 class DistributedGradient2d(LinearOperator):
     r"""Synchronous distributed implementation of a 2D discrete gradient operator.

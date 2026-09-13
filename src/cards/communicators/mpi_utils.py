@@ -9,8 +9,6 @@ workers in arbitray dimensions.
 #
 # reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
-# TODO: check typing (xp.ndarray or np.ndarray)
-
 from typing import Any
 
 import mpi4py.util.dtlib as mpilib

@@ -9,6 +9,8 @@ from cards.core.execution_context import ExecutionContext
 from cards.core.validation import SimulationConfig
 from cards.io.io_manager import IOManager
 
+# TODO: documentation
+
 
 class ObservationsHook[G, O](Protocol):
     def generate_observations(

@@ -66,7 +66,7 @@ class SharedCommunicator:
 
         self._max_send_size = np.zeros_like(buffer_size)
         self._max_recv_size = np.zeros_like(buffer_size)
-        for key in self.operators.keys():
+        for key in self.operators:
             self._max_send_size = np.maximum(
                 self._max_send_size, self.operators[key].get_send_size()
             )
@@ -84,7 +84,7 @@ class SharedCommunicator:
         )
 
         self._slice = {}
-        for key in self.operators.keys():
+        for key in self.operators:
             self._slice[key] = tuple(
                 [
                     np.s_[
