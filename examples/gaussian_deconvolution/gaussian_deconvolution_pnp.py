@@ -37,13 +37,12 @@ from cards.operators.distributed_dft_convolution import DistributedDftConvolutio
 from cards.random import create_rng
 from cards.transition_kernels.pnp_ula import CpuPnpULA, GpuPnpULA
 from cards.utils.utils import expand_shape_left
-from cards.utils.utils_img import read_dtype, read_img_shape
+from cards.utils.utils_img import load_img, read_dtype, read_img_shape
 from cards.utils.utils_observations import (
     compute_sigma2_from_isnr,
     fit_kernel_shape,
     generate_gaussian_kernel,
     generate_motion_kernel,
-    load_img,
 )
 
 

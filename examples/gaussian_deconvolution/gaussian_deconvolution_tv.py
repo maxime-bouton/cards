@@ -29,13 +29,12 @@ from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
 from cards.random import create_rng
 from cards.transition_kernels.psgla import CpuPSGLA, GpuPSGLA
-from cards.utils.utils_img import read_dtype, read_img_shape
+from cards.utils.utils_img import load_img, read_dtype, read_img_shape
 from cards.utils.utils_observations import (
     compute_sigma2_from_isnr,
     fit_kernel_shape,
     generate_gaussian_kernel,
     generate_motion_kernel,
-    load_img,
 )
 
 
