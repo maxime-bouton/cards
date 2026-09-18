@@ -1,7 +1,9 @@
 import pytest
 import torch
+from mpi4py import MPI
 
 from cards.core.execution_context import ExecutionContext
+from cards.utils.utils import expand_shape_left
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -126,3 +128,21 @@ def seed2():
 @pytest.fixture(scope="session", params=[(3, 64, 64), (1, 31, 31)])
 def input_shape(request: pytest.FixtureRequest) -> tuple[int, ...]:
     return request.param
+
+
+@pytest.fixture(params=[1, 2])
+def grid_ndim(request: pytest.FixtureRequest) -> int:
+    return request.param
+
+
+# NOTE: only first spatial axis is partitioned, slower when both axes are partitioned
+@pytest.fixture
+def grid_shape(
+    comm: MPI.Comm,
+    grid_ndim: int,
+    input_shape: tuple[int, ...],
+) -> tuple[int, ...]:
+    return expand_shape_left(
+        MPI.Compute_dims(comm.Get_size(), grid_ndim),
+        ndim=len(input_shape),
+    )

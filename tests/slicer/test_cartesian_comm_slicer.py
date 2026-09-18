@@ -681,7 +681,6 @@ def test_slicing_sync(backward, nworkers, grid_size, imsize, send_size, recv_siz
     ndims = grid_size.size
 
     for rank in range(nworkers):
-        ranknd = np.array([rank], dtype="i")
         ranknd = np.array(np.unravel_index(rank, grid_size), dtype="i")
 
         cart_slicer = CartesianCommSlicer(

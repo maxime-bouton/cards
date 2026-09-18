@@ -9,12 +9,8 @@ from cards.denoisers.serial_ddfb import SerialDDFB
 from cards.denoisers.serial_dncnn import SerialDnCNN
 from cards.denoisers.serial_drunet import SerialDRUNet
 
-
 # TODO: add test with gray images (n_channels = 1), missing DDFB weights with nch=1
-# NOTE: only first spatial axis is partitioned because way too slow when both axes are.
-@pytest.fixture
-def grid_shape(comm_size: int) -> tuple[int, ...]:
-    return (1, comm_size, 1)
+# TODO: avoid generating full image on all workers
 
 
 # NOTE: only one input shape configuration: DRUNet requires the
@@ -79,8 +75,7 @@ def test_distributed_drunet(seed, input_shape, comm, grid_shape):
 
     Warning
     -------
-    DRUNet requires the dimensions of each local tile to be multiples of 8
-    (along each spatial axis).
+    DRUNet requires the dimensions of each local tile to be multiples of 8 along each spatial axis.
     """
     rng = xp.random.default_rng(seed)
     x = rng.random(input_shape).astype(xp.float32)

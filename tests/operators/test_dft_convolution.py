@@ -20,44 +20,28 @@ def input_size(input_shape) -> np.ndarray:
     return np.array(input_shape)
 
 
-@pytest.fixture(params=[1, 2])
-def grid_ndim(request: pytest.FixtureRequest) -> int:
-    return request.param
-
-
-@pytest.fixture
-def grid_shape(
-    comm: MPI.Comm,
-    grid_ndim: int,
-    input_shape: tuple[int, ...],
-) -> tuple[int, ...]:
-    return expand_shape_left(
-        MPI.Compute_dims(comm.Get_size(), grid_ndim),
-        ndim=len(input_shape),
-    )
-
-
 @pytest.mark.serial
 def test_adjoint(seed, input_shape, input_size, kernel_size):
     """
-    Test the adjoint property of the DFT convolution operator in serial setting.
+    Serial test checking the implementation of the adjoint operator is consistent with the direct operator.
     """
+
     data_size = input_size + kernel_size - 1
-    data_shape = (*data_size,)
     rng = xp.random.default_rng(seed)
-    X = rng.random(input_size)
-    Y = rng.random(data_size)
+
+    x = rng.random(input_size)
+    y = rng.random(data_size)
     kernel = rng.random(kernel_size)
 
-    conv = DftConvolution(input_shape, data_shape, kernel)
+    conv = DftConvolution(input_shape, (*data_size,), kernel)
 
-    Hx = conv.forward(X)
-    Hy = conv.adjoint(Y)
+    Hx = conv.forward(x)
+    Hy = conv.adjoint(y)
 
-    Hxy = xp.sum(Hx * Y)
-    xHy = xp.sum(X * Hy)
+    Hxy = xp.sum(Hx * y)
+    xHy = xp.sum(y * Hy)
 
-    xp.testing.assert_allclose(Hxy, xHy, atol=1e-10)
+    xp.testing.assert_allclose(Hxy, xHy)  # atol=1e-10
 
 
 @pytest.mark.mpi
@@ -70,8 +54,11 @@ def test_adjoint_mpi(
     output_size = input_size + kernel_size - 1
 
     rng = xp.random.default_rng(seed)
+
+    # draw local image time
     X = rng.random(input_size)
     Y = rng.random(output_size)
+
     kernel = rng.random(kernel_size)
 
     convolution_handler = DistributedDftConvolution(

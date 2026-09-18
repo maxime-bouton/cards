@@ -6,7 +6,7 @@ import cards.backend as xp
 from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
 
-# FIXME: cleanse distributed test, avoid copying full array on all workers
+# FIxME: cleanse distributed test, avoid copying full array on all workers
 
 
 @pytest.mark.serial
@@ -14,12 +14,11 @@ def test_basic_check(input_shape):
     """
     Test that the gradient of a constant array is zero.
     """
-    X = xp.ones(input_shape)
-    gradient_operator = Gradient2d(input_shape)
+    x = xp.ones(input_shape)
+    G = Gradient2d(input_shape)
+    Gx = G.forward(x)
 
-    grad = gradient_operator.forward(X)
-
-    assert xp.allclose(grad, 0)
+    assert xp.allclose(Gx, 0)
 
 
 @pytest.mark.serial
@@ -28,15 +27,15 @@ def test_adjoint(seed, input_shape):
     Test the adjoint property of the gradient operator in serial setting.
     """
     rng = xp.random.default_rng(seed)
-    X = rng.standard_normal(input_shape)
-    Y = rng.standard_normal((2, *input_shape))
+    x = rng.standard_normal(input_shape)
+    y = rng.standard_normal((2, *input_shape))
 
-    grad_op = Gradient2d(input_shape)
-    Hx = grad_op.forward(X)
-    Hy = grad_op.adjoint(Y)
+    G = Gradient2d(input_shape)
+    Hx = G.forward(x)
+    Hy = G.adjoint(y)
 
-    xHy = xp.sum(X * Hy)
-    Hxy = xp.sum(Hx * Y)
+    xHy = xp.sum(x * Hy)
+    Hxy = xp.sum(Hx * y)
 
     xp.testing.assert_allclose(Hxy, xHy)
 
@@ -51,44 +50,37 @@ def test_adjoint_mpi(comm, input_shape, seed):
     grid_dims = (1, *MPI.Compute_dims(comm_size, 2))
     cart_comm = comm.Create_cart(dims=grid_dims)
 
-    grad_op = DistributedGradient2d(input_shape, grid_dims, comm)
+    G = DistributedGradient2d(input_shape, grid_dims, comm)
 
     rng = xp.random.default_rng(seed)
 
-    X = xp.zeros(input_shape)
-    Y = xp.zeros((2, *input_shape))
+    x = xp.zeros(input_shape)
+    y = xp.zeros((2, *input_shape))
 
     if rank == 0:
-        X = rng.standard_normal(input_shape)
-        Y = rng.standard_normal((2, *input_shape))
-    cart_comm.Bcast([X, MPI.DOUBLE], root=0)
-    cart_comm.Bcast([Y, MPI.DOUBLE], root=0)
+        x = rng.standard_normal(input_shape)
+        y = rng.standard_normal((2, *input_shape))
+    cart_comm.Bcast([x, MPI.DOUBLE], root=0)
+    cart_comm.Bcast([y, MPI.DOUBLE], root=0)
 
-    local_slice = grad_op.direct_communicator.cartslicer.slice_global_buffer_to_tile
+    local_slice = G.direct_communicator.cartslicer.slice_global_buffer_to_tile
 
-    local_X = X[local_slice]
-    local_Y = xp.zeros((2, *grad_op.adjoint_communicator_h.cartslicer.tile_size))
-    local_adj = xp.zeros(grad_op.adjoint_communicator_h.cartslicer.tile_size)
-    local_slice_h = (
-        grad_op.adjoint_communicator_h.cartslicer.slice_global_buffer_to_tile
-    )
-    local_slice_v = (
-        grad_op.adjoint_communicator_v.cartslicer.slice_global_buffer_to_tile
-    )
+    local_x = x[local_slice]
+    local_y = xp.zeros((2, *G.adjoint_communicator_h.cartslicer.tile_size))
+    local_slice_h = G.adjoint_communicator_h.cartslicer.slice_global_buffer_to_tile
+    local_slice_v = G.adjoint_communicator_v.cartslicer.slice_global_buffer_to_tile
 
     slice_h = np.s_[0, *local_slice_h]
     slice_v = np.s_[1, *local_slice_v]
-    local_Y[0] = Y[slice_h]
-    local_Y[1] = Y[slice_v]
+    local_y[0] = y[slice_h]
+    local_y[1] = y[slice_v]
 
-    local_grad = grad_op.forward(local_X)
-    local_adj = grad_op.adjoint(local_Y)
+    local_grad = G.forward(local_x)
+    local_adj = G.adjoint(local_y)
 
-    local_Hxy = xp.sum(local_grad[0] * local_Y[0] + local_grad[1] * local_Y[1])
-    local_xHy = xp.sum(X[local_slice] * local_adj)
+    local_Hxy = xp.sum(local_grad[0] * local_y[0] + local_grad[1] * local_y[1])
+    local_xHy = xp.sum(x[local_slice] * local_adj)
 
-    Hxy = 0
-    xHy = 0
     Hxy = comm.allreduce(local_Hxy, MPI.SUM)
     xHy = comm.allreduce(local_xHy, MPI.SUM)
 
