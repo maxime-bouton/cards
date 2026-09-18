@@ -15,11 +15,6 @@ def kernel_size(input_shape) -> np.ndarray:
     return np.array(expand_shape_left((5, 3), ndim=len(input_shape)))
 
 
-@pytest.fixture
-def input_size(input_shape) -> np.ndarray:
-    return np.array(input_shape)
-
-
 @pytest.mark.serial
 def test_adjoint(seed, input_shape, input_size, kernel_size):
     """

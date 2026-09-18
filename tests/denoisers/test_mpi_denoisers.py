@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 
 import cards.backend as xp
@@ -18,11 +17,6 @@ from cards.denoisers.serial_drunet import SerialDRUNet
 @pytest.fixture(params=[(3, 128, 128)])
 def input_shape(request):
     return request.param
-
-
-@pytest.fixture
-def input_size(input_shape) -> np.ndarray:
-    return np.array(input_shape)
 
 
 @pytest.mark.mpi

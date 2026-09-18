@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 import torch
 from mpi4py import MPI
@@ -128,6 +129,11 @@ def seed2():
 @pytest.fixture(scope="session", params=[(3, 64, 64), (1, 31, 31)])
 def input_shape(request: pytest.FixtureRequest) -> tuple[int, ...]:
     return request.param
+
+
+@pytest.fixture
+def input_size(input_shape) -> np.ndarray:
+    return np.array(input_shape)
 
 
 @pytest.fixture(params=[1, 2])
