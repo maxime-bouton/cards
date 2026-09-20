@@ -42,9 +42,7 @@ def test_dftconv_error_messages(input_size, kernel_size):
 
 @pytest.mark.serial
 def test_adjoint(seed, input_shape, input_size, kernel_size):
-    """
-    Serial test checking the implementation of the adjoint operator is consistent with the direct operator.
-    """
+    """Serial test to check the implementation of the adjoint operator is consistent with the direct operator."""
     rng = xp.random.default_rng(seed)
 
     kernel = rng.random(kernel_size)
@@ -89,9 +87,7 @@ def test_dftconv_error_messages_mpi(input_shape, kernel_size, comm, grid_shape):
 
 @pytest.mark.mpi
 def test_adjoint_mpi(seed, input_shape, kernel_size, comm, rank, grid_shape):
-    """
-    Distributed test checking the implementation of the adjoint operator is consistent with the direct operator.
-    """
+    """Distributed test to check the implementation of the adjoint operator is consistent with the direct operator."""
     kernel_rng = xp.random.default_rng(seed)
     kernel = kernel_rng.random(kernel_size)
     convolution_handler = DistributedDftConvolution(

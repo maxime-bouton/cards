@@ -1,3 +1,5 @@
+r"""Testing implementation consistency for tirch-based convolution operators."""
+
 import pytest
 import torch
 from mpi4py import MPI
@@ -6,7 +8,8 @@ import cards.backend as xp
 from cards.operators.distributed_torch_convolution import DistributedTorchConvolution
 from cards.utils.utils import torch2xp, xp2torch
 
-# FIXME: cleanse test, avoid full arrays on all workers
+# FIXME: avoid full arrays on all workers
+# TODO: revise the way rng is handled in MPI test
 
 
 @pytest.fixture
@@ -21,10 +24,7 @@ def padding():
 
 @pytest.mark.mpi
 def test_mpi_torch_conv(input_shape, kernel_dims, padding, seed, comm, comm_size):
-    """
-    Test that the MPI Torch convolution operator produces the same result as the
-    corresponding tile of the serial version.
-    """
+    """Test torch-based convolution operator produces the same in serial and distributed configurations."""
     grid_dims = (1, comm_size, 1)
     Cin = input_shape[0]
     rng = xp.random.default_rng(seed)
