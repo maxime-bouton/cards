@@ -20,7 +20,6 @@ def test_adjoint(seed, input_shape, input_size, kernel_size):
     """
     Serial test checking the implementation of the adjoint operator is consistent with the direct operator.
     """
-
     data_size = input_size + kernel_size - 1
     rng = xp.random.default_rng(seed)
 
@@ -31,12 +30,12 @@ def test_adjoint(seed, input_shape, input_size, kernel_size):
     conv = DftConvolution(input_shape, (*data_size,), kernel)
 
     Hx = conv.forward(x)
-    Hy = conv.adjoint(y)
+    Hadj_y = conv.adjoint(y)
 
     Hxy = xp.sum(Hx * y)
-    xHy = xp.sum(y * Hy)
+    xHadj_y = xp.sum(x * Hadj_y)
 
-    xp.testing.assert_allclose(Hxy, xHy)  # atol=1e-10
+    xp.testing.assert_allclose(Hxy, xHadj_y)  # atol=1e-10
 
 
 @pytest.mark.mpi
@@ -46,13 +45,13 @@ def test_adjoint_mpi(
     """
     Test the adjoint property of the DFT convolution operator in distributed settings.
     """
-    output_size = input_size + kernel_size - 1
+    data_size = input_size + kernel_size - 1
 
     rng = xp.random.default_rng(seed)
 
     # draw local image time
-    X = rng.random(input_size)
-    Y = rng.random(output_size)
+    x = rng.random(input_size)
+    y = rng.random(data_size)
 
     kernel = rng.random(kernel_size)
 
@@ -63,23 +62,20 @@ def test_adjoint_mpi(
         kernel,
     )
 
-    local_X = X[
+    local_x = x[
         convolution_handler.direct_communicator.cartslicer.slice_global_buffer_to_tile
     ]
-    local_Y = Y[
+    local_y = y[
         convolution_handler.adjoint_communicator.cartslicer.slice_global_buffer_to_tile
     ]
 
-    local_Hx = convolution_handler.forward(local_X)
-    local_Hy = convolution_handler.adjoint(local_Y)
+    local_Hx = convolution_handler.forward(local_x)
+    local_Hadj_y = convolution_handler.adjoint(local_y)
 
-    local_Hxy = xp.sum(local_Hx * local_Y)
-    local_xHy = xp.sum(local_X * local_Hy)
-
-    Hxy = 0
-    xHy = 0
+    local_Hxy = xp.sum(local_Hx * local_y)
+    local_xHadj_y = xp.sum(local_x * local_Hadj_y)
 
     Hxy = comm.allreduce(local_Hxy, MPI.SUM)
-    xHy = comm.allreduce(local_xHy, MPI.SUM)
+    xHadj_y = comm.allreduce(local_xHadj_y, MPI.SUM)
 
-    xp.testing.assert_allclose(Hxy, xHy)
+    xp.testing.assert_allclose(Hxy, xHadj_y)
