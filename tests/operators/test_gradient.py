@@ -12,9 +12,7 @@ from cards.operators.gradient import Gradient2d
 
 @pytest.mark.serial
 def test_basic_check(input_shape):
-    """
-    Test that the gradient of a constant array is zero.
-    """
+    """Test that the gradient of a constant array is zero."""
     x = xp.ones(input_shape)
     H = Gradient2d(input_shape)
     Hx = H.forward(x)
