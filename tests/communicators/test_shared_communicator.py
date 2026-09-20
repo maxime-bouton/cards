@@ -16,23 +16,6 @@ def kernel_shape():
     return (5, 3)
 
 
-@pytest.fixture(params=[1, 2])
-def grid_ndim(request: pytest.FixtureRequest) -> int:
-    return request.param
-
-
-@pytest.fixture
-def grid_shape(
-    comm: MPI.Comm,
-    grid_ndim: int,
-    input_shape,  #: tuple[int, ...],
-) -> tuple[int, ...]:
-    return expand_shape_left(
-        MPI.Compute_dims(comm.Get_size(), grid_ndim),
-        ndim=len(input_shape),
-    )
-
-
 @pytest.mark.mpi
 def test_shared_comm(
     comm: MPI.Comm,

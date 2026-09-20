@@ -84,6 +84,9 @@ def ctx(request: pytest.FixtureRequest) -> ExecutionContext:
     return ExecutionContext(mode=mode, device=device)
 
 
+# ! apply mark mpi to all tests consumming comm
+# https://stackoverflow.com/questions/63765233/adding-pytest-markers-to-test-depending-on-used-fixtures
+# @pytest.fixture(scope="session", params=[pytest.param(None, marks=pytest.mark.mpi)])
 @pytest.fixture(scope="session")
 def comm(ctx: ExecutionContext):
     return ctx.comm
