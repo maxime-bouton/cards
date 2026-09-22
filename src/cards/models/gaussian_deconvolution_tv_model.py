@@ -6,7 +6,6 @@ r"""Implementation of a Gaussian deconvolution model under a TV prior to reprodu
 
 # TODO: documentation
 
-from abc import ABC
 from dataclasses import dataclass
 
 import numpy as np
@@ -33,7 +32,7 @@ class GaussianDeconvolutionTvParams(GaussianDeconvolutionParams):
     split_coef: float
 
 
-class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel, ABC):
+class GaussianDeconvolutionTvModel(BaseGaussianDeconvolutionModel):
     def __init__(
         self,
         params: GaussianDeconvolutionTvParams,
