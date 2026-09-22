@@ -36,6 +36,7 @@ class Simulation[G, O]:
         obs_hk: ObservationsHook[G, O],
         mcmc_hk: McmcHook[G, O] | None = None,
         analysis_hk: AnalysisHook[G, O] | None = None,
+        skip_sampling: bool = False,
         paths_hk: PathsHook | None = None,
     ) -> None:
 
@@ -50,6 +51,7 @@ class Simulation[G, O]:
         self.mcmc_hk = mcmc_hk
         self.analysis_hk = analysis_hk
         self.paths_hk = paths_hk
+        self.force_skip = skip_sampling
 
         self.ctx = ExecutionContext(mode, device)
 
@@ -82,14 +84,10 @@ class Simulation[G, O]:
         obs_hk: ObservationsHook[G, O],
         mcmc_hk: McmcHook[G, O] | None = None,
         analysis_hk: AnalysisHook[G, O] | None = None,
+        skip_sampling: bool = False,
         paths_hk: PathsHook | None = None,
     ) -> "Simulation":
         args = parse_args()
-        # ! only for debugging
-        # args.config = "examples/new_config_tv.json"
-        # args.mode = "mpi"
-        # args.device = "cpu"
-        # !
         return cls(
             args.mode,
             args.device,
@@ -98,6 +96,7 @@ class Simulation[G, O]:
             obs_hk,
             mcmc_hk,
             analysis_hk,
+            skip_sampling,
             paths_hk,
         )
 
@@ -113,7 +112,7 @@ class Simulation[G, O]:
                 return
 
             has_src_ctx = self.cfg.analysis.source_context is not None
-            skip_sampling = should_run_analysis and has_src_ctx
+            skip_sampling = (should_run_analysis and has_src_ctx) or self.force_skip
 
             if self.mcmc_hk is not None:
                 estims = self._run_mcmc_phase(self.mcmc_hk, geom, obs, skip_sampling)
@@ -173,32 +172,34 @@ class Simulation[G, O]:
         mcmc_hk: McmcHook[G, O],
         geometry: G,
         obs: O,
-        skip_sampling: bool = False,
+        skip_sampling: bool,
     ) -> list[BaseEstimator]:
         self._log_phase("MCMC")
         with self._log_step("Build estimators"):
             vars_, estimators = mcmc_hk.build_estimators(geometry, obs)
 
         if skip_sampling:
-            self.log.warning(
-                f"  │   Source context provided. Skipping MCMC sampling. "
-                f"Fetching checkpoints from `{self.cfg.analysis.source_context}`."
-            )
-            return estimators
+            if not self.force_skip:
+                self.log.warning(
+                    f"  │   Source context provided. Skipping MCMC sampling. "
+                    f"Fetching checkpoints from `{self.cfg.analysis.source_context}`."
+                )
+            else:
+                self.log.warning("  │   User forced skipping MCMC sampling.")
+        else:
+            with self._log_step("Build model"):
+                model = mcmc_hk.build_model(self.ctx, self.cfg, geometry, obs, vars_)
 
-        with self._log_step("Build model"):
-            model = mcmc_hk.build_model(self.ctx, self.cfg, geometry, obs, vars_)
+            with self._log_step("Build sampler"):
+                s_params = self.create_sampler_params()
+                s_params.ckpt_dir_path.mkdir(parents=True, exist_ok=True)
+                sampler = Sampler.create_from_context(
+                    self.ctx, self.io_mng, model, estimators, s_params, self.log
+                )
 
-        with self._log_step("Build sampler"):
-            s_params = self.create_sampler_params()
-            s_params.ckpt_dir_path.mkdir(parents=True, exist_ok=True)
-            sampler = Sampler.create_from_context(
-                self.ctx, self.io_mng, model, estimators, s_params, self.log
-            )
-
-        with self._log_step("Run MCMC"):
-            self.paths.get_obs_path().parent.mkdir(parents=True, exist_ok=True)
-            sampler.sample()
+            with self._log_step("Run MCMC"):
+                self.paths.get_obs_path().parent.mkdir(parents=True, exist_ok=True)
+                sampler.sample()
 
         return estimators
 
