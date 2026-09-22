@@ -28,8 +28,12 @@ class MMSEVar(BaseEstimator):
         self._delta2 = xp.zeros_like(self._var.state)
 
     @property
-    def declared_keys(self) -> list[str]:
-        return [f"{self._var.name}_mmse", f"{self._var.name}_var"]
+    def declared_keys(self) -> tuple[str, ...]:
+        return (f"{self._var.name}_mmse", f"{self._var.name}_var")
+
+    @property
+    def uncertainty_keys(self) -> frozenset[str]:
+        return frozenset({f"{self._var.name}_var"})
 
     def aggregate_states(self) -> None:
         """Update running statistics with new samples using Welford's algorithm."""
