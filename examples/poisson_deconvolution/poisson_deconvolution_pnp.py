@@ -11,6 +11,7 @@ import numpy as np
 import torch
 
 import cards.backend as xp
+from cards.analysis.utils import compose_slices
 from cards.core.execution_context import ExecutionContext
 from cards.core.layout import Layout
 from cards.core.validation import SimulationConfig
@@ -25,6 +26,7 @@ from cards.denoisers.serial_drunet import SerialDRUNet
 from cards.estimators.base_estimator import BaseEstimator
 from cards.estimators.ci import CI
 from cards.estimators.mmse_var import MMSEVar
+from cards.hooks.default_analysis_hook import DefaultAnalysisHook
 from cards.io.io_manager import IOManager
 from cards.models import (
     BaseModel,
@@ -37,7 +39,7 @@ from cards.operators.distributed_dft_convolution import DistributedDftConvolutio
 from cards.random import create_rng
 from cards.transition_kernels.pnp_ula import CpuPnpULA, GpuPnpULA
 from cards.transition_kernels.psgla import CpuPSGLA, GpuPSGLA
-from cards.utils.utils import xp2torch
+from cards.utils.utils import expand_shape_left, xp2torch
 from cards.utils.utils_img import load_img, read_dtype, read_img_shape
 from cards.utils.utils_observations import (
     fit_kernel_shape,
@@ -229,8 +231,7 @@ class PoissonDeconvObservationsHook:
         # TODO: rework rng handling
         if ctx.is_gpu:
             y = torch.poisson(
-                xp2torch(xp.maximum(Hx, 0) * dynamic_range),
-                # device="cuda",
+                xp2torch(xp.maximum(Hx, 0) * dynamic_range, add_batch=False),
                 generator=rng,
             )
             y = xp.asarray(y, x.dtype)
@@ -354,7 +355,12 @@ class PoissonDeconvPnpMcmcHook:
         )
 
         variables = {"X": x_var, "Y": y_var, "Z1": z1_var, "Z2": z2_var}
-        estimators: list[BaseEstimator] = [MMSEVar(x_var), CI(x_var, all_samples=True)]
+        estimators: list[BaseEstimator] = [
+            MMSEVar(x_var),
+            MMSEVar(z1_var),
+            MMSEVar(z2_var),
+            CI(x_var),
+        ]
 
         return variables, estimators
 
@@ -433,3 +439,41 @@ class PoissonDeconvPnpMcmcHook:
             Z2=Z2,
             denoiser=geom.D,
         )
+
+
+def slices_obs_deconv(
+    grid_shape: tuple[int, ...],
+    kernel_shape: tuple[int, ...],
+) -> tuple[slice, ...]:
+    grid_size = np.asarray(grid_shape)
+    kernel_size = np.asarray(expand_shape_left(kernel_shape, len(grid_size)))
+    left = kernel_size // 2
+    right = -(kernel_size // 2)
+    return tuple(slice(le or None, r or None) for le, r in zip(left, right))
+
+
+class PoissonDeconvPnpAnalysisHook(
+    DefaultAnalysisHook[PnpDeconvGeometry, PoissonDeconvObs]
+):
+    def prepare_metrics_data(
+        self,
+        ctx: ExecutionContext,
+        io_mng: IOManager,
+        geometry: PnpDeconvGeometry,
+        obs: PoissonDeconvObs,
+        reduced_local: dict[str, xp.ndarray],
+        obs_path: Path,
+    ) -> tuple[dict[str, xp.ndarray], dict[str, xp.ndarray]]:
+        crop = slices_obs_deconv(geometry.grid_shape, geometry.kernel.shape)
+
+        if ctx.is_mpi:
+            composed_slices = compose_slices(geometry.layout_x.s, crop)
+            with io_mng.open(obs_path) as f:
+                y = io_mng.read_array(f, "y", composed_slices)
+        else:
+            y = obs.y[crop]
+
+        targets = {"X": reduced_local["X_mmse"], "Y": y / obs.dynamic_range}
+        references = {"X": obs.x, "Y": obs.x}
+
+        return targets, references

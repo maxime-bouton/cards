@@ -25,6 +25,7 @@ from cards.denoisers.serial_drunet import SerialDRUNet
 from cards.estimators.base_estimator import BaseEstimator
 from cards.estimators.ci import CI
 from cards.estimators.mmse_var import MMSEVar
+from cards.hooks.default_analysis_hook import DefaultAnalysisHook
 from cards.io.io_manager import IOManager
 from cards.models import (
     BaseModel,
@@ -425,7 +426,7 @@ class GaussianInpaintingPnpMcmcHook:
         )
 
         variables = {"X": x_var, "Y": y_var}
-        estimators: list[BaseEstimator] = [MMSEVar(x_var), CI(x_var, all_samples=True)]
+        estimators: list[BaseEstimator] = [MMSEVar(x_var), CI(x_var)]
 
         return variables, estimators
 
@@ -483,3 +484,21 @@ class GaussianInpaintingPnpMcmcHook:
             X,
             geom.D,
         )
+
+
+class GaussianInpaintingPnpAnalysisHook(
+    DefaultAnalysisHook[PnpInpaintingGeometry, GaussianInpaintingObs]
+):
+    def prepare_metrics_data(
+        self,
+        ctx: ExecutionContext,
+        io_mng: IOManager,
+        geometry: PnpInpaintingGeometry,
+        obs: GaussianInpaintingObs,
+        reduced_local: dict[str, xp.ndarray],
+        obs_path: Path,
+    ) -> tuple[dict[str, xp.ndarray], dict[str, xp.ndarray]]:
+        targets = {"X": reduced_local["X_mmse"], "Y": obs.y, "I": obs.interpolation}
+        references = {"X": obs.x, "Y": obs.x, "I": obs.x}
+
+        return targets, references
