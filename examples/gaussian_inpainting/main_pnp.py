@@ -4,6 +4,7 @@
 
 from gaussian_inpainting_pnp import (
     GaussianInpaintingObservationsHook,
+    GaussianInpaintingPnpAnalysisHook,
     GaussianInpaintingPnpMcmcHook,
     PnpInpaintingGeometryHook,
 )
@@ -16,8 +17,9 @@ def main():
     geom_hk = PnpInpaintingGeometryHook()
     obs_hk = GaussianInpaintingObservationsHook()
     mcmc_hk = GaussianInpaintingPnpMcmcHook()
+    analysis_hk = GaussianInpaintingPnpAnalysisHook()
 
-    simu = Simulation.from_cli(geom_hk, obs_hk, mcmc_hk)
+    simu = Simulation.from_cli(geom_hk, obs_hk, mcmc_hk, analysis_hk)
     simu.run()
 
 

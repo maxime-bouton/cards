@@ -83,14 +83,24 @@ Detailed examples provided in this repository focus on the resolution of high-di
 
 ## Example usage
 
-To run some examples, use the following instructions:
+**1. Prepare the data (if required)**<br>
+Some examples require generating `.h5` files from the raw images first. You can convert all raw images at once using a loop:
 
 ```bash
-cd examples
-python launcher.py --run
+cd data
+for img in raw/*.jpg; do python convert.py "$img"; done
+mv raw/*.h5 .
+cd ..
 ```
 
-The settings variables of `examples/launcher.py` can be commented in/out to run different subsets of experiments.
+**2. Run the examples**<br>
+Once the data is ready, you can run the launcher from the project root:
+
+```bash
+python examples/launcher.py --run
+```
+
+*Note: To run different subsets of experiments, you currently need to comment/uncomment the settings variables inside `examples/launcher.py`.*
 
 ## Contributing
 

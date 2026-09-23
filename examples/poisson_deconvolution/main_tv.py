@@ -4,6 +4,7 @@
 
 from poisson_deconvolution_tv import (
     PoissonDeconvObservationsHook,
+    PoissonDeconvTvAnalysisHook,
     PoissonDeconvTvMcmcHook,
     TvDeconvGeometryHook,
 )
@@ -18,8 +19,9 @@ def main():
     geom_hk = TvDeconvGeometryHook()
     obs_hk = PoissonDeconvObservationsHook()
     mcmc_hk = PoissonDeconvTvMcmcHook()
+    analysis_hk = PoissonDeconvTvAnalysisHook()
 
-    simu = Simulation.from_cli(geom_hk, obs_hk, mcmc_hk)
+    simu = Simulation.from_cli(geom_hk, obs_hk, mcmc_hk, analysis_hk)
     simu.run()
 
 

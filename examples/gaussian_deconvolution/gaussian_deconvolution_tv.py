@@ -9,6 +9,7 @@ import numpy as np
 import torch
 
 import cards.backend as xp
+from cards.analysis.utils import compose_slices
 from cards.core.execution_context import ExecutionContext
 from cards.core.layout import Layout
 from cards.core.validation import SimulationConfig
@@ -16,6 +17,7 @@ from cards.core.variable import Variable
 from cards.estimators.base_estimator import BaseEstimator
 from cards.estimators.ci import CI
 from cards.estimators.mmse_var import MMSEVar
+from cards.hooks.default_analysis_hook import DefaultAnalysisHook
 from cards.io.io_manager import IOManager
 from cards.models import (
     BaseModel,
@@ -29,6 +31,7 @@ from cards.operators.distributed_gradient import DistributedGradient2d
 from cards.operators.gradient import Gradient2d
 from cards.random import create_rng
 from cards.transition_kernels.psgla import CpuPSGLA, GpuPSGLA
+from cards.utils.utils import expand_shape_left
 from cards.utils.utils_img import load_img, read_dtype, read_img_shape
 from cards.utils.utils_observations import (
     compute_sigma2_from_isnr,
@@ -298,7 +301,7 @@ class GaussianDeconvTvMcmcHook:
         )
 
         variables = {"X": x_var, "Y": y_var, "Z": z_var}
-        estimators: list[BaseEstimator] = [MMSEVar(x_var), CI(x_var, all_samples=True)]
+        estimators: list[BaseEstimator] = [MMSEVar(x_var), MMSEVar(z_var), CI(x_var)]
 
         return variables, estimators
 
@@ -350,3 +353,41 @@ class GaussianDeconvTvMcmcHook:
             X=X,
             Z=Z,
         )
+
+
+def slices_obs_deconv(
+    grid_shape: tuple[int, ...],
+    kernel_shape: tuple[int, ...],
+) -> tuple[slice, ...]:
+    grid_size = np.asarray(grid_shape)
+    kernel_size = np.asarray(expand_shape_left(kernel_shape, len(grid_size)))
+    left = kernel_size // 2
+    right = -(kernel_size // 2)
+    return tuple(slice(le or None, r or None) for le, r in zip(left, right))
+
+
+class GaussianDeconvTvAnalysisHook(
+    DefaultAnalysisHook[TvDeconvGeometry, GaussianDeconvObs]
+):
+    def prepare_metrics_data(
+        self,
+        ctx: ExecutionContext,
+        io_mng: IOManager,
+        geometry: TvDeconvGeometry,
+        obs: GaussianDeconvObs,
+        reduced_local: dict[str, xp.ndarray],
+        obs_path: Path,
+    ) -> tuple[dict[str, xp.ndarray], dict[str, xp.ndarray]]:
+        crop = slices_obs_deconv(geometry.grid_shape, geometry.kernel.shape)
+
+        if ctx.is_mpi:
+            composed_slices = compose_slices(geometry.layout_x.s, crop)
+            with io_mng.open(obs_path) as f:
+                y = io_mng.read_array(f, "y", composed_slices)
+        else:
+            y = obs.y[crop]
+
+        targets = {"X": reduced_local["X_mmse"], "Y": y}
+        references = {"X": obs.x, "Y": obs.x}
+
+        return targets, references

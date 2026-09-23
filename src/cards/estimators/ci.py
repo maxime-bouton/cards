@@ -27,11 +27,15 @@ class CI(BaseEstimator):
         self._count = 0
 
     @property
-    def declared_keys(self) -> list[str]:
+    def declared_keys(self) -> tuple[str, ...]:
         keys = [f"{self._var.name}_ci"]
         if self._all_samples:
             keys.append(f"{self._var.name}_samples")
-        return keys
+        return tuple(keys)
+
+    @property
+    def uncertainty_keys(self) -> frozenset[str]:
+        return frozenset({f"{self._var.name}_ci"})
 
     @property
     def global_shapes(self) -> dict:

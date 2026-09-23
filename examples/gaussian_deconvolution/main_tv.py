@@ -4,6 +4,7 @@
 
 from gaussian_deconvolution_tv import (
     GaussianDeconvObservationsHook,
+    GaussianDeconvTvAnalysisHook,
     GaussianDeconvTvMcmcHook,
     TvDeconvGeometryHook,
 )
@@ -18,8 +19,9 @@ def main():
     geom_hk = TvDeconvGeometryHook()
     obs_hk = GaussianDeconvObservationsHook()
     mcmc_hk = GaussianDeconvTvMcmcHook()
+    analysis_hk = GaussianDeconvTvAnalysisHook()
 
-    simu = Simulation.from_cli(geom_hk, obs_hk, mcmc_hk)
+    simu = Simulation.from_cli(geom_hk, obs_hk, mcmc_hk, analysis_hk)
     simu.run()
 
 

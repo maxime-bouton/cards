@@ -50,11 +50,16 @@ class BaseEstimator(ABC):
 
     @property
     @abstractmethod
-    def declared_keys(self) -> list[str]:
-        r"""List of keys that are used by the estimator. Entirely known from `var` alone,
+    def declared_keys(self) -> tuple[str, ...]:
+        r"""Collection of keys that are used by the estimator. Entirely known from `var` alone,
         no :class:`~cards.models.base_model.BaseModel` needed. Single source of truth
         for the estimate keys contained in checkpoint files.
         """
+
+    @property
+    def uncertainty_keys(self) -> frozenset[str]:
+        r"""Collection of keys that are used by the estimator to store uncertainty maps."""
+        return frozenset()
 
     def setup(self, ckpt_size: int) -> None:
         r"""Setup the estimator to be used for the application of interest.

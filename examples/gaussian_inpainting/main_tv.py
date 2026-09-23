@@ -4,6 +4,7 @@
 
 from gaussian_inpainting_tv import (
     GaussianInpaintingObservationsHook,
+    GaussianInpaintingTvAnalysisHook,
     GaussianInpaintingTvMcmcHook,
     TvInpaintingGeometryHook,
 )
@@ -16,8 +17,9 @@ def main():
     geom_hk = TvInpaintingGeometryHook()
     obs_hk = GaussianInpaintingObservationsHook()
     mcmc_hk = GaussianInpaintingTvMcmcHook()
+    analysis_hk = GaussianInpaintingTvAnalysisHook()
 
-    simu = Simulation.from_cli(geom_hk, obs_hk, mcmc_hk)
+    simu = Simulation.from_cli(geom_hk, obs_hk, mcmc_hk, analysis_hk)
     simu.run()
 
 

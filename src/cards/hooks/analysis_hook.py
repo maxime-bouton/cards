@@ -13,14 +13,15 @@ from cards.io.io_manager import IOManager
 
 @dataclass
 class AnalysisArtifacts:
-    original: xp.ndarray
-    observations: xp.ndarray
+    original: xp.ndarray | None
+    observations: xp.ndarray | None
     reduced: dict[str, xp.ndarray]
     global_shapes: dict[str, tuple[int, ...]]
     slices: dict[str, tuple[slice, ...]]
     initialisation: xp.ndarray | None
     potential: xp.ndarray | None
     time: dict[str, xp.ndarray] | None
+    uncertainty_keys: set
 
 
 @dataclass

@@ -10,8 +10,8 @@
         "seed_data": 1234
     },
     "parameters": {
-        "reg_coef": 40,
-        "split_coef": 1e-05
+        "reg_coef": 20,
+        "split_coef": 5e-3
     },
     "sampler": {
         "ckpt_size": 100,

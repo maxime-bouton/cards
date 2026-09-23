@@ -19,9 +19,9 @@ APPLICATIONS = [
 
 OBS_CONFIGS = [
     "128.json",
-    # "2048.json",
-    # "2896.json",
-    # "4096.json",
+    # "2048.json",  # WORKERS = [1, 2, 4]
+    # "2896.json",  # WORKERS = [2]
+    # "4096.json",  # WORKERS = [4]
 ]
 
 PRIOR_CONFIGS = [
