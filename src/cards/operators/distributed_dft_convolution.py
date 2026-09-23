@@ -262,6 +262,12 @@ class DistributedDftConvolution(LinearOperator):
         tile_range: np.ndarray | None = None,
         backward: bool = False,
     ):
+        if not len(kernel.shape) == len(image_shape):
+            raise ValueError("kernel should have ndims = len(image_shape) dimensions")
+        # TODO: see if this is still the case
+        if kernel.dtype.kind == "c":
+            raise TypeError("only real-valued kernel supported")
+
         self.image_size = np.asarray(image_shape)
         self.data_size = self.image_size + np.asarray(kernel.shape) - 1
         data_shape = (*self.data_size,)
@@ -269,18 +275,13 @@ class DistributedDftConvolution(LinearOperator):
 
         if not len(self.image_shape) == len(self.data_shape):
             raise ValueError(
-                "image_size and data_size must have the same number of elements"
+                "image_shape and data_shape must have the same number of elements"
             )
 
         self.dtype = dtype
         self.grid_size = np.asarray(grid_shape)
 
         # * useful dimensions
-        if not len(kernel.shape) == self.ndims:
-            raise ValueError("kernel should have ndims = len(image_size) dimensions")
-        # TODO: see if this is still the case
-        if kernel.dtype.kind == "c":
-            raise TypeError("only real-valued kernel supported")
         self.overlap_size = np.asarray(kernel.shape) - 1
 
         # * communicator for the distributed direct operator

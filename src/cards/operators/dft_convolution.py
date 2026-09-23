@@ -87,18 +87,16 @@ class DftConvolution(LinearOperator):
         data_shape: Sequence[int],
         kernel,
     ):
+        if not len(kernel.shape) == len(image_shape):
+            raise ValueError("kernel should have ndims = len(image_shape) dimensions")
+        if kernel.dtype.kind == "c":
+            raise TypeError("only real-valued kernel supported")
+
         super().__init__(image_shape, data_shape)
         if not len(self.image_shape) == len(self.data_shape):
             raise ValueError(
                 "image_shape and data_shape must have the same number of elements"
             )
-
-        if not len(kernel.shape) == self.ndims:
-            raise ValueError("kernel should have ndims = len(image_size) dimensions")
-
-        if kernel.dtype.kind == "c":
-            raise TypeError("only real-valued kernel supported")
-
         self.kernel = kernel
         self.fft_kernel = xp.fft.rfftn(
             a=self.kernel, s=self.data_shape, axes=range(len(self.image_shape))
