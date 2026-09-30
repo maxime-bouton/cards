@@ -97,7 +97,8 @@ cd ..
 Once the data is ready, you can run the launcher from the project root:
 
 ```bash
-python examples/launcher.py --run
+cd examples
+python launcher.py --run
 ```
 
 *Note: To run different subsets of experiments, you currently need to comment/uncomment the settings variables inside `examples/launcher.py`.*
