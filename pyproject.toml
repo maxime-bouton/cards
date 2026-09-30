@@ -1,6 +1,6 @@
 [project]
 name = "cards"
-version = "0.1.0"
+version = "1.0.0"
 description = "CARDS (Composable Algorithms for Reproducible Distributed Sampling) is a Python library to ease the development of disributed MCMC algorithms, with a focus on the resolution of high-dimensional inverse problems."
 authors = [
     { name = "Maxime Bouton", email = "maxime.bouton@centralelille.fr" },
