@@ -6,8 +6,6 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![license](https://img.shields.io/badge/license-GPL--3.0-brightgreen.svg)](LICENSE)
 
-[![pipeline status](https://gitlab.cristal.univ-lille.fr/parallelmcmc/cards/badges/master/pipeline.svg)](https://gitlab.cristal.univ-lille.fr/parallelmcmc/cards/commits/master)
-
 <!-- [![conda](https://img.shields.io/conda/:variant/:channel/:packageName)](...) -->
 
 <details>
