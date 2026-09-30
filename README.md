@@ -35,7 +35,7 @@ If you only want to use `cards` in your own projects, you can install it on `ubu
 <details>
 <summary><b>New to Pixi ?</b></summary>
 <a href="https://pixi.sh/">Pixi</a> is a fast, cross-platform package manager for the Conda ecosystem (which uses <code>uv</code> under the hood for lightning-fast Python installations).<br> You can <a href="https://pixi.sh/latest/#installation">install it in seconds</a> or simply fall back to <code>conda</code> or <code>mamba</code>.
-</details><br>
+</details>
 
 ```bash
 # installation within a pixi environment (recommended)
@@ -73,17 +73,17 @@ mkdir -p data/weights && cd data/weights
 
 # DDFB
 mkdir ddfb && cd ddfb
-wget [https://github.com/maxime-bouton/cards/blob/main/data/weights/ddfb/ddfb_nch3_nla20_nfe64.pth](https://github.com/maxime-bouton/cards/blob/main/data/weights/ddfb/ddfb_nch3_nla20_nfe64.pth)
+wget https://github.com/maxime-bouton/cards/blob/main/data/weights/ddfb/ddfb_nch3_nla20_nfe64.pth
 
 # DRUNet (gray and color images)
 cd ../ && mkdir drunet && cd drunet
-wget [https://github.com/cszn/KAIR/releases/download/v1.0/drunet_gray.pth](https://github.com/cszn/KAIR/releases/download/v1.0/drunet_gray.pth) && mv drunet_gray.pth drunet_nch1.pth
-wget [https://github.com/cszn/KAIR/releases/download/v1.0/drunet_color.pth](https://github.com/cszn/KAIR/releases/download/v1.0/drunet_color.pth) && mv drunet_color.pth drunet_nch3.pth
+wget https://github.com/cszn/KAIR/releases/download/v1.0/drunet_gray.pth && mv drunet_gray.pth drunet_nch1.pth
+wget https://github.com/cszn/KAIR/releases/download/v1.0/drunet_color.pth && mv drunet_color.pth drunet_nch3.pth
 
 # DnCNN (gray and color images)
 cd ../ && mkdir dncnn && cd dncnn
-wget [https://github.com/cszn/KAIR/releases/download/v1.0/dncnn_gray_blind.pth](https://github.com/cszn/KAIR/releases/download/v1.0/dncnn_gray_blind.pth) && mv dncnn_gray_blind.pth dncnn_nch1.pth
-wget [https://github.com/cszn/KAIR/releases/download/v1.0/dncnn_color_blind.pth](https://github.com/cszn/KAIR/releases/download/v1.0/dncnn_color_blind.pth) && mv dncnn_color_blind.pth dncnn_nch3.pth
+wget https://github.com/cszn/KAIR/releases/download/v1.0/dncnn_gray_blind.pth && mv dncnn_gray_blind.pth dncnn_nch1.pth
+wget https://github.com/cszn/KAIR/releases/download/v1.0/dncnn_color_blind.pth && mv dncnn_color_blind.pth dncnn_nch3.pth
 
 cd ../../
 ```
