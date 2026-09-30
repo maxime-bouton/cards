@@ -78,7 +78,7 @@ def _create_config_file(app, obs_path: Path, prior_path: Path, common_config):
     config_path = output_dir / config_name
 
     if config_path.exists():
-        print(f"[SKIP] {config_name} already exists.")
+        print(f"\n\n[SKIP] {config_name} already exists.")
         return config_name
 
     merged_config = {}
