@@ -30,7 +30,9 @@ def test_dftconv_error_messages(input_size, kernel_size):
     # error kernel size (number of axes incompatiable with input shape)
     with pytest.raises(ValueError) as excinfo:
         DftConvolution((*input_size,), (*data_size,), xp.ones(kernel_size[-1:]))
-    assert "kernel should have ndims = len(image_size) dimensions" in str(excinfo.value)
+    assert "kernel should have ndims = len(image_shape) dimensions" in str(
+        excinfo.value
+    )
 
     # error input and output shape (inconsistent number of axes between input and output)
     with pytest.raises(ValueError) as excinfo:
@@ -82,7 +84,9 @@ def test_dftconv_error_messages_mpi(input_shape, kernel_size, comm, grid_shape):
             comm,
             (1 + 1j) * xp.ones(kernel_size[-2:]),
         )
-    assert "kernel should have ndims = len(image_size) dimensions" in str(excinfo.value)
+    assert "kernel should have ndims = len(image_shape) dimensions" in str(
+        excinfo.value
+    )
 
 
 @pytest.mark.mpi
