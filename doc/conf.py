@@ -9,9 +9,11 @@ sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 # -- Project information -----------------------------------------------------
 
 project = "CARDS"
-copyright = "2025, M. Bouton, S. Despierres, P.-A. Thouvenin and P. Chainais"
-author = "M. Bouton, S. Despierres, P.-A. Thouvenin and P. Chainais"
-version = release = "0.1.0"
+copyright = (
+    "2025, M. Bouton, P.-A. Thouvenin, S. Despierres, A. Repetti and P. Chainais"
+)
+author = "M. Bouton, P.-A. Thouvenin, S. Despierres, A. Repetti and P. Chainais"
+version = release = "1.0.0"
 
 # -- General configuration ---------------------------------------------------
 
@@ -76,7 +78,7 @@ napoleon_attr_annotations = True
 
 bibtex_bibfiles = ["strings_all_ref.bib", "biblio.bib"]
 bibtex_encoding = "utf-8-sig"
-bibtex_default_style = "alpha"
+# bibtex_default_style = "author_year"
 bibtex_reference_style = "author_year"
 
 # -- HTML output -------------------------------------------------------------

@@ -7,9 +7,9 @@ The distributed functionalitites proposed in this library are primarily oriented
 The `associated github repository <https://github.com/maxime-bouton/cards/>`_ also contains codes to reproduce the image processing experiments reported in :cite:p:`Bouton2026`.
 
 
-.. warning::
+.. .. warning::
 
-   This project is under active development, and the API my evolve significantly until version ``1.0``.
+..    This project is under active development, and the API may evolve significantly until version ``1.0``.
 
 
 .. toctree::

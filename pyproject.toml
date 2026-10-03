@@ -3,12 +3,13 @@ name = "cards"
 version = "1.0.0"
 description = "CARDS (Composable Algorithms for Reproducible Distributed Sampling) is a Python library to ease the development of disributed MCMC algorithms, with a focus on the resolution of high-dimensional inverse problems."
 authors = [
-    { name = "Maxime Bouton", email = "maxime.bouton@centralelille.fr" },
-    { name = "Pierre-Antoine Thouvenin", email = "pierre-antoine.thouvenin@centralelille.fr" },
-    { name = "Stéphane Despierres", email = "stephane.despierres@centralelille.fr" },
-    { name = "Pierre Chainais", email = "pierre.chainais@centralelille.fr" },
+    { name = "Maxime Bouton", email = "" },
+    { name = "Pierre-Antoine Thouvenin", email = "" },
+    { name = "Stéphane Despierres", email = "" },
+    { name = "Audrey Repetti", email = "" },
+    { name = "Pierre Chainais", email = "" },
 ]
-# license = { file = "LICENSE" }
+license = { file = "LICENSE" }
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
