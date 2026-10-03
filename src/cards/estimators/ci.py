@@ -28,7 +28,11 @@ class CI(BaseEstimator):
 
     @property
     def declared_keys(self) -> tuple[str, ...]:
-        keys = [f"{self._var.name}_ci"]
+        keys = [
+            f"{self._var.name}_ci",
+            f"{self._var.name}_ci_l",
+            f"{self._var.name}_ci_r",
+        ]
         if self._all_samples:
             keys.append(f"{self._var.name}_samples")
         return tuple(keys)
@@ -42,7 +46,7 @@ class CI(BaseEstimator):
         shapes = super().global_shapes
 
         if self._all_samples:
-            shapes[self.declared_keys[1]] = (self._count, *self._var.layout.full)
+            shapes[self.declared_keys[3]] = (self._count, *self._var.layout.full)
 
         return shapes
 
@@ -52,7 +56,7 @@ class CI(BaseEstimator):
 
         if self._all_samples:
             base_slice = self._var.layout.s
-            samples_key = self.declared_keys[1]
+            samples_key = self.declared_keys[3]
 
             if base_slice is not None:
                 slices_dict[samples_key] = (slice(None), *base_slice)
@@ -75,9 +79,13 @@ class CI(BaseEstimator):
 
         quantile_l = xp.quantile(valid_samples, self._alpha / 2, axis=0)
         quantile_r = xp.quantile(valid_samples, 1 - self._alpha / 2, axis=0)
-        self._estimates = {self.declared_keys[0]: quantile_r - quantile_l}
+        self._estimates = {
+            self.declared_keys[0]: quantile_r - quantile_l,
+            self.declared_keys[1]: quantile_l,
+            self.declared_keys[2]: quantile_r,
+        }
         if self._all_samples:
-            self._estimates[self.declared_keys[1]] = valid_samples
+            self._estimates[self.declared_keys[3]] = valid_samples
 
     def reset(self) -> None:
         self._count = 0
@@ -89,9 +97,13 @@ class CI(BaseEstimator):
         ctx: ExecutionContext,
     ) -> dict[str, xp.ndarray]:
         ci_key = self.declared_keys[0]
+        ci_l_key = self.declared_keys[1]
+        ci_r_key = self.declared_keys[2]
         if not self._all_samples:
             count = 0
             mean_ci = xp.zeros_like(self._var.state)
+            mean_ci_l = xp.zeros_like(self._var.state)
+            mean_ci_r = xp.zeros_like(self._var.state)
 
             for i, ckpt_dict in enumerate(per_ckpt_estimates):
                 if i < burnin:
@@ -101,16 +113,22 @@ class CI(BaseEstimator):
                 delta = ckpt_dict[ci_key] - mean_ci
                 mean_ci += delta / count
 
+                delta = ckpt_dict[ci_l_key] - mean_ci_l
+                mean_ci_l += delta / count
+
+                delta = ckpt_dict[ci_r_key] - mean_ci_r
+                mean_ci_r += delta / count
+
             if count == 0:
                 raise ValueError(
                     f"No valid checkpoints after burnin for CI on {self._var.name}"
                 )
 
-            return {ci_key: mean_ci}
+            return {ci_key: mean_ci, ci_l_key: mean_ci_l, ci_r_key: mean_ci_r}
 
         else:
             kept_samples = []
-            samples_key = self.declared_keys[1]
+            samples_key = self.declared_keys[3]
 
             for i, ckpt_dict in enumerate(per_ckpt_estimates):
                 if i < burnin:
@@ -127,4 +145,9 @@ class CI(BaseEstimator):
             quantile_l = xp.quantile(all_samples_stacked, self._alpha / 2, axis=0)
             quantile_r = xp.quantile(all_samples_stacked, 1 - self._alpha / 2, axis=0)
 
-            return {ci_key: quantile_r - quantile_l, samples_key: all_samples_stacked}
+            return {
+                ci_key: quantile_r - quantile_l,
+                ci_l_key: quantile_l,
+                ci_r_key: quantile_r,
+                samples_key: all_samples_stacked,
+            }
