@@ -6,10 +6,6 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![license](https://img.shields.io/badge/license-GPL--3.0-brightgreen.svg)](LICENSE)
 
-[![pipeline status](https://gitlab.cristal.univ-lille.fr/parallelmcmc/cards/badges/master/pipeline.svg)](https://gitlab.cristal.univ-lille.fr/parallelmcmc/cards/commits/master)
-
-<!-- [![conda](https://img.shields.io/conda/:variant/:channel/:packageName)](...) -->
-
 <details>
 <summary>Table of content</summary>
 
@@ -18,153 +14,156 @@
 - [CARDS: Composable Algorithms for Reproducible Distributed Sampling](#cards-composable-algorithms-for-reproducible-distributed-sampling)
   - [Table of content](#table-of-content)
   - [Description](#description)
-  - [Installation](#installation)
+  - [Installation (Using as a library)](#installation-using-as-a-library)
+  - [Running Examples \& Tutorials](#running-examples--tutorials)
   - [Contributing](#contributing)
     - [Setup](#setup)
     - [Testing](#testing)
-  - [License](#license)
   - [Citation](#citation)
+  - [License](#license)
 
 </details>
 
 ## Description
 
-This Python library provides elementary operators, MPI communicators and Markov transition kernels to facilitate the design of custom distributed Plug-and-Play (PnP) Markov chain Monte Carlo (MCMC) algorithms for high-dimensional Bayesian inference.
-Detailed examples provided in this repository focus on the resolution of high-dimensional inverse problems in image and signal processing.
+This Python library provides elementary operators, MPI communicators and Markov transition kernels to facilitate the design of custom distributed Plug-and-Play (PnP) Markov chain Monte Carlo (MCMC) algorithms for high-dimensional Bayesian inference. Detailed examples provided in this repository focus on the resolution of high-dimensional inverse problems in image and signal processing.
 
-:warning: **WARNING** This project is under active development, and the API may evolve significantly until version `1.0`.
+## Installation (Using as a library)
 
-## Installation
+If you only want to use `cards` in your own projects, you can install it on `ubuntu` with `cuda` GPU support within an existing `conda`-compatible environment.
 
-- The `cards` Python package can be installed on `ubuntu` with `cuda` GPU support within an existing `conda`-compatible environment (e.g., using either `pixi`, `mamba` or `conda`). Example installation commands can be found below.
+<details>
+<summary><b>New to Pixi ?</b></summary>
+<a href="https://pixi.sh/">Pixi</a> is a fast, cross-platform package manager for the Conda ecosystem (which uses <code>uv</code> under the hood for lightning-fast Python installations).<br> You can <a href="https://pixi.sh/latest/#installation">install it in seconds</a> or simply fall back to <code>conda</code> or <code>mamba</code>.
+</details>
 
-  ```bash
-  # installation within a mamba environment
-  mamba env create -n my_samplers
-  mamba install cards -c pthouvenin
+```bash
+# installation within a pixi environment (recommended)
+pixi workspace channel add pthouvenin
+pixi add cards
 
-  # installation within a pixi environment
-  pixi workspace channel add pthouvenin
-  pixi add cards
-  ```
+# installation within a mamba environment
+mamba env create -n my_samplers
+mamba install cards -c pthouvenin
+```
 
-- A distributed implementation is provided for the `DRUNet`, `DnCNN` and `DDFB` deep denoisers.
-  Pre-trained weights are not embedded into the `cards` `conda`-package.
-  The weights need to be retrieved separately, using for instance the commands detailed below.
+*Note: The package installation does not include the tutorials, examples, or pre-trained network weights. To run the examples, see the section below.*
 
-  ```bash
-  mkdir -p data/weights && cd data/weights
+## Running Examples & Tutorials
 
-  # * DDFB
-  mkdir ddfb && cd ddfb
-  wget https://github.com/maxime-bouton/cards/blob/main/data/weights/ddfb/ddfb_nch3_nla20_nfe64.pth
+To run the provided tutorials and examples, you need to clone this repository, set up the local environment, and download the required weights and datasets.
 
-  # * retrieving weights for DRUNet and DnCNN from https://github.com/cszn/KAIR
-  # (see https://drive.google.com/drive/folders/13kfr3qny7S2xwG9h7v95F5mkWs0OmU0D
-  # and https://github.com/cszn/DPIR/tree/master/model_zoo)
-  #
-  # DRUNet (gray and color images)
-  cd ../ && mkdir drunet && cd drunet
-  wget https://github.com/cszn/KAIR/releases/download/v1.0/drunet_gray.pth && mv drunet_gray.pth drunet_nch1.pth
+**1. Clone the repository and set up the environment**
 
-  wget https://github.com/cszn/KAIR/releases/download/v1.0/drunet_color.pth && mv drunet_color.pth drunet_nch3.pth
+```bash
+git clone https://github.com/maxime-bouton/cards.git
+cd cards
 
-  # DnCNN (gray and color images)
-  cd ../ && mkdir dncnn && cd dncnn
-  wget https://github.com/cszn/KAIR/releases/download/v1.0/dncnn_gray_blind.pth && mv dncnn_gray_blind.pth dncnn_nch1.pth
+# Install and activate the full environment using pixi
+pixi install --environment full
+pixi shell --environment full
+```
 
-  wget https://github.com/cszn/KAIR/releases/download/v1.0/dncnn_color_blind.pth && mv dncnn_color_blind.pth dncnn_nch3.pth
-  ```
+**2. Download pre-trained weights**
 
-<!-- # from deepinv
-# https://huggingface.co/deepinv/drunet/tree/main
-# https://huggingface.co/deepinv/dncnn/tree/main -->
+A distributed implementation is provided for the `DRUNet`, `DnCNN` and `DDFB` deep denoisers. Run the following commands from the root of the cloned repository to download them:
 
+```bash
+mkdir -p data/weights && cd data/weights
 
-## Example usage
+# DDFB
+mkdir ddfb && cd ddfb
+wget https://github.com/maxime-bouton/cards/blob/main/data/weights/ddfb/ddfb_nch3_nla20_nfe64.pth
 
-To run some examples, use the following instructions:
+# DRUNet (gray and color images)
+cd ../ && mkdir drunet && cd drunet
+wget https://github.com/cszn/KAIR/releases/download/v1.0/drunet_gray.pth && mv drunet_gray.pth drunet_nch1.pth
+wget https://github.com/cszn/KAIR/releases/download/v1.0/drunet_color.pth && mv drunet_color.pth drunet_nch3.pth
+
+# DnCNN (gray and color images)
+cd ../ && mkdir dncnn && cd dncnn
+wget https://github.com/cszn/KAIR/releases/download/v1.0/dncnn_gray_blind.pth && mv dncnn_gray_blind.pth dncnn_nch1.pth
+wget https://github.com/cszn/KAIR/releases/download/v1.0/dncnn_color_blind.pth && mv dncnn_color_blind.pth dncnn_nch3.pth
+
+cd ../../
+```
+
+**3. Prepare the data (if required)**
+
+Some examples require generating `.h5` files from the raw images first.
+
+```bash
+cd data
+for img in raw/*.jpg; do python convert.py "$img"; done
+mv raw/*.h5 .
+cd ..
+```
+
+**4. Run the examples**
+
+Once the data and weights are ready, you can run the launcher from the project root:
 
 ```bash
 cd examples
 python launcher.py --run
 ```
 
-The settings variables of `examples/launcher.py` can be commented in/out to run different subsets of experiments.
+*Note: To run different subsets of experiments, you currently need to comment/uncomment the settings variables inside `examples/launcher.py`.*
 
 ## Contributing
 
-Short guidelines on conventions adopted to set-up, test and document the library are detailed below.
-See the [online documentation](https://maxime-bouton.github.io/cards/) for further details.
-
-<details>
-
-<summary>Setup</summary>
+Short guidelines on conventions adopted to set up and test the library are detailed below.
 
 ### Setup
 
-- Only pull-requests compatible with the [`pixi`](https://pixi.sh/latest/) Python package manager will be considered.
-
-- Clone the project and create a development environment using the commands below.
+Only pull-requests compatible with the [`pixi`](https://pixi.sh/latest/) Python package manager will be considered.
 
 ```bash
 pixi self-update
-pixi clean
-pixi clean cache
 pixi install --environment full
 pixi shell --environment full
-# eval "$(pixi shell-hook --environment full)"
 ```
-</details>
-
-<details>
-
-<summary>Testing</summary>
 
 ### Testing
 
-Before any commit or pull request to the master branch, verify all tests pass under the different configuration considered (serial and distributed mode, running on CPU or GPU). See [`tests/conftest.py`](tests/conftest.py) for further details.
+Before any commit or pull request to the master branch, verify all tests pass under the different configurations considered (serial and distributed mode, running on CPU or GPU). See the [test configuration file](tests/conftest.py) for further details.
 
 ```bash
-pixi shell -e full
-
 # display available markers
 pytest --markers
 
 # list all tests available
 python -m pytest --collect-only
 
-# running all serial tests on CPU
+# running all serial tests on CPU/GPU
 python -m pytest --mode serial --device cpu
-
-# running all serial tests on GPU
 python -m pytest --mode serial --device gpu
 
-# running all MPI tests on CPU
+# running all MPI tests on CPU/GPU
 mpirun -n 2 pytest --mode mpi --device cpu
-
-# running all MPI tests on GPU
 mpirun -x OMPI_MCA_pml=ucx -x OMPI_MCA_osc=ucx -x OMPI_MCA_opal_cuda_support=true -x UCX_MEMTYPE_CACHE=n -n 2 pytest --mode mpi --device gpu
 ```
 
-</details>
-
 ## Citation
 
-If you use this code or rely on our methodology in your research, please cite our paper:
+If you reuse this code, please cite the [associated paper](https://ieeexplore.ieee.org/document/11482855).
 
-> M. Bouton, P.-A. Thouvenin, A. Repetti, and P. Chainais, "A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems," *IEEE Transactions on Computational Imaging*, vol. 12, pp. 839-849, 2026. [DOI: 10.1109/TCI.2026.3685151](https://doi.org/10.1109/TCI.2026.3685151).
-
-```bibtex
-@ARTICLE{11482855,
-  author={Bouton, Maxime and Thouvenin, Pierre-Antoine and Repetti, Audrey and Chainais, Pierre},
-  journal={IEEE Transactions on Computational Imaging},
-  title={A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems},
-  year={2026},
-  volume={12},
-  number={},
-  pages={839-849},
-  doi={10.1109/TCI.2026.3685151}
+```bib
+@article{Bouton2026,
+  arxivid      = {2511.00870},
+  author       = {Maxime Bouton and Pierre-Antoine Thouvenin and Audrey Repetti and Pierre Chainais},
+  code         = {[https://github.com/maxime-bouton/cards](https://github.com/maxime-bouton/cards)},
+  date         = {2026-04},
+  doi          = {10.1109/TCI.2026.3685151},
+  hal_id       = {hal-05326314},
+  hal_version  = {v1},
+  journaltitle = {{IEEE Trans. Comput. Imag.}},
+  month        = apr,
+  number       = {},
+  title        = {A Distributed {P}lug-and-{P}lay {MCMC} Algorithm for High-Dimensional Inverse Problems},
+  url          = {[https://hal.science/hal-05326314](https://hal.science/hal-05326314)},
+  pages        = {839-849},
+  volume       = {12},
 }
 ```
 

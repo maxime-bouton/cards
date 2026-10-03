@@ -1,6 +1,9 @@
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
+
 import argparse
 import collections.abc
-import copy
 import itertools
 import json
 import subprocess
@@ -16,19 +19,19 @@ APPLICATIONS = [
 
 OBS_CONFIGS = [
     "128.json",
-    # "2048.json",
-    # "2896.json",
-    # "4096.json",
+    # "2048.json",  # WORKERS = [1, 2, 4]
+    # "2896.json",  # WORKERS = [2]
+    # "4096.json",  # WORKERS = [4]
 ]
 
 PRIOR_CONFIGS = [
     "ddfb.json",
-    "dncnn.json",
-    "drunet.json",
+    # "dncnn.json",
+    # "drunet.json",
     "tv.json",
 ]
 
-WORKERS = [1, 2, 4]
+WORKERS = [1, 2]
 DEVICE = "gpu"
 
 ABBS = {
@@ -75,17 +78,25 @@ def _create_config_file(app, obs_path: Path, prior_path: Path, common_config):
     config_path = output_dir / config_name
 
     if config_path.exists():
-        print(f"[SKIP] {config_name} already exists.")
+        print(f"\n\n[SKIP] {config_name} already exists.")
         return config_name
 
-    with open(obs_path, "r") as f:
-        obs_data = json.load(f)
-    with open(prior_path, "r") as f:
-        prior_data = json.load(f)
+    merged_config = {}
+    merged_config["application"] = {
+        "type": f"{app_short}_{obs_prefix}",
+        "name": prior_prefix,
+    }
 
-    merged_config = copy.deepcopy(common_config)
+    obs_data, prior_data = {}, {}
+    with open(obs_path, "r") as f:
+        obs_data["observations"] = json.load(f)
+    obs_data["observations"]["seed_data"] = 1234
+    with open(prior_path, "r") as f:
+        prior_data["parameters"] = json.load(f)
+
     _deep_update(merged_config, obs_data)
     _deep_update(merged_config, prior_data)
+    _deep_update(merged_config, common_config)
 
     with open(config_path, "w") as f:
         json.dump(merged_config, f, indent=4)
@@ -94,12 +105,12 @@ def _create_config_file(app, obs_path: Path, prior_path: Path, common_config):
     return config_name
 
 
-def build_command(config_name, workers, device=DEVICE):
+def build_command(config_name, workers, prior_name, device=DEVICE):
     """Constructs the command list for GPU execution based on worker count."""
 
     rel_config_path = f"configs/{config_name}"
 
-    base_cmd = ["python", "main.py"]
+    base_cmd = ["python", "main_tv.py" if "tv" in prior_name else "main_pnp.py"]
     mode = "serial" if workers == 1 else "mpi"
     script_args = ["--config", rel_config_path, "--mode", mode, "--device", device]
 
@@ -195,7 +206,7 @@ def main(args):
             job_name = f"{base_job_name}_w{w}"
 
             if args.run:
-                cmd_list = build_command(config_name, w)
+                cmd_list = build_command(config_name, w, prior_name)
                 print(f"\n[LAUNCHING LOCAL] {job_name}")
                 try:
                     subprocess.run(cmd_list, cwd=app, check=True)
