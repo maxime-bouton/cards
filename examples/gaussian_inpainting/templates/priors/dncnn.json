@@ -1,6 +1,6 @@
 {
     "reg_coef": 1,
-    "denoiser_params": {
+    "denoiser": {
         "type": "dncnn",
         "denoising_level": null,
         "L": 3

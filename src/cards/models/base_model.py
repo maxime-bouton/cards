@@ -1,110 +1,132 @@
-r"""Abstract class specifying the interface common to all models, used to
-define an application and the associated sampling strategy.
-Methods in this class encode the interaction between the transition kernels underlying a sampler tailored to a specific inference problem.
-The methods declared in this module are called within the sampler.
+r"""Define abstract base classes for models and associated sampling strategies.
+
+This module provides the common interface for all models, specifying how an application
+interacts with its underlying transition kernels for a specific inference problem. The
+methods declared here are intended to be called directly within a
+:class:`~cards.samplers.base_sampler.BaseSampler` instance.
 """
 
-# TODO: refine wording in documentation
+# authors: M. Bouton, S. Despierres, P.-A. Thouvenin, P. Chainais, A. Repetti
+#
+# reference: M. Bouton, P.-A. Thouvenin, A. Repetti, P. Chainais. A Distributed Plug-and-Play MCMC Algorithm for High-Dimensional Inverse Problems. IEEE Transactions on Computational Imaging, 2026, 12, pp.839-849. (https://dx.doi.org/10.1109/TCI.2026.3685151)
 
 from abc import ABC, abstractmethod
+from functools import cached_property
+
+import numpy as np
+import torch
+
+import cards.backend as xp
+from cards.core.variable import Variable
 
 
 class BaseModel(ABC):
-    @abstractmethod
-    def update(self, rng):
-        r"""Updates all the current state of all the random variables involved in the model. This method triggers the update method (i.e., transition mechanism) of each underlying transition kernels.
+    r"""Abstract base class for inference models.
 
-        Parameters
-        ----------
-        rng : cards.backend.xp.random.Generator | torch.Generator
-            Random number generator given by a sampler.
-        """
-        pass
+    This class defines the common interface for models, managing the associated
+    estimators and specifying the required methods for state manipulation, potential
+    computation, and transition kernel updates.
+    """
 
-    @abstractmethod
-    def get_states(self) -> dict:
-        r"""Extracts the current state of all the variables to be sampled from the model.
+    def __init__(self, *variables: Variable):
+        super().__init__()
+        self._variables = {}
+
+        for var in variables:
+            if var.name in self._variables:
+                raise ValueError(
+                    f"Duplicate variable name detected: '{var.name}'. "
+                    "All variables passed to the model must have unique names."
+                )
+            self._variables[var.name] = var
+
+    @property
+    def keys(self):
+        r"""Return a list containing the names of all variables being sampled."""
+        return list(self._variables.keys())
+
+    @property
+    def states(self) -> dict[str, xp.ndarray]:
+        r"""Extract the current states of all variables being sampled from the model.
 
         Returns
         -------
-        dict
-            Current state of the variables.
+        dict[str, xp.ndarray]
+            The current states of the variables.
         """
-        pass
+        return {var.name: var.state for var in self._variables.values()}
 
-    # FIXME: method to be removed (not really defined or used in objects, to be clarified
-    # @abstractmethod
-    def get_states4batch(self) -> dict:
-        r"""Returns a dictionary containing a batch of samples for all the variables to be sampled from the model.
-
-        The dictionary stores a batch of consecutive samples for all the variables to be sampled, to be saved to disk.
-
-        Returns
-        -------
-        dict
-            Dictionary containing a batch of consecutive samples for each variable.
-        """
-        pass
-
-    @abstractmethod
-    def set_states(self, states: dict):
-        r"""Set the variables in the model to the associated value passed in input.
+    @states.setter
+    def states(self, states: dict[str, xp.ndarray]) -> None:
+        r"""Set the model variables to the associated values provided in the input.
 
         Parameters
         ----------
-        states : dict
-            Dictionary containing a new state value for the variables of the model.
+        states : dict[str, xp.ndarray]
+            Dictionary containing the new state values for the model's variables.
         """
-        pass
+        for k, v in states.items():
+            self._variables[k].state[:] = v
+
+        self._on_states_updated()
+
+    def _on_states_updated(self) -> None:
+        r"""Update all cached buffers in the model's variables."""
+
+    @abstractmethod
+    def compile(self) -> None:
+        r"""Compile the model to prepare it for sampling."""
+
+    @abstractmethod
+    def update(self, rng: np.random.Generator | torch.Generator) -> None:
+        r"""Update the current state of all random variables involved in the model.
+
+        This method triggers the transition mechanism (i.e., the update method) of each
+        underlying transition kernel.
+
+        Parameters
+        ----------
+        rng : np.random.Generator | torch.Generator
+            Random number generator provided by the sampler.
+        """
 
     @abstractmethod
     def compute_potential(self) -> float:
-        r"""Compute the potential function :math:`-\log p(\mathbf{x} \mid \mathbf{y})` for the target posterior distribution.
+        r"""Compute the potential function :math:`-\log p(\mathbf{x} \mid \mathbf{y})`
+        for the target posterior distribution.
 
         Returns
         -------
         float
-            Current value of the potential function.
+            The current value of the potential function.
 
         Note
         ----
-        The potential function cannot be evaluated for target distributions
-        associated with a learned prior, e.g., encoded by a deep denoiser in PnP approaches.
+        The potential function cannot be evaluated for target distributions associated
+        with a learned prior (e.g., encoded by a deep denoiser in Plug-and-Play approaches).
         """
-        pass
-
-    @abstractmethod
-    def aggregate_states(self):
-        r"""Aggregate consecutive samples over a predefined window to progressively form parameter estimates (e.g., MMSE estimate).
-
-        Note
-        ----
-        The method triggers the :meth:`~cards.estimator.BaseEstimatorBuilder.aggregate_states` in the estimators selected for the application of interest.
-        """
-        pass
 
 
 class BaseDistributedModel(BaseModel):
-    def __init__(self):
-        self.global_sizes = {}
-        self.local_sizes = {}
-        self.slices = {}
+    r"""Base class for distributed inference models.
 
-        self.set_slices()
-        self.set_global_sizes()
-        self.set_local_sizes()
+    This class extends :class:`BaseModel` to support distributed sampling across
+    multiple MPI workers. It manages the allocation and slicing of global
+    and local memory buffers.
+    """
 
-    @abstractmethod
-    def set_slices(self):
-        r"""Sets the slicer to select local variables from the global memory buffer."""
-        pass
+    @cached_property
+    def local_sizes(self) -> dict:
+        r"""Return sizes of the local buffers representing the portion of the variables
+        handled by each MPI worker."""
+        return {n: v.layout.tile for n, v in self._variables.items()}
 
-    @abstractmethod
-    def set_global_sizes(self):
-        r"""Sets the sizes of global buffers representing the variables to be sampled."""
-        pass
+    @cached_property
+    def global_sizes(self) -> dict:
+        r"""Return the sizes of the global buffers representing the variables to be sampled."""
+        return {n: v.layout.full for n, v in self._variables.items()}
 
-    @abstractmethod
-    def set_local_sizes(self):
-        r"""Sets the sizes of the local buffers representing the portion of the variables handled by each MPI worker."""
-        pass
+    @cached_property
+    def slices(self) -> dict:
+        r"""Return the slices to select local variables from the global memory buffer."""
+        return {n: v.layout.s for n, v in self._variables.items()}

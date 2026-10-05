@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
-# FIXME: add source/reference for the code (coming in part from an already existing repo...)
+# FIXME: add source/reference for the code (if coming in part from an already existing repo...)
 
 
 class MotionBlurKernel:
@@ -24,7 +24,7 @@ class MotionBlurKernel:
         self,
         size=(100, 100),
         intensity=0.0,
-        dtype: np.dtype | None = None,
+        dtype: type | None = None,
         rng: np.random.Generator | None = None,
     ):
         if not isinstance(size, tuple) or len(size) != 2:
@@ -90,7 +90,7 @@ class MotionBlurKernel:
 
         Returns
         -------
-        numpy.ndarray
+        np.ndarray
             2D array representing the motion blur kernel, normalized to sum to 1.
         """
         path = self._generate_path()
@@ -106,7 +106,7 @@ class MotionBlurKernel:
 
         blur_radius = max(1, int(self.diagonal * 0.01))
         img = img.filter(ImageFilter.GaussianBlur(radius=blur_radius))
-        img = img.resize(self.size, Image.LANCZOS)
+        img = img.resize(self.size, Image.Resampling.LANCZOS)
 
         kernel = np.array(img, dtype=self.dtype)
         kernel = kernel / np.sum(kernel) if np.sum(kernel) > 0 else kernel
@@ -136,7 +136,7 @@ class MotionBlurKernel:
 
         Returns
         -------
-        numpy.ndarray
+        np.ndarray
             The motion blur kernel.
         """
         return self._kernel
