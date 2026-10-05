@@ -80,6 +80,7 @@ isort = ">=9.0.2,<10"
 prek = ">=0.5.4,<0.6"
 ruff = ">=0.16.9,<0.17"
 ty = ">=0.0.84,<0.0.85"
+git-changelog = ">=2.4.0,<3"
 
 [tool.pixi.package]
 name = { workspace = true }

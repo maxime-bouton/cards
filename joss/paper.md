@@ -1,50 +1,56 @@
----
+______________________________________________________________________
+
 title: 'CARDS: Composable Algorithms for Reproducible Distributed Sampling'
 tags:
-  - Python
-  - Markov chain Monte Carlo algorithms
-  - Langevin algorithm
-  - Plug-and-Play prior
-  - distributed computing
+
+- Python
+- Markov chain Monte Carlo algorithms
+- Langevin algorithm
+- Plug-and-Play prior
+- distributed computing
 
 authors:
-  - name: Maxime Bouton
-    orcid: 0009-0007-4480-3541
-    # equal-contrib: true
-    affiliation: 1
-  - name: Pierre-Antoine Thouvenin
-    orcid: 0000-0003-1246-9458
-    corresponding: true # (This is how to denote the corresponding author)
-    # equal-contrib: true # (This is how you can denote equal contributions between multiple authors)
-    affiliation: 1
-  - name: Stéphane Despierres
-    affiliation: 1
-  - name: Audrey Repetti
-    orcid: 0000-0002-6296-6957
-    affiliation: "2, 3" # (Multiple affiliations must be quoted)
-  - name: Pierre Chainais
-    orcid: 0000-0003-4377-7584
-    affiliation: 1
-affiliations:
- - name: Univ. Lille, CNRS, Centrale Lille, UMR 9189 CRIStAL, F-59000 Lille, France
-   index: 1
- - name: School of Mathematical and Computer Sciences, Heriot-Watt University, Edinburgh EH14 4AS, UK
-   index: 2
- - name: Maxwell Institute for Mathematical Sciences, Edinburgh EH8 9BT, UK
-   index: 3
-date: 12 September 2026
-bibliography: paper.bib
 
+- name: Maxime Bouton
+  orcid: 0009-0007-4480-3541
+  # equal-contrib: true
+  affiliation: 1
+- name: Pierre-Antoine Thouvenin
+  orcid: 0000-0003-1246-9458
+  corresponding: true # (This is how to denote the corresponding author)
+  # equal-contrib: true # (This is how you can denote equal contributions between multiple authors)
+  affiliation: 1
+- name: Stéphane Despierres
+  affiliation: 1
+- name: Audrey Repetti
+  orcid: 0000-0002-6296-6957
+  affiliation: "2, 3" # (Multiple affiliations must be quoted)
+- name: Pierre Chainais
+  orcid: 0000-0003-4377-7584
+  affiliation: 1
+  affiliations:
+- name: Univ. Lille, CNRS, Centrale Lille, UMR 9189 CRIStAL, F-59000 Lille, France
+  index: 1
+- name: School of Mathematical and Computer Sciences, Heriot-Watt University, Edinburgh EH14 4AS, UK
+  index: 2
+- name: Maxwell Institute for Mathematical Sciences, Edinburgh EH8 9BT, UK
+  index: 3
+  date: 12 September 2026
+  bibliography: paper.bib
 
 # Optional fields for papers that are part of a joint submission.
+
 # For example, submitting to a AAS journal too, see this blog post:
+
 # https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
 
 # If you are not making a joint submission you should remove these lines.
 
-# aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
-# aas-journal: Astrophysical Journal <- The name of the AAS journal.
----
+# aas-doi: 10.3847/xxxxx \<- update this with the DOI from AAS once you know it.
+
+# aas-journal: Astrophysical Journal \<- The name of the AAS journal.
+
+______________________________________________________________________
 
 <!-- Link to instructions : https://joss.readthedocs.io/en/latest/index.html -->
 
@@ -195,7 +201,7 @@ of this manuscript, or the preparation of supporting materials.
 
 # Acknowledgements
 
-This work was supported by the ANR project ``Chaire IA Sherlock'' ANR-20-CHIA-0031-01 hold by P. Chainais, the national support within the programme d’investissements d’avenir ANR-16-IDEX-0004 ULNE, Région HDF, and the CNRS IEA “DAISHI” hold by P.-A. Thouvenin and A. Repetti.
+This work was supported by the ANR project \`\`Chaire IA Sherlock'' ANR-20-CHIA-0031-01 hold by P. Chainais, the national support within the programme d’investissements d’avenir ANR-16-IDEX-0004 ULNE, Région HDF, and the CNRS IEA “DAISHI” hold by P.-A. Thouvenin and A. Repetti.
 The project was provided with computing HPC and storage resources by GENCI at IDRIS on the supercomputer Jean Zay’s V100 partition thanks to the grant 2024-AD010615597.
 The authors acknowledge engineering support from Damien Marchal and Emmanuel Leguy, research engineers at UMR 9189 CRIStAL lab, F-59000 Lille, France.
 The library has been developed while M. Bouton and S. Despierres were affiliated with Centrale Lille Institut.
